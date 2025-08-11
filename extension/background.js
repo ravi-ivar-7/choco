@@ -127,7 +127,7 @@ class ChocoBackground {
 
                 case 'TOKEN_DETECTED':
                     console.log('🔍 Token detected from content script:', request.token?.source)
-                    await this.handleTokenDetection(request.token, sender.tab)
+                    console.log('⏭️ Auto-sync disabled - ignoring token detection')
                     sendResponse({ success: true })
                     break
 
@@ -263,48 +263,24 @@ class ChocoBackground {
             refreshPreview: token?.refreshToken ? token.refreshToken.substring(0, 20) + '...' : null
         })
         
-        // Validate token before saving
+        // Validate token before storing
         if (!token?.refreshToken) {
-            console.log('⚠️ No refresh token found, skipping save')
+            console.log('⚠️ No refresh token found, skipping storage')
             return false
         }
         
-        console.log('💾 Attempting to save new token to database...')
+        // Store the detected token for manual sync later
+        console.log('💾 Storing detected token for manual sync...')
+        await chrome.storage.local.set({
+            pendingToken: {
+                ...token,
+                detectedAt: Date.now(),
+                tabUrl: tab?.url
+            }
+        })
         
-        // Check user authentication first
-        const userValidation = await this.validateUser()
-        if (!userValidation.valid) {
-            console.error('❌ User not authenticated for auto-save:', userValidation.reason)
-            await this.showNotification(
-                'Auto-Sync Failed',
-                '🔒 Please log into the Choco extension first to enable automatic token sync.',
-                'warning'
-            )
-            return false
-        }
-        
-        console.log('✅ User authenticated, proceeding with token save...')
-        const saved = await this.saveNewToken(token)
-        
-        if (saved) {
-            // Show success notification
-            console.log('✅ Token successfully saved and synced!')
-            await this.showNotification(
-                'Web Platform Access Updated',
-                '🎉 New login detected and shared with your team automatically!',
-                'success'
-            )
-            return true
-        } else {
-            // Show error notification
-            console.error('❌ Failed to save token to database')
-            await this.showNotification(
-                'Auto-Sync Failed',
-                '😔 Couldn\'t automatically save your login. Please open the extension to sync manually.',
-                'error'
-            )
-            return false
-        }
+        console.log('✅ Token stored for manual sync')
+        return true
     }
 
     // Get cookies for a specific URL

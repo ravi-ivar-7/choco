@@ -17,23 +17,13 @@
             margin: 0;
             padding: 0;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 30%, #2d1b69 60%, #0f0f23 100%);
+            background: #0d1117;
             color: #ffffff;
             overflow: hidden;
             position: relative;
         }
 
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-        }
+
 
         .container {
             padding: 16px;
@@ -51,7 +41,7 @@
         .logo {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%);
+            background: linear-gradient(135deg, #21262d 0%, #30363d 50%, #484f58 100%);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             display: flex;
@@ -59,7 +49,7 @@
             justify-content: center;
             margin: 0 auto 12px;
             font-size: 24px;
-            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4),
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
                         0 0 0 1px rgba(255, 255, 255, 0.05),
                         inset 0 1px 0 rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
@@ -100,16 +90,16 @@
 
         .status-card {
             background: linear-gradient(135deg, 
-                        rgba(255, 255, 255, 0.12) 0%, 
-                        rgba(255, 255, 255, 0.08) 50%, 
-                        rgba(255, 255, 255, 0.06) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+                        rgba(33, 38, 45, 0.8) 0%, 
+                        rgba(48, 54, 61, 0.6) 50%, 
+                        rgba(72, 79, 88, 0.4) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                        0 1px 0 rgba(255, 255, 255, 0.1) inset,
-                        0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+                        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                        0 0 0 1px rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
             position: relative;
             overflow: hidden;
@@ -235,40 +225,40 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4),
+            background: linear-gradient(135deg, #238636 0%, #2ea043 50%, #3fb950 100%);
+            color: white;
+            border: 1px solid rgba(35, 134, 54, 0.3);
+            box-shadow: 0 4px 16px rgba(35, 134, 54, 0.4),
                         0 1px 0 rgba(255, 255, 255, 0.1) inset;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%);
-            box-shadow: 0 12px 40px rgba(139, 92, 246, 0.5),
+            background: linear-gradient(135deg, #2ea043 0%, #3fb950 50%, #4ecf6c 100%);
+            box-shadow: 0 12px 40px rgba(35, 134, 54, 0.5),
                         0 1px 0 rgba(255, 255, 255, 0.2) inset;
             transform: translateY(-2px);
         }
 
         .btn-secondary {
             background: linear-gradient(135deg, 
-                        rgba(255, 255, 255, 0.12) 0%, 
-                        rgba(255, 255, 255, 0.08) 100%);
+                        rgba(33, 38, 45, 0.8) 0%, 
+                        rgba(48, 54, 61, 0.6) 100%);
             color: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2),
-                        0 1px 0 rgba(255, 255, 255, 0.1) inset;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
+                        0 1px 0 rgba(255, 255, 255, 0.05) inset;
         }
 
         .btn-secondary:hover {
             background: linear-gradient(135deg, 
-                        rgba(255, 255, 255, 0.18) 0%, 
-                        rgba(255, 255, 255, 0.12) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+                        rgba(48, 54, 61, 0.9) 0%, 
+                        rgba(72, 79, 88, 0.7) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #ffffff;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3),
-                        0 1px 0 rgba(255, 255, 255, 0.15) inset;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5),
+                        0 1px 0 rgba(255, 255, 255, 0.1) inset;
             transform: translateY(-1px);
         }
 
