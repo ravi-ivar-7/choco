@@ -1,0 +1,16 @@
+{
+  "name": "choco-backend",
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "backend/$1"
+    }
+  ]
+}
