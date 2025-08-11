@@ -141,18 +141,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-            <h3 className="text-sm font-medium text-slate-700 mb-2 flex items-center">
-              <Lock className="mr-2 h-4 w-4" />
-              Demo Credentials
-            </h3>
-            <div className="text-xs text-slate-600 space-y-1">
-              <div><strong>Email:</strong> admin@choco.dev</div>
-              <div><strong>Password:</strong> admin123</div>
-            </div>
-          </div>
         </div>
 
         {/* Back to Home */}
