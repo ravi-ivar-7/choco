@@ -1,0 +1,13 @@
+{
+  "name": "choco-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "install-backend": "cd backend && npm install"
+  },
+  "workspaces": [
+    "backend"
+  ]
+}
