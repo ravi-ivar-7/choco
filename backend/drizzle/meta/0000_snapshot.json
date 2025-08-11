@@ -1,5 +1,5 @@
 {
-  "id": "196cab0e-b15a-4f7b-a260-6e6195bbcf36",
+  "id": "99fda7f2-f8b3-4aa7-88ce-260e8b8b5e98",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -26,8 +26,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "algozenith_account_id": {
-          "name": "algozenith_account_id",
+        "platform_account_id": {
+          "name": "platform_account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -51,11 +51,11 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "teams_algozenith_account_id_unique": {
-          "name": "teams_algozenith_account_id_unique",
+        "teams_platform_account_id_unique": {
+          "name": "teams_platform_account_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "algozenith_account_id"
+            "platform_account_id"
           ]
         }
       }

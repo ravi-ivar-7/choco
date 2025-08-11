@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       id: teams.id,
       name: teams.name,
       description: teams.description,
-      algozenithAccountId: teams.algozenithAccountId,
+      platformAccountId: teams.platformAccountId,
       createdAt: teams.createdAt,
       updatedAt: teams.updatedAt,
     }).from(teams);
@@ -38,40 +38,40 @@ export async function POST(request: NextRequest) {
     const user = await requireAdmin(request);
     const body = await request.json();
     
-    const { name, description, algozenithAccountId } = body;
+    const { name, description, platformAccountId } = body;
     
-    if (!name || !algozenithAccountId) {
+    if (!name || !platformAccountId) {
       return NextResponse.json({
         success: false,
-        message: 'Team name and AlgoZenith Account ID are required'
+        message: 'Team name and Platform Account ID are required'
       }, { status: 400 });
     }
 
-    // Check if algozenithAccountId already exists
+    // Check if platformAccountId already exists
     const existingTeam = await db.select()
       .from(teams)
-      .where(eq(teams.algozenithAccountId, algozenithAccountId))
+      .where(eq(teams.platformAccountId, platformAccountId))
       .limit(1);
 
     if (existingTeam.length > 0) {
       return NextResponse.json({
         success: false,
-        message: 'A team with this AlgoZenith Account ID already exists'
+        message: 'A team with this Platform Account ID already exists'
       }, { status: 400 });
     }
 
     const teamId = createId();
-    const newTeam = await db.insert(teams).values({
+    const [newTeam] = await db.insert(teams).values({
       id: teamId,
       name,
       description: description || null,
-      algozenithAccountId,
+      platformAccountId,
     }).returning();
 
     return NextResponse.json({
       success: true,
       message: 'Team created successfully',
-      team: newTeam[0]
+      team: newTeam
     });
   } catch (error) {
     console.error('Team creation error:', error);
@@ -88,12 +88,12 @@ export async function PUT(request: NextRequest) {
     const user = await requireAdmin(request);
     const body = await request.json();
     
-    const { id, name, description, algozenithAccountId } = body;
+    const { id, name, description, platformAccountId } = body;
     
-    if (!id || !name || !algozenithAccountId) {
+    if (!id || !name || !platformAccountId) {
       return NextResponse.json({
         success: false,
-        message: 'Team ID, name, and AlgoZenith Account ID are required'
+        message: 'Team ID, name, and Platform Account ID are required'
       }, { status: 400 });
     }
 
@@ -110,16 +110,16 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if algozenithAccountId is used by another team
+    // Check if platformAccountId is used by another team
     const duplicateTeam = await db.select()
       .from(teams)
-      .where(eq(teams.algozenithAccountId, algozenithAccountId))
+      .where(eq(teams.platformAccountId, platformAccountId))
       .limit(1);
 
     if (duplicateTeam.length > 0 && duplicateTeam[0].id !== id) {
       return NextResponse.json({
         success: false,
-        message: 'Another team is already using this AlgoZenith Account ID'
+        message: 'Another team is already using this Platform Account ID'
       }, { status: 400 });
     }
 
@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
       .set({
         name,
         description: description || null,
-        algozenithAccountId,
+        platformAccountId,
         updatedAt: new Date(),
       })
       .where(eq(teams.id, id))

@@ -17,7 +17,7 @@ class ChocoPopup {
         })
 
         document.getElementById('loginBtn').addEventListener('click', () => {
-            this.openAlgoZenith()
+            this.openWebPlatform()
         })
 
         document.getElementById('adminBtn').addEventListener('click', () => {
@@ -63,24 +63,24 @@ class ChocoPopup {
             this.updateStatus('checking', '✅ Great! I know who you are', `Welcome back, ${user.name}!`)
             await new Promise(resolve => setTimeout(resolve, 300))
             
-            // Step 2: Check browser for AlgoZenith login
-            this.updateStatus('checking', '🔍 Looking in your browser...', 'Checking if you\'re already signed into AlgoZenith')
+            // Step 2: Check browser for web platform login
+            this.updateStatus('checking', '🔍 Looking in your browser...', 'Checking if you\'re already signed into the web platform')
             await new Promise(resolve => setTimeout(resolve, 500))
             
             const browserTokens = await this.getMaangTokensFromCookies()
             
             if (browserTokens && browserTokens.refreshToken) {
-                this.updateStatus('checking', '✅ Found your AlgoZenith login!', `Great! You\'re already signed in`)
+                this.updateStatus('checking', '✅ Found your web platform login!', `Great! You\'re already signed in`)
                 await new Promise(resolve => setTimeout(resolve, 300))
                 
-                // Step 3: Test with AlgoZenith
-                this.updateStatus('checking', '🧪 Testing everything...', 'Making sure AlgoZenith still recognizes you')
+                // Step 3: Test with web platform
+                this.updateStatus('checking', '🧪 Testing everything...', 'Making sure the web platform still recognizes you')
                 await new Promise(resolve => setTimeout(resolve, 500))
                 
                 const tokenValidation = await this.validateMaangTokens()
                 
                 if (tokenValidation.valid) {
-                    this.updateStatus('checking', '✅ Perfect! Everything works', 'AlgoZenith confirmed your access')
+                    this.updateStatus('checking', '✅ Perfect! Everything works', 'Web platform confirmed your access')
                     await new Promise(resolve => setTimeout(resolve, 300))
                     
                     // Step 4: Share with team
@@ -90,12 +90,12 @@ class ChocoPopup {
                     const storeResult = await this.storeTokenInDB(browserTokens)
                     
                     if (storeResult.success) {
-                        this.updateStatus('success', '✨ All set! Your team is ready', 'Everyone can now access AlgoZenith easily')
+                        this.updateStatus('success', '✨ All set! Your team is ready', 'Everyone can now access the web platform easily')
                     } else {
                         this.updateStatus('error', '😔 Oops! Couldn\'t share with team', storeResult.error || 'Something went wrong while setting up team access')
                     }
                 } else {
-                    this.updateStatus('checking', '😕 Your AlgoZenith login expired', 'No worries, let me check if your teammates can help')
+                    this.updateStatus('checking', '😕 Your web platform login expired', 'No worries, let me check if your teammates can help')
                     await new Promise(resolve => setTimeout(resolve, 300))
                     
                     // Continue to check team tokens
@@ -110,12 +110,12 @@ class ChocoPopup {
                         // Show refresh notification since team login is available
                         this.showRefreshNotification()
                     } else {
-                        this.updateStatus('expired', '🔑 AlgoZenith Access Needed', 'Your login expired and no team access available - Please sign into AlgoZenith to refresh')
+                        this.updateStatus('expired', '🔑 Web Platform Access Needed', 'Your login expired and no team access available - Please sign into the web platform to refresh')
                         this.showLoginButton(true)
                     }
                 }
             } else {
-                this.updateStatus('checking', '🔍 No AlgoZenith login found', 'You\'re not signed into AlgoZenith yet - let me check with your team')
+                this.updateStatus('checking', '🔍 No web platform login found', 'You\'re not signed into the web platform yet - let me check with your team')
                 await new Promise(resolve => setTimeout(resolve, 300))
                 
                 // Continue to check team tokens
@@ -130,7 +130,7 @@ class ChocoPopup {
                     // Show refresh notification since team login is available
                     this.showRefreshNotification()
                 } else {
-                    this.updateStatus('expired', '🔑 AlgoZenith Access Required', 'No team access found - Please sign into AlgoZenith to set up access for your team')
+                    this.updateStatus('expired', '🔑 Web Platform Access Required', 'No team access found - Please sign into the web platform to set up access for your team')
                     this.showLoginButton(true)
                 }
             }
@@ -425,7 +425,7 @@ class ChocoPopup {
                         await chrome.tabs.sendMessage(tab.id, {
                             type: 'SHOW_NOTIFICATION',
                             title: 'Team Access Available',
-                            message: '🔄 Your team has AlgoZenith access ready! Please refresh this page to access AlgoZenith with shared credentials.',
+                            message: '🔄 Your team has web platform access ready! Please refresh this page to access the platform with shared credentials.',
                             notificationType: 'success'
                         })
                         console.log(`✅ Refresh notification sent to maang.in tab ${tab.id}`)
@@ -479,7 +479,7 @@ class ChocoPopup {
             const teamTokensResponse = await this.getTeamTokens()
             
             if (!teamTokensResponse.success || !teamTokensResponse.tokens || teamTokensResponse.tokens.length === 0) {
-                return { valid: false, reason: 'Your teammates haven\'t set up AlgoZenith access yet' }
+                return { valid: false, reason: 'Your teammates haven\'t set up web platform access yet' }
             }
 
             console.log(`Found ${teamTokensResponse.tokens.length} team access options, testing each one...`)
@@ -561,7 +561,7 @@ class ChocoPopup {
 
     async validateMaangToken(token) {
         try {
-            console.log('🧪 Validating AlgoZenith access token...')
+            console.log('🧪 Validating web platform access token...')
             
             // Basic token format validation
             if (!token || !token.refreshToken) {
@@ -609,7 +609,7 @@ class ChocoPopup {
                     console.log('✅ Token validation successful - ready for use')
                     return { 
                         valid: true, 
-                        reason: 'Token validated and ready for AlgoZenith access' 
+                        reason: 'Token validated and ready for web platform access' 
                     }
                 } else {
                     console.log('❌ Token could not be set as cookie')
@@ -772,7 +772,7 @@ class ChocoPopup {
         }
     }
 
-    openAlgoZenith() {
+    openWebPlatform() {
         chrome.tabs.create({ url: 'https://maang.in' })
         window.close()
     }

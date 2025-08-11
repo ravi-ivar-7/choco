@@ -14,8 +14,8 @@ async function initializeDatabase() {
     await db.insert(teams).values({
       id: teamId,
       name: 'Demo Team',
-      description: 'Demo team for AlgoZenith access',
-      algozenithAccountId: 'demo-account-123',
+      description: 'Demo team for web platform access',
+      platformAccountId: 'demo-account-123',
     });
 
     console.log('✅ Created demo team');
@@ -34,22 +34,6 @@ async function initializeDatabase() {
       teamId: teamId,
       isActive: true,
     });
-
-    console.log('✅ Created admin user with password: admin');
-
-    // Create demo token (encrypted)
-    const demoToken = 'demo-refresh-token-' + Date.now();
-    const encryptedTokenString = encryptToken(demoToken); // Returns base64 string ready for database
-    const tokenHashValue = hashToken(demoToken);
-
-    await db.insert(tokens).values({
-      teamId: teamId,
-      encryptedToken: encryptedTokenString,
-      tokenHash: tokenHashValue,
-      createdBy: adminId,
-    });
-
-    console.log('✅ Created demo token');
 
     console.log('\n🎉 Database initialized successfully!');
     console.log('\n🔐 Admin credentials:');

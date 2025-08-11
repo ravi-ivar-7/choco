@@ -1,12 +1,12 @@
 import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 
-// Teams table - represents AlgoZenith team accounts
+// Teams table - represents web platform team accounts
 export const teams = pgTable('teams', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   name: text('name').notNull(),
   description: text('description'),
-  algozenithAccountId: text('algozenith_account_id').notNull().unique(),
+  platformAccountId: text('platform_account_id').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

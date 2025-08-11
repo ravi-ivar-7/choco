@@ -290,7 +290,7 @@ class ChocoBackground {
             // Show success notification
             console.log('✅ Token successfully saved and synced!')
             await this.showNotification(
-                'AlgoZenith Access Updated',
+                'Web Platform Access Updated',
                 '🎉 New login detected and shared with your team automatically!',
                 'success'
             )
@@ -346,7 +346,7 @@ class ChocoBackground {
             // Show notification about expired token
             await this.showNotification(
                 'Token Expired',
-                '⚠️ Your AlgoZenith token has expired. Please log in again.',
+                '⚠️ Your web platform token has expired. Please log in again.',
                 'warning'
             )
         }

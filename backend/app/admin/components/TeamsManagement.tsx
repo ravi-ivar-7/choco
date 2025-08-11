@@ -10,15 +10,15 @@ interface Team {
   id: string
   name: string
   description?: string
-  algozenithAccountId: string
+  platformAccountId: string
   createdAt: string
   updatedAt: string
 }
 
 interface TeamsManagementProps {
   teams: Team[]
-  onCreateTeam: (teamData: { name: string; description?: string; algozenithAccountId: string }) => Promise<void>
-  onUpdateTeam: (teamData: { id: string; name: string; description?: string; algozenithAccountId: string }) => Promise<void>
+  onCreateTeam: (teamData: { name: string; description?: string; platformAccountId: string }) => Promise<void>
+  onUpdateTeam: (teamData: { id: string; name: string; description?: string; platformAccountId: string }) => Promise<void>
   onDeleteTeam: (teamId: string) => Promise<void>
 }
 
@@ -26,12 +26,12 @@ export default function TeamsManagement({ teams, onCreateTeam, onUpdateTeam, onD
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
 
-  const handleCreateTeam = async (teamData: { name: string; description?: string; algozenithAccountId: string }) => {
+  const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
     await onCreateTeam(teamData)
     setShowTeamForm(false)
   }
 
-  const handleUpdateTeam = async (teamData: { name: string; description?: string; algozenithAccountId: string }) => {
+  const handleUpdateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
     if (editingTeam) {
       await onUpdateTeam({ ...teamData, id: editingTeam.id })
       setEditingTeam(null)
@@ -63,7 +63,7 @@ export default function TeamsManagement({ teams, onCreateTeam, onUpdateTeam, onD
                     <p className="text-sm text-gray-600 mt-1">{team.description}</p>
                   )}
                   <div className="flex items-center space-x-4 mt-2">
-                    <Badge variant="outline">ID: {team.algozenithAccountId}</Badge>
+                    <Badge variant="outline">ID: {team.platformAccountId}</Badge>
                     <span className="text-xs text-gray-500">
                       Created: {new Date(team.createdAt).toLocaleDateString()}
                     </span>

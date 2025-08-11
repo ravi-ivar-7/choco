@@ -28,8 +28,8 @@ class ChocoContentScript {
             container.id = 'choco-notifications'
             container.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
+                bottom: 20px;
+                left: 20px;
                 z-index: 10000;
                 pointer-events: none;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -368,7 +368,7 @@ class ChocoContentScript {
             <div style="font-size: 48px; margin-bottom: 16px;">🍫</div>
             <h3 style="margin: 0 0 12px 0; color: #333;">Choco Token Refresh</h3>
             <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-                Your team's AlgoZenith token needs to be refreshed. Please log in to update it for everyone.
+                Your team's web platform token needs to be refreshed. Please log in to update it for everyone.
             </p>
             <button id="choco-login-btn" style="
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

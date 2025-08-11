@@ -2,10 +2,10 @@ CREATE TABLE IF NOT EXISTS "teams" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
-	"algozenith_account_id" text NOT NULL,
+	"platform_account_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "teams_algozenith_account_id_unique" UNIQUE("algozenith_account_id")
+	CONSTRAINT "teams_platform_account_id_unique" UNIQUE("platform_account_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "tokens" (

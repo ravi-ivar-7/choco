@@ -6,7 +6,7 @@ interface Team {
   id: string
   name: string
   description?: string
-  algozenithAccountId: string
+  platformAccountId: string
   createdAt: string
   updatedAt: string
 }

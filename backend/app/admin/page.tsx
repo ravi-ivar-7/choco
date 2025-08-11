@@ -24,7 +24,7 @@ interface Team {
   id: string
   name: string
   description?: string
-  algozenithAccountId: string
+  platformAccountId: string
   createdAt: string
   updatedAt: string
 }
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
   }
 
   // Team management functions
-  const handleCreateTeam = async (teamData: { name: string; description?: string; algozenithAccountId: string }) => {
+  const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
     try {
       const token = localStorage.getItem('choco_token')
       if (!token) return
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleUpdateTeam = async (teamData: { id: string; name: string; description?: string; algozenithAccountId: string }) => {
+  const handleUpdateTeam = async (teamData: { id: string; name: string; description?: string; platformAccountId: string }) => {
     try {
       const token = localStorage.getItem('choco_token')
       if (!token) return

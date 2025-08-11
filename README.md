@@ -1,12 +1,12 @@
-# 🍫 Choco — Team Access Manager for AlgoZenith
+# 🍫 Choco — Team Access Manager for Web Platforms
 
-**Choco** is a secure browser extension + backend service that helps a small, approved team manage and sync official authentication tokens for an AlgoZenith (**maang.in**) team account.
+**Choco** is a secure browser extension + backend service that helps a small, approved team manage and sync official authentication tokens for web platform (**maang.in**) team accounts.
 
 ## 🎯 Features
 
 - **Secure Token Management**: AES-256 encrypted tokens stored server-side
 - **Team Access Control**: Only authorized team members can access shared tokens
-- **Auto Token Refresh**: Seamless token validation and refresh for AlgoZenith
+- **Auto Token Refresh**: Seamless token validation and refresh for web platforms
 - **Real-time Sync**: Token updates sync instantly across all team members
 - **Audit Logs**: Complete audit trail of all token operations
 - **Admin Dashboard**: Web-based admin interface for team management
@@ -97,7 +97,7 @@ choco/
 
 1. **Install the extension** and visit `maang.in`
 2. **Click the Choco extension icon** to check token status
-3. **If no token exists**, log in to AlgoZenith normally
+3. **If no token exists**, log in to the web platform normally
 4. **The extension will automatically detect and save** your login token
 5. **Token is encrypted and synced** to the team backend
 
@@ -164,7 +164,7 @@ npm run build
 
 ### Database Schema
 
-- **teams**: AlgoZenith team accounts
+- **teams**: Web platform team accounts
 - **users**: Authorized team members
 - **tokens**: Encrypted authentication tokens
 - **audit_logs**: Complete operation history
@@ -247,12 +247,12 @@ Edit `extension/manifest.json` to:
 
 ## 📄 License
 
-This project is for educational and team use. Ensure compliance with AlgoZenith's terms of service.
+This project is for educational and team use. Ensure compliance with the web platform's terms of service.
 
 ## ⚠️ Disclaimer
 
 This tool is designed for legitimate team access management. Users are responsible for:
-- Complying with AlgoZenith's terms of service
+- Complying with the web platform's terms of service
 - Ensuring proper authorization for team access
 - Maintaining security of shared credentials
 - Regular security audits and updates

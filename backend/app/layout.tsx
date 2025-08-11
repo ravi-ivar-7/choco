@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Choco - Team Access Manager',
-  description: 'Secure team access management for AlgoZenith',
+  description: 'Secure team access management for web platforms',
 }
 
 export default function RootLayout({

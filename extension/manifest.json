@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Choco - Team Access Manager",
   "version": "1.0.0",
-  "description": "Secure team access management for AlgoZenith (maang.in)",
+  "description": "Secure team access management for web platforms (maang.in)",
   
   "permissions": [
     "storage",

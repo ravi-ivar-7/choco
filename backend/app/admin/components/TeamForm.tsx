@@ -6,14 +6,14 @@ interface Team {
   id: string
   name: string
   description?: string
-  algozenithAccountId: string
+  platformAccountId: string
   createdAt: string
   updatedAt: string
 }
 
 interface TeamFormProps {
   team?: Team | null
-  onSubmit: (teamData: { name: string; description?: string; algozenithAccountId: string }) => Promise<void>
+  onSubmit: (teamData: { name: string; description?: string; platformAccountId: string }) => Promise<void>
   onCancel: () => void
 }
 
@@ -24,7 +24,7 @@ export default function TeamForm({ team, onSubmit, onCancel }: TeamFormProps) {
     await onSubmit({
       name: formData.get('name') as string,
       description: formData.get('description') as string,
-      algozenithAccountId: formData.get('algozenithAccountId') as string,
+      platformAccountId: formData.get('platformAccountId') as string,
     })
   }
 
@@ -58,12 +58,12 @@ export default function TeamForm({ team, onSubmit, onCancel }: TeamFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">AlgoZenith Account ID</label>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Platform Account ID</label>
               <input 
-                name="algozenithAccountId" 
+                name="platformAccountId" 
                 type="text" 
                 required 
-                defaultValue={team?.algozenithAccountId || ''}
+                defaultValue={team?.platformAccountId || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
                 placeholder="Enter account ID" 
               />

@@ -43,7 +43,7 @@ export default function HomePage() {
     {
       icon: Key,
       title: 'Auto Token Refresh',
-      description: 'Seamless token validation and refresh for AlgoZenith',
+      description: 'Seamless token validation and refresh for web platforms',
       gradient: 'from-emerald-600 to-teal-600'
     },
     {
@@ -97,19 +97,19 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto">
             <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full px-4 py-2 mb-6">
               <Zap className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-800">Secure Team Access for AlgoZenith</span>
+              <span className="text-sm font-medium text-purple-800">Secure Team Access Management</span>
             </div>
             
             <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
               Team Access Manager for{' '}
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                AlgoZenith
+                Web Platforms
               </span>
             </h1>
             
-            <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-              Choco helps your team securely manage and sync official authentication tokens 
-              for a shared AlgoZenith account with encrypted storage and secure access control.
+            <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+              Streamline your team's workflow with secure, automated access management 
+              for shared web platform accounts with encrypted storage and secure access control.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -154,7 +154,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mb-4">Why Choose Choco?</h2>
             <p className="text-slate-600 max-w-2xl mx-auto">
               Built with security and team collaboration in mind, Choco provides enterprise-grade 
-              token management for your AlgoZenith team account.
+              token management for your team's web platform accounts.
             </p>
           </div>
 
@@ -215,7 +215,7 @@ export default function HomePage() {
             <span className="font-semibold">Choco</span>
           </div>
           <p className="text-sm text-slate-600">
-            Secure team access management for AlgoZenith • Built with Next.js & TypeScript
+            Secure team access management for web platforms • Built with Next.js & TypeScript
           </p>
         </div>
       </footer>

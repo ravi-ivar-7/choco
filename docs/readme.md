@@ -1,7 +1,7 @@
-# 🍫 Choco — Team Access Manager for AlgoZenith
+# 🍫 Choco — Team Access Manager for Web Platforms
 
 **Short description:**  
-Choco is a browser extension + backend service that helps a small, approved team securely manage and sync official authentication tokens for an AlgoZenith (**maang.in**) team account.  
+Choco is a browser extension + backend service that helps a small, approved team securely manage and sync official authentication tokens for web platform (**maang.in**) team accounts.  
 
 Choco does **not** steal or inject cookies without consent — it uses only approved APIs or flows, and encrypts tokens in a secure backend so authorized members can refresh their access when needed.  
 
@@ -9,18 +9,18 @@ Choco does **not** steal or inject cookies without consent — it uses only appr
 
 ## 📌 Overview
 
-Choco makes it easy for your group to stay logged in to a shared AlgoZenith account with permission, without everyone having to log in manually all the time.
+Choco makes it easy for your group to stay logged in to a shared web platform account with permission, without everyone having to log in manually all the time.
 
 **It:**
 1. Checks if your current token is still valid.  
 2. If not, fetches the latest approved token from the Choco backend.  
-3. If no valid token exists, lets you log in directly to AlgoZenith.  
+3. If no valid token exists, lets you log in directly to the web platform.  
 4. Stores the updated token in the backend (encrypted) for teammates to use.  
 
 ---
 
 ## 🎯 Goals
-- Smooth, secure multi-user access for a shared AlgoZenith account.  
+- Smooth, secure multi-user access for a shared web platform account.  
 - No raw cookies stored in browsers — tokens handled server-side.  
 - Only members explicitly added to the Choco team can access the shared token.  
 - Audit logs for all token updates.  
@@ -75,7 +75,7 @@ Choco makes it easy for your group to stay logged in to a shared AlgoZenith acco
      ```
 
 4. **If no valid token exists**:  
-   - Extension prompts user to log in manually to AlgoZenith (Google login supported).  
+   - Extension prompts user to log in manually to the web platform (Google login supported).  
    - After login, extension securely sends the new token to backend.  
    - Backend updates the shared token for the whole team.  
    - **Message:**  
