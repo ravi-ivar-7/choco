@@ -105,6 +105,9 @@ class ChocoPopup {
                     
                     if (teamTokenValidation.valid) {
                         this.updateStatus('success', '🎉 Perfect! Your team has you covered', teamTokenValidation.reason)
+                        
+                        // Show refresh notification since team login is available
+                        this.showRefreshNotification()
                     } else {
                         this.updateStatus('none', '😔 No one has set up AlgoZenith yet', teamTokenValidation.reason + ' - Please sign into AlgoZenith first')
                     }
@@ -121,6 +124,9 @@ class ChocoPopup {
                 
                 if (teamTokenValidation.valid) {
                     this.updateStatus('success', '🎉 Great! Your team has you covered', teamTokenValidation.reason)
+                    
+                    // Show refresh notification since team login is available
+                    this.showRefreshNotification()
                 } else {
                     this.updateStatus('none', '😔 Team needs AlgoZenith access', teamTokenValidation.reason + ' - Please sign into AlgoZenith to get started')
                 }
@@ -399,6 +405,36 @@ class ChocoPopup {
         } catch (error) {
             console.error('❌ Error storing tokens:', error)
             return { success: false, message: 'Connection error while storing tokens' }
+        }
+    }
+    
+    // Show refresh notification to maang.in tabs when team login is available
+    async showRefreshNotification() {
+        try {
+            console.log('🔄 Showing refresh page notification - team login detected...')
+            
+            // Send notification to all maang.in tabs
+            const tabs = await chrome.tabs.query({ url: ['https://maang.in/*', 'https://*.maang.in/*'] })
+            
+            if (tabs.length > 0) {
+                for (const tab of tabs) {
+                    try {
+                        await chrome.tabs.sendMessage(tab.id, {
+                            type: 'SHOW_NOTIFICATION',
+                            title: 'Team Access Available',
+                            message: '🔄 Your team has AlgoZenith access ready! Please refresh this page to access AlgoZenith with shared credentials.',
+                            notificationType: 'success'
+                        })
+                        console.log(`✅ Refresh notification sent to maang.in tab ${tab.id}`)
+                    } catch (error) {
+                        console.warn(`⚠️ Failed to send refresh notification to tab ${tab.id}:`, error.message)
+                    }
+                }
+            } else {
+                console.log('📝 No maang.in tabs found for refresh notification')
+            }
+        } catch (error) {
+            console.error('❌ Error showing refresh notification:', error)
         }
     }
 

@@ -1,25 +1,39 @@
 // Choco Extension Background Service Worker
 class ChocoBackground {
     constructor() {
+        console.log('🚀 Choco Extension starting up...')
         this.backendUrl = 'http://localhost:3000'
         this.init()
     }
 
     init() {
+        console.log('🔧 Initializing Choco Extension...')
         // Wait for Chrome APIs to be available
         this.waitForChromeAPIs().then(() => {
+            console.log('✅ Chrome APIs ready')
             this.setupEventListeners()
             this.setupPeriodicTasks()
         }).catch(error => {
-            console.error('Failed to initialize Chrome APIs:', error)
+            console.error('❌ Failed to initialize Chrome APIs:', error)
         })
     }
 
     async waitForChromeAPIs() {
         return new Promise((resolve) => {
+            console.log('🔍 Checking Chrome APIs availability...')
+            
             if (chrome && chrome.runtime && chrome.storage) {
+                console.log('✅ Chrome APIs available (runtime, storage)')
+                
                 resolve()
             } else {
+                console.warn('⚠️ Some Chrome APIs not ready, waiting...')
+                console.log('Available APIs:', {
+                    chrome: !!chrome,
+                    runtime: !!chrome?.runtime,
+                    storage: !!chrome?.storage,
+                    notifications: !!chrome?.notifications
+                })
                 // Wait a bit for APIs to become available
                 setTimeout(() => resolve(), 100)
             }
@@ -170,15 +184,35 @@ class ChocoBackground {
 
     async saveNewToken(tokens) {
         try {
+            console.log('💾 Starting token save process...')
+            
             // Validate user authentication first
             const userValidation = await this.validateUser()
             if (!userValidation.valid) {
-                console.error('User not authenticated:', userValidation.reason)
+                console.error('❌ User not authenticated:', userValidation.reason)
                 return false
             }
 
             const user = userValidation.user
             const authToken = userValidation.token
+            console.log('✅ User authenticated:', user.email)
+
+            // Prepare token data for backend
+            const tokenData = {
+                refreshToken: tokens.refreshToken || (typeof tokens === 'string' ? tokens : null), // Primary token
+                accessToken: (!tokens.refreshToken && typeof tokens !== 'string') ? tokens.accessToken : null, // Fallback
+                generalToken: (!tokens.refreshToken && !tokens.accessToken && typeof tokens !== 'string') ? (tokens.generalToken || tokens.jwt) : null, // Last fallback
+                userEmail: user.email,
+                tokenSource: 'auto_detected' // Mark as automatically detected
+            }
+            
+            console.log('📤 Sending token to backend:', {
+                hasRefresh: !!tokenData.refreshToken,
+                hasAccess: !!tokenData.accessToken,
+                hasGeneral: !!tokenData.generalToken,
+                userEmail: tokenData.userEmail,
+                source: tokenData.tokenSource
+            })
 
             // Send to backend using correct API endpoint (same as popup.js)
             const response = await fetch(`${this.backendUrl}/api/maang/store`, {
@@ -187,38 +221,69 @@ class ChocoBackground {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 },
-                body: JSON.stringify({
-                    refreshToken: tokens.refreshToken || (typeof tokens === 'string' ? tokens : null), // Primary token
-                    accessToken: (!tokens.refreshToken && typeof tokens !== 'string') ? tokens.accessToken : null, // Fallback
-                    generalToken: (!tokens.refreshToken && !tokens.accessToken && typeof tokens !== 'string') ? (tokens.generalToken || tokens.jwt) : null, // Last fallback
-                    userEmail: user.email,
-                    tokenSource: 'auto_detected' // Mark as automatically detected
-                })
+                body: JSON.stringify(tokenData)
             })
 
+            console.log('📥 Backend response status:', response.status)
+            
             if (!response.ok) {
-                console.error('Failed to save token to backend')
+                const errorText = await response.text()
+                console.error('❌ Backend rejected token save:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                })
                 return false
             }
 
             const data = await response.json()
+            console.log('📋 Backend response:', data)
+            
+            if (data.success) {
+                console.log('✅ Token successfully saved to backend!')
+            } else {
+                console.error('❌ Backend reported save failure:', data.message)
+            }
+            
             return data.success
         } catch (error) {
-            console.error('Token save failed:', error)
+            console.error('❌ Token save failed with exception:', {
+                message: error.message,
+                stack: error.stack
+            })
             return false
         }
     }
 
     async handleTokenDetection(token, tab) {
         console.log('🎆 New token detected on maang.in from:', token?.source || 'unknown')
+        console.log('🔍 Token details:', {
+            hasRefresh: !!token?.refreshToken,
+            hasAccess: !!token?.accessToken,
+            refreshPreview: token?.refreshToken ? token.refreshToken.substring(0, 20) + '...' : null
+        })
         
         // Validate token before saving
         if (!token?.refreshToken) {
             console.log('⚠️ No refresh token found, skipping save')
-            return
+            return false
         }
         
         console.log('💾 Attempting to save new token to database...')
+        
+        // Check user authentication first
+        const userValidation = await this.validateUser()
+        if (!userValidation.valid) {
+            console.error('❌ User not authenticated for auto-save:', userValidation.reason)
+            await this.showNotification(
+                'Auto-Sync Failed',
+                '🔒 Please log into the Choco extension first to enable automatic token sync.',
+                'warning'
+            )
+            return false
+        }
+        
+        console.log('✅ User authenticated, proceeding with token save...')
         const saved = await this.saveNewToken(token)
         
         if (saved) {
@@ -229,14 +294,16 @@ class ChocoBackground {
                 '🎉 New login detected and shared with your team automatically!',
                 'success'
             )
+            return true
         } else {
             // Show error notification
-            console.log('❌ Failed to save token to database')
+            console.error('❌ Failed to save token to database')
             await this.showNotification(
                 'Auto-Sync Failed',
                 '😔 Couldn\'t automatically save your login. Please open the extension to sync manually.',
                 'error'
             )
+            return false
         }
     }
 
@@ -314,28 +381,39 @@ class ChocoBackground {
     }
 
     async showNotification(title, message, type = 'info') {
-        const settings = await this.getSettings()
-        
-        if (!settings.notificationsEnabled) {
-            return
-        }
-
-        const iconUrl = type === 'success' ? 'assets/icon-success.png' :
-                       type === 'error' ? 'assets/icon-error.png' :
-                       type === 'warning' ? 'assets/icon-warning.png' :
-                       'assets/icon-48.png'
-
-        if (chrome.notifications) {
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: iconUrl,
-                title: title,
-                message: message
-            })
-        } else {
-            console.warn('Chrome notifications API not available')
+        try {
+            console.log(`🔔 Attempting to show in-page notification: ${title} - ${message}`)
+            
+            // Send notification to content script for in-page display
+            const tabs = await chrome.tabs.query({ url: ['https://maang.in/*', 'https://*.maang.in/*'] })
+            
+            if (tabs.length > 0) {
+                // Send to all maang.in tabs
+                for (const tab of tabs) {
+                    try {
+                        await chrome.tabs.sendMessage(tab.id, {
+                            type: 'SHOW_NOTIFICATION',
+                            title: title,
+                            message: message,
+                            notificationType: type
+                        })
+                        console.log(`✅ In-page notification sent to tab ${tab.id}`)
+                    } catch (error) {
+                        console.warn(`⚠️ Failed to send notification to tab ${tab.id}:`, error.message)
+                    }
+                }
+            } else {
+                console.log('📝 No maang.in tabs found, logging notification instead')
+                console.log(`📢 NOTIFICATION: ${title} - ${message}`)
+            }
+        } catch (error) {
+            console.error('❌ Error showing in-page notification:', error)
+            // Fallback: log to console
+            console.log(`📢 NOTIFICATION (fallback): ${title} - ${message}`)
         }
     }
+    
+
 }
 
 // Initialize background service

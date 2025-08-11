@@ -1,8 +1,158 @@
 // Choco Extension Content Script for maang.in
 class ChocoContentScript {
     constructor() {
+        console.log('🚀 Choco content script starting on:', window.location.href)
         this.isInitialized = false
-        this.init()
+        
+        // Wait for DOM to be ready before setting up notifications
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('📄 DOM loaded, setting up notifications...')
+                this.setupInPageNotifications()
+                this.init()
+            })
+        } else {
+            console.log('📄 DOM already ready, setting up notifications...')
+            this.setupInPageNotifications()
+            this.init()
+        }
+    }
+    
+    // Setup in-page notification system
+    setupInPageNotifications() {
+        console.log('🔧 Setting up in-page notification system...')
+        
+        // Create notification container if it doesn't exist
+        if (!document.getElementById('choco-notifications')) {
+            const container = document.createElement('div')
+            container.id = 'choco-notifications'
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                pointer-events: none;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `
+            document.body.appendChild(container)
+            console.log('✅ In-page notification container created and added to DOM')
+        } else {
+            console.log('⚠️ Notification container already exists')
+        }
+    }
+    
+    // Show in-page toast notification
+    showInPageNotification(title, message, type = 'info', duration = 5000) {
+        console.log(`🔔 Showing in-page notification: ${title} - ${message}`)
+        
+        const container = document.getElementById('choco-notifications')
+        if (!container) {
+            console.error('❌ Notification container not found')
+            return
+        }
+        
+        // Create notification element
+        const notification = document.createElement('div')
+        const notificationId = 'choco-notif-' + Date.now()
+        notification.id = notificationId
+        
+        // Set colors based on type
+        let bgColor, borderColor, icon
+        switch (type) {
+            case 'success':
+                bgColor = '#10b981'
+                borderColor = '#059669'
+                icon = '✅'
+                break
+            case 'error':
+                bgColor = '#ef4444'
+                borderColor = '#dc2626'
+                icon = '❌'
+                break
+            case 'warning':
+                bgColor = '#f59e0b'
+                borderColor = '#d97706'
+                icon = '⚠️'
+                break
+            default:
+                bgColor = '#3b82f6'
+                borderColor = '#2563eb'
+                icon = '🔔'
+        }
+        
+        notification.style.cssText = `
+            background: ${bgColor};
+            color: white;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border-left: 4px solid ${borderColor};
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            min-width: 300px;
+            pointer-events: auto;
+            cursor: pointer;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 0;
+            position: relative;
+        `
+        
+        notification.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <span style="font-size: 18px; flex-shrink: 0;">${icon}</span>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${title}</div>
+                    <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">${message}</div>
+                </div>
+                <button style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 16px;
+                    cursor: pointer;
+                    padding: 0;
+                    margin-left: 8px;
+                    opacity: 0.7;
+                    flex-shrink: 0;
+                " onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+        `
+        
+        // Add to container
+        container.appendChild(notification)
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)'
+            notification.style.opacity = '1'
+        }, 10)
+        
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (document.getElementById(notificationId)) {
+                notification.style.transform = 'translateX(100%)'
+                notification.style.opacity = '0'
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove()
+                    }
+                }, 300)
+            }
+        }, duration)
+        
+        // Click to dismiss
+        notification.addEventListener('click', () => {
+            notification.style.transform = 'translateX(100%)'
+            notification.style.opacity = '0'
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove()
+                }
+            }, 300)
+        })
+        
+        console.log('✅ In-page notification displayed:', notificationId)
     }
 
     async init() {
@@ -94,11 +244,25 @@ class ChocoContentScript {
     // Check for new tokens and notify background script
     async checkForNewTokens() {
         try {
+            console.log('🔍 Checking for tokens on maang.in...')
+            
             // Get current cookies
             const cookies = await this.getCookies()
+            console.log('🍪 Current cookies:', {
+                hasRefresh: !!cookies.refreshToken,
+                hasAccess: !!cookies.accessToken,
+                refreshPreview: cookies.refreshToken ? cookies.refreshToken.substring(0, 20) + '...' : null
+            })
             
             if (cookies.refreshToken) {
-                console.log('🍪 Found refresh token in cookies!')
+                console.log('🎉 Found refresh token! Notifying background script...')
+                
+                // Store the last sent token to avoid spam
+                const lastToken = localStorage.getItem('choco_last_sent_token')
+                if (lastToken === cookies.refreshToken) {
+                    console.log('⏭️ Same token already sent, skipping...')
+                    return
+                }
                 
                 // Notify background script about new token
                 chrome.runtime.sendMessage({
@@ -109,15 +273,24 @@ class ChocoContentScript {
                         source: 'content_script_detection'
                     }
                 }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('❌ Runtime error:', chrome.runtime.lastError)
+                        return
+                    }
+                    
                     if (response?.success) {
-                        console.log('✅ Token detection sent to background script')
+                        console.log('✅ Token detection sent to background script successfully!')
+                        // Remember this token to avoid resending
+                        localStorage.setItem('choco_last_sent_token', cookies.refreshToken)
                     } else {
-                        console.log('❌ Failed to send token to background script')
+                        console.error('❌ Background script failed to process token:', response)
                     }
                 })
+            } else {
+                console.log('⚠️ No refresh token found in cookies')
             }
         } catch (error) {
-            console.error('Error checking for tokens:', error)
+            console.error('❌ Error checking for tokens:', error)
         }
     }
 
@@ -134,22 +307,37 @@ class ChocoContentScript {
     }
 
     async handleMessage(request, sender, sendResponse) {
-        try {
-            switch (request.type) {
-                case 'TOKEN_REFRESH_NEEDED':
-                    await this.handleTokenRefresh(request.status)
-                    sendResponse({ success: true })
-                    break
-
-                default:
-                    sendResponse({ success: false, error: 'Unknown message type' })
-            }
-        } catch (error) {
-            console.error('Content script message handling error:', error)
-            sendResponse({ success: false, error: error.message })
+        console.log('Content script received message:', request.type)
+        
+        switch (request.type) {
+            case 'SHOW_TOKEN_REFRESH_MODAL':
+                this.showTokenRefreshModal()
+                sendResponse({ success: true })
+                break
+                
+            case 'GET_COOKIES':
+                const cookies = await this.getCookies()
+                sendResponse({ success: true, cookies })
+                break
+                
+            case 'SHOW_NOTIFICATION':
+                this.showInPageNotification(
+                    request.title,
+                    request.message,
+                    request.notificationType || 'info'
+                )
+                sendResponse({ success: true })
+                break
+                
+            case 'TOKEN_REFRESH_NEEDED':
+                await this.handleTokenRefresh(request.status)
+                sendResponse({ success: true })
+                break
+                
+            default:
+                sendResponse({ success: false, error: 'Unknown message type' })
         }
     }
-
 
 
     async handleTokenRefresh(status) {
@@ -218,6 +406,6 @@ class ChocoContentScript {
 }
 
 // Initialize content script
-if (typeof window !== 'undefined' && window.location.href.includes('maang.in')) {
+if (window.location.href.includes('maang.in')) {
     new ChocoContentScript()
 }

@@ -26,14 +26,6 @@ export async function POST(request: NextRequest) {
         message: 'At least one token (refresh, access, or general) is required' 
       }, { status: 400 });
     }
-
-    console.log('💾 Storing new token for team (one token per team policy)');
-    console.log('💾 New token provided:', {
-      hasRefresh: !!refreshToken,
-      hasAccess: !!accessToken,
-      hasGeneral: !!generalToken,
-      source: tokenSource
-    });
     
     // Delete all existing tokens for this team (one token per team policy)
     const deletedCount = await db.delete(tokens)
