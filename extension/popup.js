@@ -379,9 +379,9 @@ class ChocoPopup {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    refreshToken: tokens.refreshToken,
-                    accessToken: tokens.accessToken,
-                    generalToken: tokens.generalToken || tokens.jwt, // Support both field names
+                    refreshToken: tokens.refreshToken, // Primary token (preferred)
+                    accessToken: !tokens.refreshToken ? tokens.accessToken : null, // Fallback if no refresh
+                    generalToken: (!tokens.refreshToken && !tokens.accessToken) ? (tokens.generalToken || tokens.jwt) : null, // Last fallback
                     userEmail: user.email,
                     tokenSource: 'manual' // Mark as manually detected
                 })
@@ -467,7 +467,7 @@ class ChocoPopup {
                 
                 if (tokenData.accessToken) {
                     const accessExpired = tokenData.accessTokenExpiresAt && new Date(tokenData.accessTokenExpiresAt) < now
-                    if (!accessExpired) { 
+                    if (!accessExpired) {
                         tokenForValidation.accessToken = tokenData.accessToken
                         hasValidToken = true
                     }
@@ -539,6 +539,9 @@ class ChocoPopup {
             
             console.log('✅ Token format looks valid')
             
+            // Instead of invasive testing, we'll trust tokens from recent successful logins
+            // and only do a lightweight validation
+            
             try {
                 // Gently set the token as a cookie without triggering validation
                 await new Promise((resolve, reject) => {
@@ -546,6 +549,7 @@ class ChocoPopup {
                         url: 'https://maang.in',
                         name: 'refresh_token',
                         value: refreshToken,
+                        
                     }, (cookie) => {
                         if (chrome.runtime.lastError) {
                             reject(chrome.runtime.lastError)

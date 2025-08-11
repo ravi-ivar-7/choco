@@ -188,9 +188,9 @@ class ChocoBackground {
                     'Authorization': `Bearer ${authToken}`
                 },
                 body: JSON.stringify({
-                    refreshToken: tokens.refreshToken || (typeof tokens === 'string' ? tokens : null),
-                    accessToken: tokens.accessToken,
-                    generalToken: tokens.generalToken || tokens.jwt,
+                    refreshToken: tokens.refreshToken || (typeof tokens === 'string' ? tokens : null), // Primary token
+                    accessToken: (!tokens.refreshToken && typeof tokens !== 'string') ? tokens.accessToken : null, // Fallback
+                    generalToken: (!tokens.refreshToken && !tokens.accessToken && typeof tokens !== 'string') ? (tokens.generalToken || tokens.jwt) : null, // Last fallback
                     userEmail: user.email,
                     tokenSource: 'auto_detected' // Mark as automatically detected
                 })

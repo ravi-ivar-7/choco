@@ -27,129 +27,31 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get all existing tokens for this team to check for duplicates
-    const allTeamTokens = await db.select()
-      .from(tokens)
-      .where(and(
-        eq(tokens.teamId, user.teamId),
-        eq(tokens.isActive, true)
-      ));
-
-    // Check for duplicates by decrypting and comparing tokens
-    console.log(`🔍 Checking ${allTeamTokens.length} existing tokens for duplicates`);
-    console.log('🔍 New tokens provided:', {
+    console.log('💾 Storing new token for team (one token per team policy)');
+    console.log('💾 New token provided:', {
       hasRefresh: !!refreshToken,
       hasAccess: !!accessToken,
       hasGeneral: !!generalToken,
-      refreshPreview: refreshToken ? refreshToken.substring(0, 20) + '...' : null
+      source: tokenSource
     });
     
-    let existingToken: any = null;
+    // Delete all existing tokens for this team (one token per team policy)
+    const deletedCount = await db.delete(tokens)
+      .where(eq(tokens.teamId, user.teamId));
     
-    for (const tokenRecord of allTeamTokens) {
-      try {
-        console.log(`🔍 Checking token record ${tokenRecord.id}`);
-        
-        // Check refresh token match
-        if (refreshToken && tokenRecord.encryptedRefreshToken) {
-          console.log('🔍 Decrypting existing refresh token...');
-          const decryptedRefresh = decryptToken(tokenRecord.encryptedRefreshToken);
-          console.log('🔍 Comparing refresh tokens:', {
-            newPreview: refreshToken.substring(0, 20) + '...',
-            existingPreview: decryptedRefresh.substring(0, 20) + '...',
-            match: decryptedRefresh === refreshToken
-          });
-          
-          if (decryptedRefresh === refreshToken) {
-            console.log('✅ Found duplicate refresh token!');
-            existingToken = tokenRecord;
-            break;
-          }
-        }
-        
-        // Check access token match
-        if (accessToken && tokenRecord.encryptedAccessToken) {
-          console.log('🔍 Decrypting existing access token...');
-          const decryptedAccess = decryptToken(tokenRecord.encryptedAccessToken);
-          console.log('🔍 Comparing access tokens:', {
-            newPreview: accessToken.substring(0, 20) + '...',
-            existingPreview: decryptedAccess.substring(0, 20) + '...',
-            match: decryptedAccess === accessToken
-          });
-          
-          if (decryptedAccess === accessToken) {
-            console.log('✅ Found duplicate access token!');
-            existingToken = tokenRecord;
-            break;
-          }
-        }
-        
-        // Check general token match
-        if (generalToken && tokenRecord.encryptedGeneralToken) {
-          console.log('🔍 Decrypting existing general token...');
-          const decryptedGeneral = decryptToken(tokenRecord.encryptedGeneralToken);
-          console.log('🔍 Comparing general tokens:', {
-            newPreview: generalToken.substring(0, 20) + '...',
-            existingPreview: decryptedGeneral.substring(0, 20) + '...',
-            match: decryptedGeneral === generalToken
-          });
-          
-          if (decryptedGeneral === generalToken) {
-            console.log('✅ Found duplicate general token!');
-            existingToken = tokenRecord;
-            break;
-          }
-        }
-      } catch (error) {
-        // Skip tokens that can't be decrypted (corrupted data)
-        console.warn(`❌ Failed to decrypt token ${tokenRecord.id}:`, error);
-        continue;
-      }
-    }
+    console.log(`🗑️ Deleted ${deletedCount} existing tokens for team ${user.teamId}`);
     
-    console.log('🔍 Duplicate check result:', {
-      foundDuplicate: !!existingToken,
-      existingTokenId: existingToken?.id
-    });
-
-    if (existingToken) {
-      // Token entry exists, update with all provided tokens and timestamps
-      const updateData: any = { 
-        updatedAt: new Date(),
-        lastUsedAt: new Date(),
-        tokenSource // Update source if different
-      };
-      
-      // Update refresh token if provided
-      if (refreshToken) {
-        updateData.encryptedRefreshToken = encryptToken(refreshToken);
-        updateData.refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      }
-      
-      // Update access token if provided
-      if (accessToken) {
-        updateData.encryptedAccessToken = encryptToken(accessToken);
-        updateData.accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
-      }
-      
-      // Update general token if provided
-      if (generalToken) {
-        updateData.encryptedGeneralToken = encryptToken(generalToken);
-        updateData.generalTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      }
-      
-      await db.update(tokens)
-        .set(updateData)
-        .where(eq(tokens.id, existingToken.id));
-
-      return NextResponse.json({
-        success: true,
-        message: 'Token updated successfully',
-        tokenId: existingToken.id
-      });
+    // Use refresh token as the primary token (most common and long-lasting)
+    const primaryToken = refreshToken || accessToken || generalToken;
+    
+    if (!primaryToken) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'No valid token provided' 
+      }, { status: 400 });
     }
 
-    // Create new token entry with all provided tokens
+    // Create new token entry with the primary token only
     const tokenData: any = {
       teamId: user.teamId,
       isActive: true,
@@ -157,22 +59,18 @@ export async function POST(request: NextRequest) {
       tokenSource
     };
     
-    // Add individual tokens if provided
+    // Store only the primary token (priority: refresh > access > general)
     if (refreshToken) {
+      console.log('💾 Storing refresh token as primary token');
       tokenData.encryptedRefreshToken = encryptToken(refreshToken);
-      // Set expiration to 30 days from now (default for refresh tokens)
       tokenData.refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    }
-    
-    if (accessToken) {
+    } else if (accessToken) {
+      console.log('💾 Storing access token as primary token');
       tokenData.encryptedAccessToken = encryptToken(accessToken);
-      // Set expiration to 1 hour from now (default for access tokens)
       tokenData.accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
-    }
-    
-    if (generalToken) {
+    } else if (generalToken) {
+      console.log('💾 Storing general token as primary token');
       tokenData.encryptedGeneralToken = encryptToken(generalToken);
-      // Set expiration to 24 hours from now (default for general tokens)
       tokenData.generalTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     }
 
