@@ -22,7 +22,7 @@ async function initializeDatabase() {
 
     // Create demo admin user with password
     const adminId = createId();
-    const adminEmail = 'admin@choco.dev';
+    const adminEmail = 'admin@gmail.com';
     const hashedPassword = await generateAndHashInitialPassword(adminEmail);
     
     await db.insert(users).values({
@@ -37,7 +37,7 @@ async function initializeDatabase() {
 
     console.log('\n🎉 Database initialized successfully!');
     console.log('\n🔐 Admin credentials:');
-    console.log('  Email: admin@choco.dev');
+    console.log('  Email: admin@gmail.com');
     console.log('  Password: admin');
     console.log('\n📝 Notes:');
     console.log('  - Demo team created with encrypted token storage');

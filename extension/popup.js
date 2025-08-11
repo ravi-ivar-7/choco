@@ -1,7 +1,7 @@
 // Choco Extension Popup Script
 class ChocoPopup {
     constructor() {
-        this.backendUrl = 'http://localhost:3000'
+        this.backendUrl = 'https://algochoco.vercel.app'
         this.init()
     }
 

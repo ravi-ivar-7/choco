@@ -15,7 +15,8 @@
   "host_permissions": [
     "https://maang.in/*",
     "https://*.maang.in/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://algochoco.vercel.app/*"
   ],
   
   "background": {

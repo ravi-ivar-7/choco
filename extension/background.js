@@ -2,7 +2,7 @@
 class ChocoBackground {
     constructor() {
         console.log('🚀 Choco Extension starting up...')
-        this.backendUrl = 'http://localhost:3000'
+        this.backendUrl = 'https://algochoco.vercel.app'
         this.init()
     }
 
