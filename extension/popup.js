@@ -7,7 +7,8 @@ class ChocoPopup {
 
     async init() {
         this.bindEvents()
-        await this.checkTokenStatus()
+        // Don't auto-check - wait for user to click the button
+        this.updateStatus('none', '👋 Welcome to Choco Team Access Manager', 'Click "Check Token Status" to get started')
     }
 
     bindEvents() {
@@ -109,7 +110,8 @@ class ChocoPopup {
                         // Show refresh notification since team login is available
                         this.showRefreshNotification()
                     } else {
-                        this.updateStatus('none', '😔 No one has set up AlgoZenith yet', teamTokenValidation.reason + ' - Please sign into AlgoZenith first')
+                        this.updateStatus('expired', '🔑 AlgoZenith Access Needed', 'Your login expired and no team access available - Please sign into AlgoZenith to refresh')
+                        this.showLoginButton(true)
                     }
                 }
             } else {
@@ -128,12 +130,13 @@ class ChocoPopup {
                     // Show refresh notification since team login is available
                     this.showRefreshNotification()
                 } else {
-                    this.updateStatus('none', '😔 Team needs AlgoZenith access', teamTokenValidation.reason + ' - Please sign into AlgoZenith to get started')
+                    this.updateStatus('expired', '🔑 AlgoZenith Access Required', 'No team access found - Please sign into AlgoZenith to set up access for your team')
+                    this.showLoginButton(true)
                 }
             }
         } catch (error) {
             console.error('Token check failed:', error)
-            this.updateStatus('none', '⚠️ Connection error', 'Unable to connect to Choco backend')
+            this.updateStatus('expired', '⚠️ Connection Issue', 'Unable to connect to Choco backend - Please check your internet connection')
             this.showLoginForm(true)
         }
 
@@ -671,6 +674,7 @@ class ChocoPopup {
         badge.className = `status-badge status-${type}`
         badge.textContent = type === 'checking' ? 'Checking' : 
                            type === 'active' ? 'Active' :
+                           type === 'success' ? 'Active' :
                            type === 'expired' ? 'Expired' : 'None'
 
         // Update message and details
