@@ -23,7 +23,10 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
 
     const token = authHeader.substring(7);
     
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    const JWT_SECRET = process.env.JWT_SECRET ;
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
     const user = await db.select()

@@ -52,7 +52,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate JWT token
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    const JWT_SECRET = process.env.JWT_SECRET ;
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     const token = jwt.sign(
       { 
         userId: userData.id, 
@@ -67,9 +70,6 @@ export async function POST(request: NextRequest) {
     await db.update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(users.id, userData.id));
-
-    // Log successful login
-   
 
     return NextResponse.json({
       success: true,
