@@ -62,6 +62,7 @@ export function decryptToken(encryptedString: string): string {
   let decrypted = decipher.update(encryptedData, undefined, 'utf8');
   decrypted += decipher.final('utf8');
   
+  console.log('Decrypted token:', decrypted)
   return decrypted;
 }
 

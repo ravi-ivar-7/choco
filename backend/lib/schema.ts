@@ -25,12 +25,22 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Tokens table - encrypted AlgoZenith tokens
 export const tokens = pgTable('tokens', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
-  encryptedToken: text('encrypted_token').notNull(), // Encrypted refresh token
-  tokenHash: text('token_hash').notNull(), // Hash for duplicate detection
+  
+  // Individual token fields (encrypted)
+  encryptedRefreshToken: text('encrypted_refresh_token'), // Encrypted refresh token
+  encryptedAccessToken: text('encrypted_access_token'),   // Encrypted access token
+  encryptedGeneralToken: text('encrypted_general_token'), // Encrypted general token (JWT/other)
+  
+  // Individual expiration timestamps
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at'),
+  generalTokenExpiresAt: timestamp('general_token_expires_at'),
+  
+  // Metadata
+  tokenSource: text('token_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'
   isActive: boolean('is_active').notNull().default(true),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),

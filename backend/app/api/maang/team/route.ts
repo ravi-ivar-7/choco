@@ -28,20 +28,37 @@ export async function GET(request: NextRequest) {
     // Decrypt tokens for testing
     const decryptedTokens = teamTokens.map(token => {
       try {
-        // Direct decryption from base64 string stored in database
-        const decryptedRefreshToken = decryptToken(token.encryptedToken);
-        
-        // The stored token is just the refresh token string, not a JSON object
-        return {
+        const decryptedData: any = {
           id: token.id,
-          decryptedToken: {
-            refreshToken: decryptedRefreshToken,
-            accessToken: null // We only store refresh tokens
-          },
-          createdAt: token.createdAt
+          createdAt: token.createdAt,
+          tokenSource: token.tokenSource,
+          lastUsedAt: token.lastUsedAt
         };
+        
+        // Decrypt individual tokens if they exist
+        if (token.encryptedRefreshToken) {
+          decryptedData.refreshToken = decryptToken(token.encryptedRefreshToken);
+          decryptedData.refreshTokenExpiresAt = token.refreshTokenExpiresAt;
+        }
+        
+        if (token.encryptedAccessToken) {
+          decryptedData.accessToken = decryptToken(token.encryptedAccessToken);
+          decryptedData.accessTokenExpiresAt = token.accessTokenExpiresAt;
+        }
+        
+        if (token.encryptedGeneralToken) {
+          decryptedData.generalToken = decryptToken(token.encryptedGeneralToken);
+          decryptedData.generalTokenExpiresAt = token.generalTokenExpiresAt;
+        }
+        
+        // For backward compatibility, set 'token' to refreshToken if available
+        if (decryptedData.refreshToken) {
+          decryptedData.token = decryptedData.refreshToken;
+        }
+        
+        return decryptedData;
       } catch (error) {
-        console.error(`Failed to decrypt token ${token.id}:`, error);
+        console.error(`Failed to decrypt tokens for ${token.id}:`, error);
         return null;
       }
     }).filter(Boolean);

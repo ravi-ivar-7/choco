@@ -24,7 +24,113 @@ class ChocoContentScript {
             this.handleMessage(request, sender, sendResponse)
             return true
         })
-        console.log('Choco content script ready, waiting for background messages')
+        
+        // Start monitoring for login events
+        this.startLoginMonitoring()
+        console.log('Choco content script ready, monitoring for login events')
+    }
+
+    // Monitor for login events on maang.in
+    async startLoginMonitoring() {
+        console.log('🔍 Starting login monitoring on maang.in')
+        
+        // Check for tokens immediately
+        this.checkForNewTokens()
+        
+        // Monitor for URL changes (SPA navigation)
+        let currentUrl = window.location.href
+        setInterval(() => {
+            if (window.location.href !== currentUrl) {
+                currentUrl = window.location.href
+                console.log('URL changed to:', currentUrl)
+                // Check for tokens after navigation
+                setTimeout(() => this.checkForNewTokens(), 2000)
+            }
+        }, 1000)
+        
+        // Monitor for DOM changes that might indicate login
+        this.observeLoginChanges()
+        
+        // Periodic token check (every 30 seconds)
+        setInterval(() => {
+            this.checkForNewTokens()
+        }, 30000)
+    }
+
+    // Observe DOM changes that might indicate login/logout
+    observeLoginChanges() {
+        const observer = new MutationObserver((mutations) => {
+            let shouldCheck = false
+            
+            mutations.forEach((mutation) => {
+                // Check if any added nodes contain login/logout indicators
+                if (mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const text = node.textContent?.toLowerCase() || ''
+                            // Look for login/logout related text changes
+                            if (text.includes('login') || text.includes('logout') || 
+                                text.includes('dashboard') || text.includes('profile') ||
+                                text.includes('welcome') || text.includes('sign')) {
+                                shouldCheck = true
+                            }
+                        }
+                    })
+                }
+            })
+            
+            if (shouldCheck) {
+                console.log('DOM changes detected, checking for tokens...')
+                setTimeout(() => this.checkForNewTokens(), 1000)
+            }
+        })
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        })
+    }
+
+    // Check for new tokens and notify background script
+    async checkForNewTokens() {
+        try {
+            // Get current cookies
+            const cookies = await this.getCookies()
+            
+            if (cookies.refreshToken) {
+                console.log('🍪 Found refresh token in cookies!')
+                
+                // Notify background script about new token
+                chrome.runtime.sendMessage({
+                    type: 'TOKEN_DETECTED',
+                    token: {
+                        refreshToken: cookies.refreshToken,
+                        accessToken: cookies.accessToken,
+                        source: 'content_script_detection'
+                    }
+                }, (response) => {
+                    if (response?.success) {
+                        console.log('✅ Token detection sent to background script')
+                    } else {
+                        console.log('❌ Failed to send token to background script')
+                    }
+                })
+            }
+        } catch (error) {
+            console.error('Error checking for tokens:', error)
+        }
+    }
+
+    // Get cookies from current page
+    async getCookies() {
+        return new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                type: 'GET_COOKIES',
+                url: window.location.href
+            }, (response) => {
+                resolve(response?.cookies || {})
+            })
+        })
     }
 
     async handleMessage(request, sender, sendResponse) {

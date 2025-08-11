@@ -112,8 +112,14 @@ class ChocoBackground {
                     break
 
                 case 'TOKEN_DETECTED':
+                    console.log('🔍 Token detected from content script:', request.token?.source)
                     await this.handleTokenDetection(request.token, sender.tab)
                     sendResponse({ success: true })
+                    break
+
+                case 'GET_COOKIES':
+                    const cookies = await this.getCookiesForUrl(request.url)
+                    sendResponse({ success: true, cookies })
                     break
 
                 case 'GET_SETTINGS':
@@ -182,8 +188,11 @@ class ChocoBackground {
                     'Authorization': `Bearer ${authToken}`
                 },
                 body: JSON.stringify({
-                    refreshToken: tokens.refreshToken || tokens, // Handle both object and string
-                    userEmail: user.email
+                    refreshToken: tokens.refreshToken || (typeof tokens === 'string' ? tokens : null),
+                    accessToken: tokens.accessToken,
+                    generalToken: tokens.generalToken || tokens.jwt,
+                    userEmail: user.email,
+                    tokenSource: 'auto_detected' // Mark as automatically detected
                 })
             })
 
@@ -201,24 +210,63 @@ class ChocoBackground {
     }
 
     async handleTokenDetection(token, tab) {
-        console.log('New token detected on maang.in')
+        console.log('🎆 New token detected on maang.in from:', token?.source || 'unknown')
         
+        // Validate token before saving
+        if (!token?.refreshToken) {
+            console.log('⚠️ No refresh token found, skipping save')
+            return
+        }
+        
+        console.log('💾 Attempting to save new token to database...')
         const saved = await this.saveNewToken(token)
         
         if (saved) {
             // Show success notification
+            console.log('✅ Token successfully saved and synced!')
             await this.showNotification(
-                'Token Updated',
-                '🔐 New AlgoZenith token saved and synced for your team',
+                'AlgoZenith Access Updated',
+                '🎉 New login detected and shared with your team automatically!',
                 'success'
             )
         } else {
             // Show error notification
+            console.log('❌ Failed to save token to database')
             await this.showNotification(
-                'Token Save Failed',
-                '⚠️ Failed to save new token. Please try again.',
+                'Auto-Sync Failed',
+                '😔 Couldn\'t automatically save your login. Please open the extension to sync manually.',
                 'error'
             )
+        }
+    }
+
+    // Get cookies for a specific URL
+    async getCookiesForUrl(url) {
+        try {
+            const cookies = {}
+            
+            // Get refresh token cookie
+            const refreshTokenCookie = await new Promise(resolve => {
+                chrome.cookies.get({ url: url, name: 'refresh_token' }, resolve)
+            })
+            
+            // Get access token cookie
+            const accessTokenCookie = await new Promise(resolve => {
+                chrome.cookies.get({ url: url, name: 'access_token' }, resolve)
+            })
+            
+            if (refreshTokenCookie) {
+                cookies.refreshToken = refreshTokenCookie.value
+            }
+            
+            if (accessTokenCookie) {
+                cookies.accessToken = accessTokenCookie.value
+            }
+            
+            return cookies
+        } catch (error) {
+            console.error('Error getting cookies:', error)
+            return {}
         }
     }
 

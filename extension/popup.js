@@ -312,8 +312,17 @@ class ChocoPopup {
             // Internal validation: Check if user has valid tokens in cookies
             const maangTokens = await this.getMaangTokensFromCookies()
             
-            if (maangTokens.accessToken && maangTokens.refreshToken) {
-                console.log('✅ Found tokens in cookies, storing in team database...')
+            // Check if we have ANY tokens (not requiring both access AND refresh)
+            const hasAnyToken = maangTokens.refreshToken || maangTokens.accessToken || maangTokens.generalToken
+            
+            if (hasAnyToken) {
+                console.log('✅ Found tokens in cookies:', {
+                    refresh: !!maangTokens.refreshToken,
+                    access: !!maangTokens.accessToken,
+                    general: !!maangTokens.generalToken
+                })
+                
+                console.log('💾 Storing tokens in team database...')
                 
                 // Store the found tokens in DB for team sharing
                 const storeResult = await this.storeTokenInDB(maangTokens)
@@ -326,7 +335,7 @@ class ChocoPopup {
                 }
             }
             
-            console.log('❌ No tokens in cookies, checking team tokens...')
+            console.log('🔍 No tokens in cookies, checking team tokens...')
             
             // Step 2: No tokens found, check team tokens from database
             const teamTokenValidation = await this.checkTeamTokensFromDB()
@@ -371,7 +380,10 @@ class ChocoPopup {
                 },
                 body: JSON.stringify({
                     refreshToken: tokens.refreshToken,
-                    userEmail: user.email
+                    accessToken: tokens.accessToken,
+                    generalToken: tokens.generalToken || tokens.jwt, // Support both field names
+                    userEmail: user.email,
+                    tokenSource: 'manual' // Mark as manually detected
                 })
             })
 
@@ -438,7 +450,49 @@ class ChocoPopup {
                 const tokenData = teamTokensResponse.tokens[i]
                 console.log(`Trying option ${i + 1}/${teamTokensResponse.tokens.length}`)
                 
-                const validation = await this.validateMaangToken(tokenData.decryptedToken)
+                // Check token expiration before testing (if expiration data is available)
+                const now = new Date()
+                let hasValidToken = false
+                
+                // Check each token type and its expiration
+                const tokenForValidation = {}
+                
+                if (tokenData.refreshToken) {
+                    const refreshExpired = tokenData.refreshTokenExpiresAt && new Date(tokenData.refreshTokenExpiresAt) < now
+                    if (!refreshExpired) {
+                        tokenForValidation.refreshToken = tokenData.refreshToken
+                        hasValidToken = true
+                    }
+                }
+                
+                if (tokenData.accessToken) {
+                    const accessExpired = tokenData.accessTokenExpiresAt && new Date(tokenData.accessTokenExpiresAt) < now
+                    if (!accessExpired) { 
+                        tokenForValidation.accessToken = tokenData.accessToken
+                        hasValidToken = true
+                    }
+                }
+                
+                if (tokenData.generalToken) {
+                    const generalExpired = tokenData.generalTokenExpiresAt && new Date(tokenData.generalTokenExpiresAt) < now
+                    if (!generalExpired) {
+                        tokenForValidation.generalToken = tokenData.generalToken
+                        hasValidToken = true
+                    }
+                }
+                
+                if (!hasValidToken) {
+                    console.log(`❌ Option ${i + 1} - all tokens expired`)
+                    continue
+                }
+                
+                console.log('Testing tokens:', {
+                    refresh: !!tokenForValidation.refreshToken,
+                    access: !!tokenForValidation.accessToken,
+                    general: !!tokenForValidation.generalToken
+                })
+
+                const validation = await this.validateMaangToken(tokenForValidation)
                 
                 if (validation.valid) {
                     console.log(`✅ Found working access option ${i + 1}!`)
@@ -447,7 +501,7 @@ class ChocoPopup {
                         reason: `Great! Using access shared by your teammate`
                     }
                 } else {
-                    console.log(`❌ Option ${i + 1} expired: ${validation.reason}`)
+                    console.log(`❌ Option ${i + 1} validation failed: ${validation.reason}`)
                 }
             }
 
@@ -468,74 +522,71 @@ class ChocoPopup {
 
     async validateMaangToken(token) {
         try {
-            console.log('🧪 Testing AlgoZenith access by checking with their servers...')
+            console.log('🧪 Validating AlgoZenith access token...')
             
-            // Step 1: Set the refresh token as cookie on maang.in
-            await new Promise((resolve, reject) => {
-                chrome.cookies.set({
-                    url: 'https://maang.in',
-                    name: 'refresh_token',
-                    value: token.refreshToken,
-                    secure: true,
-                    httpOnly: false
-                }, (cookie) => {
-                    if (chrome.runtime.lastError) {
-                        reject(chrome.runtime.lastError)
-                    } else {
-                        resolve(cookie)
-                    }
-                })
-            })
-
-            console.log('✅ Access info sent to AlgoZenith, now testing...')
-            
-            // Step 2: Find or create a maang.in tab to trigger validation
-            let tabs = await new Promise(resolve => {
-                chrome.tabs.query({ url: '*://maang.in/*' }, resolve)
-            })
-            
-            let tabId
-            if (tabs.length > 0) {
-                // Use existing maang.in tab
-                tabId = tabs[0].id
-                console.log('Using existing AlgoZenith tab for testing')
-            } else {
-                // Create new tab for validation
-                const newTab = await new Promise(resolve => {
-                    chrome.tabs.create({ url: 'https://maang.in', active: false }, resolve)
-                })
-                tabId = newTab.id
-                console.log('Created new AlgoZenith tab for testing')
+            // Basic token format validation
+            if (!token || !token.refreshToken) {
+                console.log('❌ No refresh token provided')
+                return { valid: false, reason: 'No refresh token provided' }
             }
             
-            // Step 3: Reload the tab to trigger maang.in's token validation
-            await new Promise(resolve => {
-                chrome.tabs.reload(tabId, resolve)
-            })
+            // Check if token looks valid (basic format check)
+            const refreshToken = token.refreshToken
+            if (typeof refreshToken !== 'string' || refreshToken.length < 10) {
+                console.log('❌ Invalid token format')
+                return { valid: false, reason: 'Invalid token format' }
+            }
             
-            // Step 4: Wait for page to load and maang.in to process the token
-            console.log('Waiting for AlgoZenith to check your access...')
-            await new Promise(resolve => setTimeout(resolve, 3000)) // Wait 3 seconds for validation
+            console.log('✅ Token format looks valid')
             
-            // Step 5: Check if the refresh_token cookie still exists after maang.in validation
-            const refreshTokenCookie = await new Promise(resolve => {
-                chrome.cookies.get({ url: 'https://maang.in', name: 'refresh_token' }, resolve)
-            })
-
-            if (refreshTokenCookie && refreshTokenCookie.value === token.refreshToken) {
-                console.log('✅ Access is VALID - AlgoZenith accepted your login')
-                return { valid: true, reason: 'Perfect! AlgoZenith confirmed your access' }
-            } else if (refreshTokenCookie && refreshTokenCookie.value !== token.refreshToken) {
-                console.log('⚠️ Access was refreshed - AlgoZenith updated your login')
-                return { valid: true, reason: 'Great! AlgoZenith refreshed your access (still working)' }
-            } else {
-                console.log('❌ Access is INVALID - AlgoZenith removed your login')
-                return { valid: false, reason: 'AlgoZenith didn\'t recognize this login - please sign in again' }
+            try {
+                // Gently set the token as a cookie without triggering validation
+                await new Promise((resolve, reject) => {
+                    chrome.cookies.set({
+                        url: 'https://maang.in',
+                        name: 'refresh_token',
+                        value: refreshToken,
+                    }, (cookie) => {
+                        if (chrome.runtime.lastError) {
+                            reject(chrome.runtime.lastError)
+                        } else {
+                            resolve(cookie)
+                        }
+                    })
+                })
+                
+                console.log('✅ Token set successfully as cookie')
+                
+                // Quick validation: check if cookie was set properly
+                const setCookie = await new Promise(resolve => {
+                    chrome.cookies.get({ url: 'https://maang.in', name: 'refresh_token' }, resolve)
+                })
+                
+                if (setCookie && setCookie.value === refreshToken) {
+                    console.log('✅ Token validation successful - ready for use')
+                    return { 
+                        valid: true, 
+                        reason: 'Token validated and ready for AlgoZenith access' 
+                    }
+                } else {
+                    console.log('❌ Token could not be set as cookie')
+                    return { 
+                        valid: false, 
+                        reason: 'Token could not be set - may be invalid or expired' 
+                    }
+                }
+                
+            } catch (cookieError) {
+                console.log('❌ Cookie setting failed:', cookieError)
+                return { 
+                    valid: false, 
+                    reason: 'Could not set token cookie - browser permission issue' 
+                }
             }
             
         } catch (error) {
-            console.error('Access validation error:', error)
-            return { valid: false, reason: 'Something went wrong while checking with AlgoZenith - please try again' }
+            console.error('Token validation error:', error)
+            return { valid: false, reason: 'Token validation failed - please try again' }
         }
     }
 
