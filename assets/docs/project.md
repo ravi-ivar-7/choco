@@ -1,7 +1,7 @@
 # 🍫 Choco — Team Access Manager for Web Platforms
 
 **Short description:**  
-Choco is a browser extension + backend service that helps a small, approved team securely manage and sync official authentication tokens for web platform (**maang.in**) team accounts.  
+Choco is a browser extension + backend service that helps a small, approved team securely manage and sync official authentication tokens for web platform accounts.  
 
 Choco does **not** steal or inject cookies without consent — it uses only approved APIs or flows, and encrypts tokens in a secure backend so authorized members can refresh their access when needed.  
 

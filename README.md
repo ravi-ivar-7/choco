@@ -1,278 +1,237 @@
 # 🍫 Choco — Team Access Manager for Web Platforms
 
-**Choco** is a secure browser extension + backend service that helps a small, approved team manage and sync official authentication tokens for web platform (**maang.in**) team accounts.
+**Choco** is a secure browser extension + backend service that helps a small, approved team manage and sync official authentication tokens for web accounts.
 
-## 🎯 Features
+## 📋 Quick Navigation
 
-- **Secure Token Management**: AES-256 encrypted tokens stored server-side
-- **Team Access Control**: Only authorized team members can access shared tokens
-- **Auto Token Refresh**: Seamless token validation and refresh for web platforms
-- **Real-time Sync**: Token updates sync instantly across all team members
-- **Admin Dashboard**: Web-based admin interface for team management
-
-## 🏗 Architecture
-
-```
-choco/
-├── extension/          # Chrome browser extension
-│   ├── manifest.json   # Extension configuration
-│   ├── popup.html      # Extension popup UI
-│   ├── popup.js        # Popup logic
-│   ├── background.js   # Service worker
-│   └── content.js      # Content script for maang.in
-│
-├── backend/            # Next.js backend + admin UI
-│   ├── app/            # Next.js app directory
-│   │   ├── api/        # API routes
-│   │   ├── admin/      # Admin dashboard pages
-│   │   └── login/      # Authentication pages
-│   ├── lib/            # Shared utilities
-│   │   ├── db.ts       # Database connection
-│   │   ├── schema.ts   # Database schema
-│   │   ├── crypto.ts   # Encryption utilities
-│   │   └── auth.ts     # Authentication middleware
-│   └── components/     # React components
-│
-└── docs/               # Documentation
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ 
-- Chrome browser
-- Git
-
-### Backend Setup
-
-1. **Clone and navigate to backend**:
-   ```bash
-   cd backend
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-4. **Initialize database**:
-   ```bash
-   npm run db:generate
-   npm run db:migrate
-   npx tsx scripts/init-db.ts
-   ```
-
-5. **Start development server**:
-   ```bash
-   npm run dev
-   ```
-
-   The backend will be available at `http://localhost:3000`
-
-### Extension Setup
-
-1. **Open Chrome Extensions**:
-   - Go to `chrome://extensions/`
-   - Enable "Developer mode"
-
-2. **Load extension**:
-   - Click "Load unpacked"
-   - Select the `extension/` folder
-
-3. **Pin the extension**:
-   - Click the puzzle piece icon in Chrome toolbar
-   - Pin the Choco extension
-
-## 🔧 Usage
-
-### For Team Members
-
-1. **Install the extension** and visit `maang.in`
-2. **Click the Choco extension icon** to check token status
-3. **If no token exists**, log in to the web platform normally
-4. **The extension will automatically detect and save** your login token
-5. **Token is encrypted and synced** to the team backend
-
-### For Administrators
-
-1. **Visit the admin dashboard** at `http://localhost:3000/admin`
-2. **Login with demo credentials**:
-   - Email: `admin@choco.dev`
-   - Password: `admin123`
-3. **Monitor token status**, view audit logs, and manage team members
-
-## 🔐 Security Features
-
-- **AES-256 Encryption**: All tokens encrypted before storage
-- **HTTPS Only**: All communication over secure channels
-- **Authentication Required**: Backend verifies authorized team members
-- **Audit Logging**: Complete trail of all operations
-- **Device Fingerprinting**: Track access by device and IP
-- **Session Management**: Secure admin session handling
-
-## 📊 Admin Dashboard
-
-The admin dashboard provides:
-
-- **Token Status**: Current token validity and expiration
-- **Team Management**: Add/remove authorized members
-- **Audit Logs**: Complete history of token operations
-- **Security Settings**: Configure access rules and alerts
-- **Activity Monitoring**: Real-time team access activity
-
-## 🔄 How It Works
-
-1. **User opens maang.in** → Extension checks local token validity
-2. **If valid** → Continue browsing normally
-3. **If invalid** → Extension requests latest token from backend
-4. **If no valid token** → Prompt user to log in manually
-5. **After login** → Extension detects new token and syncs to backend
-6. **Team access** → All authorized members get updated token
-
-## 🛠 Development
-
-### Backend Development
-
-```bash
-# Start development server
-npm run dev
-
-# Run database migrations
-npm run db:migrate
-
-# View database
-npm run db:studio
-
-# Build for production
-npm run build
-```
-
-### Extension Development
-
-1. Make changes to extension files
-2. Go to `chrome://extensions/`
-3. Click refresh icon on Choco extension
-4. Test changes
-
-### Database Schema
-
-- **teams**: Web platform team accounts
-- **users**: Authorized team members
-- **tokens**: Encrypted authentication tokens
-- **audit_logs**: Complete operation history
-- **sessions**: Admin session management
-
-## 🧪 Testing
-
-```bash
-# Run backend tests
-cd backend
-npm test
-
-# Run extension tests
-cd extension
-npm test
-
-# Run end-to-end tests
-npm run test:e2e
-```
-
-## 📦 Production Deployment
-
-### Backend Deployment
-
-1. **Set production environment variables**
-2. **Use a production database** (PostgreSQL recommended)
-3. **Configure HTTPS** with proper SSL certificates
-4. **Set strong encryption keys**
-5. **Enable security headers**
-
-### Extension Distribution
-
-1. **Build extension for production**
-2. **Submit to Chrome Web Store** (optional)
-3. **Or distribute as enterprise package**
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Database
-DATABASE_URL="./choco.db"
-
-# Encryption (CHANGE IN PRODUCTION!)
-ENCRYPTION_KEY="your-super-secure-encryption-key"
-
-# Server
-PORT=3000
-NODE_ENV=development
-
-# Admin Credentials
-ADMIN_EMAIL="admin@choco.dev"
-ADMIN_PASSWORD="admin123"
-```
-
-### Extension Configuration
-
-Edit `extension/manifest.json` to:
-- Add additional host permissions
-- Configure content security policy
-- Set extension metadata
-
-## 🚨 Security Considerations
-
-- **Change default encryption key** in production
-- **Use HTTPS** for all communications
-- **Regularly rotate tokens** and encryption keys
-- **Monitor audit logs** for suspicious activity
-- **Limit team member access** to authorized personnel only
-- **Use strong admin passwords**
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-This project is for educational and team use. Ensure compliance with the web platform's terms of service.
+| Section | Description |
+|---------|-------------|
+| [📦 Extension Setup](#📦-1-extension-setup) | Install and configure Chrome extension |
+| [🗄️ Database Setup](#🗄️-2-database-setup) | Create Supabase database |
+| [⚙️ Backend Setup](#⚙️-3-backend-setup) | Configure and run backend server |
+| [🌐 Deployment](#🌐-4-deployment) | Deploy to Vercel |
+| [🎯 How to Use](#🎯-5-how-to-use) | Usage guide for team members and admins |
 
 ## ⚠️ Disclaimer
 
-This tool is designed for legitimate team access management. Users are responsible for:
-- Complying with the web platform's terms of service
-- Ensuring proper authorization for team access
-- Maintaining security of shared credentials
-- Regular security audits and updates
-
-## 🆘 Support
-
-For issues and questions:
-1. Check the admin dashboard logs
-2. Review browser console for extension errors
-3. Verify backend API connectivity
-4. Check database connectivity and permissions
-
-## 🎉 Demo Credentials
-
-**Admin Dashboard:**
-- Email: `admin@choco.dev`
-- Password: `admin123`
-
-**Team Member:**
-- Email: `member@choco.dev`
-- Password: `admin123`
+This extension is intended solely for educational and personal use.
+It should only be used to manage cookies for websites you own or have explicit permission to access.
+Any use of this extension to obtain or use cookies without authorization is strictly prohibited and may violate applicable laws, terms of service, or privacy rights.
+The creator of this extension assumes no liability for any misuse, including but not limited to account bans, data loss, unauthorized access, or related consequences.
 
 ---
 
+## 🚀 Quick Setup Guide
+
+### Prerequisites
+- Node.js 18+ installed
+- Chrome browser
+- Git
+- Supabase account (for database)
+- Vercel account (for deployment)
+
+---
+
+## 📦 1. Extension Setup
+
+### Step 1: Get the Repository
+
+**Option 1 – Clone using Git**
+```bash
+git clone https://github.com/ravi-ivar-7/choco.git
+cd choco
+```
+
+**Option 2 – Download as ZIP from**  
+`https://github.com/ravi-ivar-7/choco`
+
+### Step 2: Configure Backend URL
+Update the backend URL in extension files:
+- `extension/popup.js` - Update `this.backendUrl`
+- `extension/background.js` - Update `this.backendUrl`
+
+```javascript
+// For production
+this.backendUrl = 'https://your-app.vercel.app';
+
+// For local development
+this.backendUrl = 'http://localhost:3000';
+```
+
+### Step 3: Load Extension in Chrome
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** (toggle in top-right corner)
+3. Click **Load unpacked**
+4. Select the `extension/` folder from the cloned repository
+5. Pin the extension to your toolbar
+
+![Chrome Extension Setup](/assets/images/chrome-extension-setup.png)
+
+### Step 4: Test Extension
+1. Visit target website
+2. You should see a "👋 Welcome to Choco" notification
+3. Click the Choco extension icon in your toolbar
+4. Click **Check Token Status** to verify setup
+
+---
+
+## 🗄️ 2. Database Setup
+
+### Step 1: Create Supabase Project
+1. Go to [Supabase](https://supabase.com/)
+2. Click **New Project**
+3. Choose your organization and create project
+4. Wait for project initialization
+
+### Step 2: Get Database URL
+1. Go to **Settings** → **Database**
+2. Copy the **Connection string** under **Connection pooling**
+3. Replace `[YOUR-PASSWORD]` with your actual database password
+
+```bash
+# Example database URL format:
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres"
+```
+
+---
+
+## ⚙️ 3. Backend Setup
+
+### Step 1: Install Dependencies
+```bash
+cd backend
+npm install
+# or
+yarn install
+```
+
+### Step 2: Configure Environment
+```bash
+# Copy from .env.example and update the values
+cp .env.example .env
+```
+
+Edit `.env` file with your configuration:
+```bash
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+DATABASE_URL="your-supabase-database-url"
+ENCRYPTION_KEY="your-secure-32-character-encryption-key"
+JWT_SECRET="your-jwt-secret-key"
+```
+
+### Step 3: Initialize Database
+```bash
+# Generate database schema
+npm run db:generate
+
+# Run migrations
+npm run db:migrate
+
+# Initialize admin user and demo data
+npx run db:init
+```
+
+### Step 4: Start Development Server
+```bash
+npm run dev
+```
+
+Backend will be available at: `http://localhost:3000`
+
+### Step 5: Access Admin Dashboard
+1. Navigate to `http://localhost:3000/admin`
+2. Use admin credentials displayed in terminal after running `npm run db:init`
+
+---
+
+## 🌐 4. Deployment
+
+### Step 1: Prepare for Deployment
+```bash
+# Push your code to GitHub
+git add .
+git commit -m "Initial setup"
+git push origin main
+```
+
+### Step 2: Deploy to Vercel
+1. Go to [Vercel](https://vercel.com/)
+2. Click **New Project**
+3. Import your GitHub repository
+4. Configure project settings:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `/`
+
+### Step 3: Configure Environment Variables
+In Vercel project settings, add environment variables:
+```bash
+NEXT_PUBLIC_APP_URL="https://your-app.vercel.app"
+DATABASE_URL="your-supabase-database-url"
+ENCRYPTION_KEY="your-secure-32-character-encryption-key"
+JWT_SECRET="your-jwt-secret-key"
+```
+
+### Step 4: Update Extension Configuration
+After deployment, update extension files with your Vercel URL:
+- `extension/popup.js`
+- `extension/background.js`
+
+```javascript
+this.backendUrl = 'https://your-app.vercel.app';
+```
+
+### Step 5: Reload Extension
+1. Go to `chrome://extensions/`
+2. Click refresh icon on Choco extension
+3. Test the connection
+
+---
+
+## 🎯 5. How to Use
+
+### For Team Members
+1. **Install the extension** following the setup guide above
+2. **Get login credentials** from your team admin
+3. **Visit maang.in** - you'll see welcome notifications
+4. **Click extension icon** → **Check Token Status**
+5. **Login when prompted** with your team credentials
+6. **Extension automatically syncs** tokens with your team database
+
+### For Administrators
+1. **Access admin dashboard** at your deployed URL + `/admin`
+2. **Login with admin credentials**
+3. **Manage team members, accounts, etc** 
+4. **Monitor token status** in the Overview tab
+
+---
+
+## 📁 Project Structure
+Detailed project structure is available in: `/assets/docs/structure.md`
+
+## 🔒 Security Features
+- **AES-256 Encryption** for token storage
+- **JWT Authentication** for admin access
+- **HTTPS-only** communication
+- **Team-based access control**
+- **Real-time token synchronization**
+
+## 🆘 Troubleshooting
+
+### Extension Issues
+- Check browser console for errors
+- Verify backend URL is correct
+- Ensure extension has proper permissions
+
+### Backend Issues
+- Check environment variables
+- Verify database connection
+- Review server logs in Vercel dashboard
+
+### Database Issues
+- Confirm Supabase project is active
+- Verify database URL format
+- Check migration status
+
+---
+
+**⚠️ Important**: Always update the backend URL in extension files when deploying to production!
