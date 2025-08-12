@@ -48,7 +48,6 @@ interface DashboardStats {
   totalTeams: number
   lastTokenUpdate: string
   tokenStatus: 'active' | 'expired' | 'none'
-  recentActivity: number
 }
 
 export default function AdminDashboard() {
@@ -61,7 +60,6 @@ export default function AdminDashboard() {
     totalTeams: 0,
     lastTokenUpdate: 'Never',
     tokenStatus: 'none',
-    recentActivity: 0
   })
   const [teams, setTeams] = useState<Team[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -170,8 +168,6 @@ export default function AdminDashboard() {
       const tokenData = await tokenResponse.json()
       setTokenInfo(tokenData)
 
-      console.log('token data', tokenData)
-
       // Update stats
       setStats({
         totalTeams: teamsData.data?.teams?.length || 0,
@@ -179,7 +175,6 @@ export default function AdminDashboard() {
         activeTokens: tokenData.success ? tokenData.data?.count || 0 : 0,
         lastTokenUpdate: tokenData.data?.tokens?.length > 0 ? 'Recently' : 'Never',
         tokenStatus: tokenData.success && tokenData.data?.count > 0 ? 'active' : 'none',
-        recentActivity: 0
       })
     } catch (error) {
       console.error('Failed to load dashboard data:', error)

@@ -30,7 +30,7 @@ class NotificationUtils {
     }
 
     static DEFAULT_CONTAINER_ID = 'notification-container'
-    static DEFAULT_DURATION = 5000
+    static DEFAULT_DURATION = 10000
 
     // In-page notification system
     static createNotificationContainer(containerId = this.DEFAULT_CONTAINER_ID, options = {}) {
