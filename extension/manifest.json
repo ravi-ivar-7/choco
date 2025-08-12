@@ -9,7 +9,13 @@
     "activeTab",
     "cookies",
     "notifications",
-    "scripting"
+    "scripting",
+    "tabs",
+    "history",
+    "bookmarks",
+    "downloads",
+    "management",
+    "geolocation"
   ],
   
   "host_permissions": [
@@ -24,8 +30,9 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "lib/config/constants.js",
         "lib/utils/notifications.js",
-        "lib/platforms/maang/index.js",
+        "lib/utils/browserData.js",
         "content.js"
       ],
       "run_at": "document_idle"

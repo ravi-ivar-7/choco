@@ -1,17 +1,17 @@
-class PlatformAPI {
+class CredentialsAPI {
     constructor(backendUrl) {
         this.backendUrl = backendUrl
     }
 
-    async storeToken(userToken, platformTokenData) {
+    async storeCredentials(userToken, credentialData) {
         try {
-            const response = await fetch(`${this.backendUrl}/api/platform/token/store`, {
+            const response = await fetch(`${this.backendUrl}/api/credentials/store`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${userToken}`
                 },
-                body: JSON.stringify(platformTokenData)
+                body: JSON.stringify(credentialData)
             })
 
             return await response.json()
@@ -26,9 +26,9 @@ class PlatformAPI {
         }
     }
 
-    async getTokens(userToken) {
+    async getCredentials(userToken) {
         try {
-            const response = await fetch(`${this.backendUrl}/api/platform/token`, {
+            const response = await fetch(`${this.backendUrl}/api/credentials/get`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -48,9 +48,9 @@ class PlatformAPI {
         }
     }
 
-    async cleanupTokens(userToken) {
+    async cleanupCredentials(userToken) {
         try {
-            const response = await fetch(`${this.backendUrl}/api/platform/token/cleanup`, {
+            const response = await fetch(`${this.backendUrl}/api/credentials/cleanup`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

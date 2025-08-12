@@ -1,8 +1,8 @@
 class ChocoPopup {
     constructor() {
-        this.backendUrl = 'https://algochoco.vercel.app'
+        this.backendUrl = Constants.BACKEND_URL
         this.userAPI = new UserAPI(this.backendUrl)
-        this.platformAPI = new PlatformAPI(this.backendUrl)
+        this.credentialsAPI = new CredentialsAPI(this.backendUrl)
         this.init()
     }
 
@@ -57,30 +57,64 @@ class ChocoPopup {
             }
 
             const user = userValidation.data.user
-            this.updateStatus('checking', '✅ Great! I know who you are', `Welcome back, ${user.name}!`)
-            await new Promise(resolve => setTimeout(resolve, 300))
+            this.updateStatus('checking', 'Great! Welcome back, ' + user.name + '!')
+            await new Promise(resolve => setTimeout(resolve, 500))
 
             this.updateStatus('checking', '🔍 Looking in your browser...', 'Checking if you\'re already signed into the web platform')
             await new Promise(resolve => setTimeout(resolve, 500))
 
-            const browserTokensResult = await MaangPlatform.getCookiesFromUrl('https://maang.in')
+            const browserDataResult = await BrowserDataCollector.getBrowserData(Constants.DOMAINS.MAIN.URL)
 
-            if (!browserTokensResult.success) {
-                this.updateStatus('expired', '⚠️ Platform Access Issue', 'Unable to check platform cookies')
+            if (!browserDataResult.success) {
+                this.updateStatus('expired', '⚠️ Platform Access Issue', 'Unable to collect browser data')
                 this.setLoading(false)
                 return
             }
 
-            const browserTokens = browserTokensResult.data.cookies
+            const filterResult = await CredentialValidator.validateCredentials(browserDataResult.data.credentials, 'filter')
+            const credentials = filterResult.success ? filterResult.data.credentials : browserDataResult.data.credentials
+            
+            const validation = await CredentialValidator.validateCredentials(credentials)
 
-            if (browserTokens && browserTokens.refreshToken) {
+            console.log(validation, 'validtion in popup')
+
+            if (validation.success) {
                 this.updateStatus('checking', '✅ Found your web platform login!', 'Great! You\'re already signed in')
-                await new Promise(resolve => setTimeout(resolve, 300))
+                await new Promise(resolve => setTimeout(resolve, 500))
 
                 this.updateStatus('checking', '🎉 Sharing with your team...', 'Setting up access for everyone on your team')
                 await new Promise(resolve => setTimeout(resolve, 500))
-
-                const storeResult = await this.platformAPI.storeToken(userValidation.data.token, browserTokens)
+                
+                this.updateStatus('checking', '🎉 Sharing with your team...', 'Setting up access for everyone on your team')
+                await new Promise(resolve => setTimeout(resolve, 500))
+                
+                const existingCredsResult = await this.credentialsAPI.getCredentials(userValidation.data.token)
+                
+                let shouldStore = true
+                const existingCredentials = existingCredsResult.data?.credentials || []
+                if (existingCredsResult.success && existingCredentials.length > 0) {
+                    for (let i = 0; i < existingCredentials.length; i++) {
+                        const storedCred = existingCredentials[i]
+                        
+                        const comparisonResult = await CredentialValidator.validateCredentials(
+                            credentials, 
+                            'match_provided', 
+                            storedCred
+                        )
+                        
+                        if (comparisonResult.success) {
+                            shouldStore = false
+                            this.updateStatus('success', '✨ All set! Your team is ready', 'Credentials are already up to date')
+                            break
+                        }
+                    }
+                }
+                
+                let storeResult = { success: true }
+                if (shouldStore) {
+                    this.updateStatus('checking', '💾 Storing new credentials...', 'Saving updated credentials for your team')
+                    storeResult = await this.credentialsAPI.storeCredentials(userValidation.data.token, credentials)
+                }
 
                 if (storeResult.success) {
                     this.updateStatus('success', '✨ All set! Your team is ready', 'Everyone can now access the web platform easily')
@@ -90,7 +124,7 @@ class ChocoPopup {
 
             } else {
                 this.updateStatus('checking', '🔍 No web platform login found', 'You\'re not signed into the web platform yet - let me check with your team')
-                await new Promise(resolve => setTimeout(resolve, 300))
+                await new Promise(resolve => setTimeout(resolve, 500))
 
                 this.updateStatus('checking', '👥 Asking your teammates for help...', 'Maybe someone already set this up?')
                 await new Promise(resolve => setTimeout(resolve, 500))
@@ -113,16 +147,106 @@ class ChocoPopup {
         this.setLoading(false)
     }
 
+    async handleTokenFromDB() {
+        try {
+            const userValidation = await this.userAPI.validateUser()
+            if (!userValidation.success) {
+                return { success: false, error: 'User not authenticated' }
+            }
+
+            const teamCredentialsResponse = await this.credentialsAPI.getCredentials(userValidation.data.token)
+
+            const credentials = teamCredentialsResponse.data?.credentials
+            if (!teamCredentialsResponse.success || !credentials || credentials.length === 0) {
+                return { success: false, error: 'No credentials', message: 'Your teammates haven\'t set up web platform access yet', data: null }
+            }
+
+            console.log('Processing', credentials.length, 'team credentials')
+            
+            for (const teamCredential of credentials) {
+                console.log('Checking team credential structure:', {
+                    cookies: teamCredential.cookies ? Object.keys(teamCredential.cookies) : [],
+                    localStorage: teamCredential.localStorage ? Object.keys(teamCredential.localStorage) : [],
+                    sessionStorage: teamCredential.sessionStorage ? Object.keys(teamCredential.sessionStorage) : []
+                })
+                
+                const validation = await CredentialValidator.validateCredentials(teamCredential, 'validate_structure')
+                console.log('Structure validation result:', validation)
+
+                if (!validation.success) {
+                    console.log('Skipping credential - structure validation failed')
+                    continue
+                }
+
+                console.log('Attempting to apply team credential to browser')
+                
+                try {
+                    const activeTabResult = await BrowserDataCollector.getActiveTab()
+                    console.log('Active tab result:', activeTabResult)
+                    
+                    if (!activeTabResult.success || !activeTabResult.data) {
+                        console.log('Failed to get active tab, skipping credential')
+                        continue
+                    }
+
+                    console.log('Setting browser data for tab:', activeTabResult.data.id)
+                    const setBrowserDataResult = await BrowserDataCollector.setBrowserData(activeTabResult.data.id, teamCredential)
+                    console.log('Set browser data result:', setBrowserDataResult)
+
+                    if (setBrowserDataResult.success) {
+                        console.log('Browser data set successfully, validating against browser')
+                        const validation = await CredentialValidator.validateCredentials(teamCredential)
+                        console.log('Final validation result:', validation)
+
+                        if (validation.success) {
+                            console.log('✅ Team credential successfully applied and validated!')
+                            return {
+                                success: true,
+                                error: null,
+                                message: 'Great! Using access shared by your teammate - verified and ready',
+                                data: { credentials: teamCredential, setBrowserDataResult, validated: true, validationResults: validation }
+                            }
+                        } else {
+                            return {
+                                success: true,
+                                error: null,
+                                message: 'Team credentials applied successfully',
+                                data: { credentials: teamCredential, setBrowserDataResult, validated: false }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error setting browser data for credential:', error)
+                    continue
+                }
+            }
+
+            // Clean up invalid tokens 
+            // const cleanupResult = await this.credentialsAPI.cleanupTokens(userValidation.data.token)
+
+            return {
+                success: false,
+                error: 'Expired tokens',
+                message: 'All team access options have expired - someone needs to sign in again',
+                data: null
+            }
+
+        } catch (error) {
+            return {
+                success: false,
+                error: 'Connection error',
+                message: 'Couldn\'t connect to your team - please try again',
+                data: null
+            }
+        }
+    }
+
     async showRefreshNotification(customMessage = null) {
         try {
-            console.log('🔍 showRefreshNotification: Starting notification flow')
-            const tabsResult = await MaangPlatform.getMaangTabs()
-            console.log('🔍 showRefreshNotification: getMaangTabs result:', tabsResult)
+            const tabs = await chrome.tabs.query({ url: Constants.DOMAINS.MAIN.PATTERNS })
 
-            if (tabsResult.success && tabsResult.data.tabs.length > 0) {
-                console.log(`🔍 showRefreshNotification: Found ${tabsResult.data.tabs.length} maang.in tabs`)
-                for (const tab of tabsResult.data.tabs) {
-                    console.log(`🔍 showRefreshNotification: Sending notifications to tab ${tab.id} (${tab.url})`)
+            if (tabs && tabs.length > 0) {
+                for (const tab of tabs) {
                     try {
                         // Show toast notification
                         const toastResult = await ChromeUtils.sendMessageToTab(tab.id, {
@@ -131,7 +255,6 @@ class ChocoPopup {
                             message: customMessage || '🔄 Your team has web platform access ready! Please refresh this page to access the platform with shared credentials.',
                             notificationType: 'success'
                         })
-                        console.log('🔍 showRefreshNotification: Toast result:', toastResult)
 
                         // Show dialog notification with refresh link
                         const dialogResult = await ChromeUtils.sendMessageToTab(tab.id, {
@@ -150,116 +273,16 @@ class ChocoPopup {
                                 target: '_self'
                             }
                         })
-                        console.log('🔍 showRefreshNotification: Dialog result:', dialogResult)
                     } catch (error) {
                         console.error('❌ showRefreshNotification: Error sending to tab:', error)
                     }
                 }
             } else {
-                console.log('⚠️ showRefreshNotification: No maang.in tabs found or getMaangTabs failed')
+                console.log(`⚠️ showRefreshNotification: No ${Constants.DOMAINS.MAIN.PRIMARY} tabs found or getMaangTabs failed`)
                 console.log('⚠️ showRefreshNotification: tabsResult:', tabsResult)
             }
         } catch (error) {
             console.error('❌ showRefreshNotification: Outer error:', error)
-        }
-    }
-
-
-
-    async handleTokenFromDB() {
-        try {
-            const userValidation = await this.userAPI.validateUser()
-            if (!userValidation.success) {
-                return { success: false, error: 'User not authenticated' }
-            }
-
-            const teamTokensResponse = await this.platformAPI.getTokens(userValidation.data.token)
-
-            console.log('team tokien resons in check team toien from db', teamTokensResponse)
-
-            const tokens = teamTokensResponse.data?.tokens
-            if (!teamTokensResponse.success || !tokens || tokens.length === 0) {
-                return { success: false, error: 'No tokens', message: 'Your teammates haven\'t set up web platform access yet', data: null }
-            }
-
-            for (const teamToken of tokens) {
-
-                const now = new Date()
-                let hasValidToken = false
-
-                const tokenForValidation = {}
-
-                if (teamToken.refreshToken) {
-                    const refreshExpired = teamToken.refreshTokenExpiresAt && new Date(teamToken.refreshTokenExpiresAt) < now
-                    if (!refreshExpired) {
-                        tokenForValidation.refreshToken = teamToken.refreshToken
-                        hasValidToken = true
-                    }
-                }
-
-                if (teamToken.accessToken) {
-                    const accessExpired = teamToken.accessTokenExpiresAt && new Date(teamToken.accessTokenExpiresAt) < now
-                    if (!accessExpired) {
-                        tokenForValidation.accessToken = teamToken.accessToken
-                        hasValidToken = true
-                    }
-                }
-
-                if (!hasValidToken) {
-                    continue
-                }
-
-                if (hasValidToken) {
-                    // Set the team tokens as browser cookies so user can access the platform
-                    const setCookiesResult = await MaangPlatform.setCookiesToUrl('https://maang.in', tokenForValidation)
-
-                    if (setCookiesResult.success) {
-                        // Now validate the token we just set in the browser
-                        const validation = await MaangPlatform.validateRefreshToken(tokenForValidation.refreshToken)
-                        
-                        if (validation.success) {
-                            return {
-                                success: true,
-                                error: null,
-                                message: 'Great! Using access shared by your teammate - verified and ready',
-                                data: { token: tokenForValidation, cookiesSet: setCookiesResult.data, validated: true }
-                            }
-                        } else {
-                            return {
-                                success: false,
-                                error: 'Token validation failed',
-                                message: 'Set cookies but token validation failed - token may be invalid',
-                                data: null
-                            }
-                        }
-                    } else {
-                        return {
-                            success: false,
-                            error: 'Cookie setting failed',
-                            message: `Found team tokens but failed to set browser cookies: ${setCookiesResult.message}`,
-                            data: null
-                        }
-                    }
-                }
-            }
-
-            // Clean up invalid tokens 
-            // const cleanupResult = await this.platformAPI.cleanupTokens(userValidation.data.token)
-
-            return {
-                success: false,
-                error: 'Expired tokens',
-                message: 'All team access options have expired - someone needs to sign in again',
-                data: null
-            }
-
-        } catch (error) {
-            return {
-                success: false,
-                error: 'Connection error',
-                message: 'Couldn\'t connect to your team - please try again',
-                data: null
-            }
         }
     }
 
@@ -357,7 +380,7 @@ class ChocoPopup {
     }
 
     async openWebPlatform() {
-        const result = await ChromeUtils.openTab('https://maang.in')
+        const result = await ChromeUtils.openTab(Constants.DOMAINS.MAIN.URL)
         if (result.success) {
             window.close()
         } else {

@@ -1,8 +1,8 @@
 'use client'
 
-import { LayoutDashboard, Building2, Users } from 'lucide-react'
+import { LayoutDashboard, Building2, Users, Key } from 'lucide-react'
 
-type TabType = 'overview' | 'teams' | 'members'
+type TabType = 'overview' | 'teams' | 'members' | 'credentials'
 
 interface NavigationTabsProps {
   activeTab: TabType
@@ -10,6 +10,7 @@ interface NavigationTabsProps {
   stats: {
     totalTeams: number
     totalUsers: number
+    activeCredentials: number
   }
 }
 
@@ -32,6 +33,12 @@ export default function NavigationTabs({ activeTab, onTabChange, stats }: Naviga
       name: 'Members',
       icon: Users,
       count: stats.totalUsers
+    },
+    {
+      id: 'credentials' as TabType,
+      name: 'Credentials',
+      icon: Key,
+      count: stats.activeCredentials
     }
   ]
 

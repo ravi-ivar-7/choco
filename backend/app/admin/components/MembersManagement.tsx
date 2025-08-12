@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'
 import MemberForm from './MemberForm'
 
 interface Team {
@@ -28,47 +28,214 @@ interface Member {
   updatedAt: string
 }
 
-interface MembersManagementProps {
-  members: Member[]
-  teams: Team[]
-  onCreateMember: (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string }) => Promise<void>
-  onUpdateMember: (memberData: { id: string; name: string; email: string; role: 'admin' | 'member'; teamId: string; isActive: boolean }) => Promise<void>
-  onDeleteMember: (memberId: string) => Promise<void>
-}
-
-export default function MembersManagement({ 
-  members, 
-  teams, 
-  onCreateMember, 
-  onUpdateMember, 
-  onDeleteMember 
-}: MembersManagementProps) {
+export default function MembersManagement() {
+  const [members, setMembers] = useState<Member[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showMemberForm, setShowMemberForm] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
 
-  const handleCreateMember = async (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string }) => {
-    await onCreateMember(memberData)
-    setShowMemberForm(false)
+  const loadData = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        setError('No authentication token found')
+        return
+      }
+
+      // Load both members and teams
+      const [membersResponse, teamsResponse] = await Promise.all([
+        fetch('/api/members', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/teams', { headers: { 'Authorization': `Bearer ${token}` } })
+      ])
+
+      if (!membersResponse.ok || !teamsResponse.ok) {
+        throw new Error('Failed to fetch data')
+      }
+
+      const [membersData, teamsData] = await Promise.all([
+        membersResponse.json(),
+        teamsResponse.json()
+      ])
+
+      if (membersData.success) {
+        setMembers(membersData.data.members || [])
+      }
+      if (teamsData.success) {
+        setTeams(teamsData.data.teams || [])
+      }
+      
+      if (!membersData.success || !teamsData.success) {
+        setError('Failed to load some data')
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error)
+      setError('Failed to load members and teams')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleUpdateMember = async (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string; isActive?: boolean }) => {
-    if (editingMember) {
-      await onUpdateMember({ 
-        ...memberData, 
-        id: editingMember.id,
-        isActive: memberData.isActive ?? true // Default to true if not provided
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleCreateMember = async (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string }) => {
+    try {
+      setActionLoading('create')
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/members', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(memberData),
       })
-      setEditingMember(null)
+
+      const result = await response.json()
+      if (result.success) {
+        await loadData() // Refresh the list
+        setShowMemberForm(false)
+        alert('Member created successfully')
+      } else {
+        alert(result.message || 'Failed to create member')
+      }
+    } catch (error) {
+      console.error('Failed to create member:', error)
+      alert('Failed to create member')
+    } finally {
+      setActionLoading(null)
     }
+  }
+
+  const handleUpdateMemberWrapper = async (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string; isActive?: boolean }) => {
+    await handleUpdateMember({ ...memberData, isActive: memberData.isActive ?? true })
+  }
+
+  const handleUpdateMember = async (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string; isActive: boolean }) => {
+    if (!editingMember) return
+    
+    try {
+      setActionLoading(editingMember.id)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/members', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...memberData, id: editingMember.id }),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        await loadData() // Refresh the list
+        setEditingMember(null)
+        alert('Member updated successfully')
+      } else {
+        alert(result.message || 'Failed to update member')
+      }
+    } catch (error) {
+      console.error('Failed to update member:', error)
+      alert('Failed to update member')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to delete this member?')) {
+      return
+    }
+
+    try {
+      setActionLoading(memberId)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch(`/api/members?id=${memberId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        await loadData() // Refresh the list
+        alert('Member deleted successfully')
+      } else {
+        alert(result.message || 'Failed to delete member')
+      }
+    } catch (error) {
+      console.error('Failed to delete member:', error)
+      alert('Failed to delete member')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading members...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadData}
+            disabled={isLoading}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Members Management</h2>
-        <Button onClick={() => setShowMemberForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Member
+        <h2 className="text-xl font-semibold text-slate-900">Members Management</h2>
+        <Button 
+          onClick={() => setShowMemberForm(true)}
+          disabled={actionLoading === 'create'}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {actionLoading === 'create' ? 'Creating...' : 'Add Member'}
         </Button>
       </div>
 
@@ -111,16 +278,22 @@ export default function MembersManagement({
                     variant="outline"
                     size="sm"
                     onClick={() => setEditingMember(member)}
+                    disabled={actionLoading !== null}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onDeleteMember(member.id)}
-                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteMember(member.id)}
+                    disabled={actionLoading === member.id}
+                    className="text-red-600 hover:text-red-700 disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {actionLoading === member.id ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -134,7 +307,7 @@ export default function MembersManagement({
         <MemberForm
           member={editingMember}
           teams={teams}
-          onSubmit={editingMember ? handleUpdateMember : handleCreateMember}
+          onSubmit={editingMember ? handleUpdateMemberWrapper : handleCreateMember}
           onCancel={() => {
             setShowMemberForm(false)
             setEditingMember(null)

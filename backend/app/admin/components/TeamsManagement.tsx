@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'
 import TeamForm from './TeamForm'
 
 interface Team {
@@ -15,36 +15,201 @@ interface Team {
   updatedAt: string
 }
 
-interface TeamsManagementProps {
-  teams: Team[]
-  onCreateTeam: (teamData: { name: string; description?: string; platformAccountId: string }) => Promise<void>
-  onUpdateTeam: (teamData: { id: string; name: string; description?: string; platformAccountId: string }) => Promise<void>
-  onDeleteTeam: (teamId: string) => Promise<void>
-}
-
-export default function TeamsManagement({ teams, onCreateTeam, onUpdateTeam, onDeleteTeam }: TeamsManagementProps) {
+export default function TeamsManagement() {
+  const [teams, setTeams] = useState<Team[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
 
-  const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
-    await onCreateTeam(teamData)
-    setShowTeamForm(false)
+  const loadTeams = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        setError('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/teams', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch teams')
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        setTeams(data.data.teams || [])
+      } else {
+        setError(data.error || 'Failed to load teams')
+      }
+    } catch (error) {
+      console.error('Failed to load teams:', error)
+      setError('Failed to load teams')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleUpdateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
-    if (editingTeam) {
-      await onUpdateTeam({ ...teamData, id: editingTeam.id })
-      setEditingTeam(null)
+  useEffect(() => {
+    loadTeams()
+  }, [])
+
+  const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
+    try {
+      setActionLoading('create')
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/teams', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamData),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        await loadTeams() // Refresh the list
+        setShowTeamForm(false)
+        alert('Team created successfully')
+      } else {
+        alert(result.message || 'Failed to create team')
+      }
+    } catch (error) {
+      console.error('Failed to create team:', error)
+      alert('Failed to create team')
+    } finally {
+      setActionLoading(null)
     }
+  }
+
+  const handleUpdateTeamWrapper = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
+    if (!editingTeam) return
+    await handleUpdateTeam({ ...teamData, id: editingTeam.id })
+  }
+
+  const handleUpdateTeam = async (teamData: { id: string; name: string; description?: string; platformAccountId: string }) => {
+    try {
+      setActionLoading(teamData.id)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamData),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        await loadTeams() // Refresh the list
+        setEditingTeam(null)
+        alert('Team updated successfully')
+      } else {
+        alert(result.message || 'Failed to update team')
+      }
+    } catch (error) {
+      console.error('Failed to update team:', error)
+      alert('Failed to update team')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setActionLoading(teamId)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      const response = await fetch(`/api/teams?id=${teamId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        await loadTeams() // Refresh the list
+        alert('Team deleted successfully')
+      } else {
+        alert(result.message || 'Failed to delete team')
+      }
+    } catch (error) {
+      console.error('Failed to delete team:', error)
+      alert('Failed to delete team')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading teams...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadTeams}
+            disabled={isLoading}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Teams Management</h2>
-        <Button onClick={() => setShowTeamForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Team
+        <h2 className="text-xl font-semibold text-slate-900">Teams Management</h2>
+        <Button 
+          onClick={() => setShowTeamForm(true)}
+          disabled={actionLoading === 'create'}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {actionLoading === 'create' ? 'Creating...' : 'Add Team'}
         </Button>
       </div>
 
@@ -74,16 +239,22 @@ export default function TeamsManagement({ teams, onCreateTeam, onUpdateTeam, onD
                     variant="outline"
                     size="sm"
                     onClick={() => setEditingTeam(team)}
+                    disabled={actionLoading !== null}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onDeleteTeam(team.id)}
-                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteTeam(team.id)}
+                    disabled={actionLoading === team.id}
+                    className="text-red-600 hover:text-red-700 disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {actionLoading === team.id ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -96,7 +267,7 @@ export default function TeamsManagement({ teams, onCreateTeam, onUpdateTeam, onD
       {(showTeamForm || editingTeam) && (
         <TeamForm
           team={editingTeam}
-          onSubmit={editingTeam ? handleUpdateTeam : handleCreateTeam}
+          onSubmit={editingTeam ? handleUpdateTeamWrapper : handleCreateTeam}
           onCancel={() => {
             setShowTeamForm(false)
             setEditingTeam(null)

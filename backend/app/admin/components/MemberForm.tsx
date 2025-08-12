@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 
 interface Team {
   id: string
@@ -32,16 +34,23 @@ interface MemberFormProps {
 }
 
 export default function MemberForm({ member, teams, onSubmit, onCancel }: MemberFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    await onSubmit({
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      role: formData.get('role') as 'admin' | 'member',
-      teamId: formData.get('teamId') as string,
-      isActive: member ? formData.get('isActive') === 'on' : true,
-    })
+    setIsSubmitting(true)
+    try {
+      const formData = new FormData(e.target as HTMLFormElement)
+      await onSubmit({
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        role: formData.get('role') as 'admin' | 'member',
+        teamId: formData.get('teamId') as string,
+        isActive: member ? formData.get('isActive') === 'on' : true,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -115,11 +124,28 @@ export default function MemberForm({ member, teams, onSubmit, onCancel }: Member
             )}
           </div>
           <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-2 mt-6">
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel} 
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Button type="submit" className="w-full sm:w-auto">
-              {member ? 'Update Member' : 'Create Member'}
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {member ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                member ? 'Update Member' : 'Create Member'
+              )}
             </Button>
           </div>
         </form>

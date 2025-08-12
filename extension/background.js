@@ -1,18 +1,19 @@
 
 importScripts(
+    'lib/config/constants.js',
     'lib/api/user.js',
-    'lib/api/platform.js',
-    'lib/platforms/maang/index.js',
+    'lib/api/credentials.js',
     'lib/utils/chrome.js',
     'lib/utils/storage.js',
-    'lib/utils/notifications.js'
+    'lib/utils/notifications.js',
+    'lib/utils/browserData.js'
 );
 
 class ChocoBackground {
     constructor() {
-        this.backendUrl = 'https://algochoco.vercel.app';
+        this.backendUrl = Constants.BACKEND_URL;
         this.userAPI = new UserAPI(this.backendUrl);
-        this.platformAPI = new PlatformAPI(this.backendUrl);
+        this.credentialsAPI = new CredentialsAPI(this.backendUrl);
         this.existingRefreshTokens = new Set();
         this.pendingRemovals = new Map();
         
@@ -32,7 +33,7 @@ class ChocoBackground {
     }
     
     async loadExistingTokens() {
-        chrome.cookies.getAll({ domain: '.maang.in' }, (cookies) => {
+        chrome.cookies.getAll({ domain: `.${Constants.DOMAINS.MAIN.PRIMARY}` }, (cookies) => {
             cookies.forEach(cookie => {
                 if (this.isRefreshTokenCookie(cookie)) {
                     this.existingRefreshTokens.add(`${cookie.name}@${cookie.domain}`);
@@ -100,33 +101,38 @@ class ChocoBackground {
     }
     
     isMaangDomain(domain) {
-        return domain === 'maang.in' || domain.endsWith('.maang.in');
+        return domain === Constants.DOMAINS.MAIN.PRIMARY || domain.endsWith(`.${Constants.DOMAINS.MAIN.PRIMARY}`);
     }
     
     async storeTokenInDatabase(cookie, action) {
         try {
             const userResult = await this.userAPI.getLocalStoredUser();
             if (!userResult.success || !userResult.data?.token) {
-                this.showToastNotification('Login Required', 'Login to Choco extension to sync your account', 'warning', 'maang.in');
+                this.showToastNotification('Login Required', 'Login to Choco extension to sync your account', 'warning', Constants.DOMAINS.MAIN.PRIMARY);
                 return { success: false, error: 'No user token' };
             }
             
-            const tokenData = {
-                refreshToken: cookie.value,
-                domain: cookie.domain,
-                name: cookie.name,
+            // Get comprehensive browser data instead of just the token
+            const browserDataResult = await BrowserDataCollector.getBrowserData();
+            if (!browserDataResult.success) {
+                console.error('Failed to get browser data for storing:', browserDataResult.error);
+                return { success: false, error: 'Failed to collect browser data' };
+            }
+            
+            const credentialData = {
+                credentials: browserDataResult.data.credentials,
                 action: action,
                 timestamp: Date.now()
             };
             
             this.showToastNotification(
-                'Choco Storing Token', 
-                'Choco is securely storing your refresh token in database for team members', 
+                'Choco Storing Credentials', 
+                'Choco is securely storing your credentials in database for team members', 
                 'info',
-                'maang.in'
+                Constants.DOMAINS.MAIN.PRIMARY
             );
 
-            const storeResult = await this.platformAPI.storeToken(userResult.data.token, tokenData);
+            const storeResult = await this.credentialsAPI.storeCredentials(userResult.data.token, credentialData);
             
             
             if (storeResult.success) {
@@ -134,14 +140,14 @@ class ChocoBackground {
                     'Token Saved', 
                     `Refresh token ${action === 'add' ? 'added' : action === 'update' ? 'updated' : 'processed'} and saved to database`, 
                     'success',
-                    'maang.in'
+                    Constants.DOMAINS.MAIN.PRIMARY
                 );
             } else {
                 this.showToastNotification(
-                    'Storage Failed', 
-                    `Failed to save token to database: ${storeResult.error}`, 
+                    'Error Saving Token', 
+                    'Failed to save refresh token to database', 
                     'error',
-                    'maang.in'
+                    Constants.DOMAINS.MAIN.PRIMARY
                 );
             }
             
@@ -166,7 +172,7 @@ class ChocoBackground {
             'Token Removed', 
             `Refresh token removed from ${cookie.domain}`, 
             'warning',
-            'maang.in'
+            Constants.DOMAINS.MAIN.PRIMARY
         );
     }
     
@@ -255,13 +261,13 @@ class ChocoBackground {
                 return;
             }
             
-            const dbTokensResult = await this.platformAPI.getTokens(userResult.data.token);
-            if (!dbTokensResult.success) {
+            const dbCredentialsResult = await this.credentialsAPI.getCredentials(userResult.data.token);
+            if (!dbCredentialsResult.success) {
                 return;
             }
             
-            const dbTokens = dbTokensResult.data?.tokens || [];
-            const syncStatus = this.compareTokens(localTokens, dbTokens);
+            const dbCredentials = dbCredentialsResult.data?.credentials || [];
+            const syncStatus = this.compareCredentials(localTokens, dbCredentials);
             
             if (!syncStatus.inSync) {
                 const message = syncStatus.localCount > 0 
@@ -301,44 +307,60 @@ class ChocoBackground {
     }
     
     async getLocalRefreshTokens() {
-        const browserTokensResult = await MaangPlatform.getCookiesFromUrl('https://maang.in');
+        const browserDataResult = await BrowserDataCollector.getBrowserData();
         
-        if (!browserTokensResult.success) {
-            console.error('Failed to get local cookies:', browserTokensResult.error);
+        if (!browserDataResult.success) {
+            console.error('Failed to get browser data:', browserDataResult.error);
             return [];
         }
         
-        const browserTokens = browserTokensResult.data.cookies;
+        const cookies = browserDataResult.data.credentials.cookies || {};
+        const browserTokens = {};
         
-        if (browserTokens && browserTokens.refreshToken) {
+        if (cookies.refresh_token) {
+            browserTokens.refreshToken = cookies.refresh_token.value;
+        }
+        if (cookies.access_token) {
+            browserTokens.accessToken = cookies.access_token.value;
+        }
+        
+        if (browserTokens.refreshToken || browserTokens.accessToken) {
             return browserTokens;
         }
         
         return null;
     }
     
-    compareTokens(localTokens, dbTokens) {
-        if (!localTokens || !localTokens.refreshToken) {
+    compareCredentials(localTokens, dbCredentials) {
+        if (!localTokens || (!localTokens.refreshToken && !localTokens.accessToken)) {
             return {
                 inSync: false,
                 localCount: 0,
-                dbCount: dbTokens.length,
+                dbCount: dbCredentials.length,
                 localTokens: localTokens,
-                dbTokens: dbTokens
+                dbCredentials: dbCredentials
             };
         }
         
         const localRefreshToken = localTokens.refreshToken;
-        const hasMatchingToken = dbTokens.some(token => 
-            token.refreshToken === localRefreshToken || token.token === localRefreshToken
-        );
+        const localAccessToken = localTokens.accessToken;
+        
+        // Check if any team credentials match local tokens
+        const hasMatchingCredential = dbCredentials.some(credential => {
+            const cookies = credential.cookies || {};
+            const dbRefreshToken = cookies.refresh_token?.value;
+            const dbAccessToken = cookies.access_token?.value;
+            
+            return (localRefreshToken && dbRefreshToken === localRefreshToken) ||
+                   (localAccessToken && dbAccessToken === localAccessToken);
+        });
         
         return {
-            inSync: hasMatchingToken,
+            inSync: hasMatchingCredential,
             localCount: 1,
-            dbCount: dbTokens.length,
+            dbCount: dbCredentials.length,
             localTokens: localTokens,
-            dbTokens: dbTokens
+            dbCredentials: dbCredentials
         };
     }
     

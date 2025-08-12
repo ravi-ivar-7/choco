@@ -12,24 +12,7 @@ class ChromeUtils {
         })
     }
 
-    static async getCurrentTab() {
-        try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-            return {
-                success: true,
-                error: null,
-                message: tab ? 'Current tab retrieved successfully' : 'No current tab found',
-                data: { tab: tab || null }
-            }
-        } catch (error) {
-            return {
-                success: false,
-                error: 'Tab query error',
-                message: `Failed to get current tab: ${error.message}`,
-                data: null
-            }
-        }
-    }
+
 
     static async getAllTabs() {
         try {

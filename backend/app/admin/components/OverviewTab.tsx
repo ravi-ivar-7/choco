@@ -1,173 +1,143 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, AlertTriangle, Clock } from 'lucide-react'
+import { CheckCircle, Clock, RefreshCw } from 'lucide-react'
 import DashboardStats from './DashboardStats'
 
-interface DashboardStats {
-  activeTokens: number
+interface StatsData {
+  activeCredentials: number
   totalUsers: number
   totalTeams: number
-  lastTokenUpdate: string
-  tokenStatus: 'active' | 'expired' | 'none'
+  lastCredentialUpdate: string
+  credentialStatus: 'active' | 'none'
 }
 
-interface OverviewTabProps {
-  stats: DashboardStats
-  tokenInfo: any
-}
-
-function getStatusIcon(status: 'active' | 'expired' | 'none') {
+function getStatusIcon(status: 'active' | 'none') {
   switch (status) {
     case 'active':
       return CheckCircle
-    case 'expired':
-      return AlertTriangle
     default:
       return Clock
   }
 }
 
-function getStatusColor(status: 'active' | 'expired' | 'none') {
-  switch (status) {
-    case 'active':
-      return 'text-green-600 bg-green-100'
-    case 'expired':
-      return 'text-red-600 bg-red-100'
-    default:
-      return 'text-gray-600 bg-gray-100'
-  }
-}
+export default function OverviewTab() {
+  const [stats, setStats] = useState<StatsData>({
+    activeCredentials: 0,
+    totalUsers: 0,
+    totalTeams: 0,
+    lastCredentialUpdate: 'Never',
+    credentialStatus: 'none'
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export default function OverviewTab({ stats, tokenInfo }: OverviewTabProps) {
-  const StatusIcon = getStatusIcon(stats.tokenStatus)
+  const loadStats = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        setError('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats')
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        setStats(data.data)
+      } else {
+        setError(data.error || 'Failed to load stats')
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error)
+      setError('Failed to load dashboard statistics')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadStats()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading overview...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadStats}
+            disabled={isLoading}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const StatusIcon = getStatusIcon(stats.credentialStatus)
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Stats Grid - Responsive */}
+    <div className="space-y-6">
+      {/* Dashboard Stats */}
       <DashboardStats stats={stats} />
 
-      {/* Token Status */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border">
-        <h3 className="text-lg font-semibold mb-4">Token Status</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-600">Current Status</span>
-            <Badge className={getStatusColor(stats.tokenStatus)}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {stats.tokenStatus}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-600">Last Update</span>
-            <span className="text-sm text-slate-900">{stats.lastTokenUpdate}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-600">Active Tokens</span>
-            <Badge className={getStatusColor(stats.tokenStatus)}>
-              {stats.activeTokens}
-            </Badge>
+      {/* Credential Status Card */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-slate-900 mb-4">Credential Status</h3>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <StatusIcon className={`h-5 w-5 ${
+              stats.credentialStatus === 'active' ? 'text-green-500' : 'text-gray-400'
+            }`} />
+            <div>
+              <p className="text-sm font-medium text-slate-900">
+                {stats.credentialStatus === 'active' ? 'Active Credentials' : 'No Active Credentials'}
+              </p>
+              <p className="text-xs text-slate-500">
+                Last updated: {stats.lastCredentialUpdate}
+              </p>
+            </div>
           </div>
           
-          {tokenInfo && (
-            <div className="pt-4 border-t space-y-3">
-              <div className="text-sm text-slate-600">
-                <strong>Token Details:</strong>
-              </div>
-              {tokenInfo.data?.tokens && tokenInfo.data.tokens.length > 0 && (
-                <div className="space-y-4">
-                  {tokenInfo.data.tokens.map((token: any, index: number) => (
-                    <div key={token.id || index} className="w-full bg-slate-50 rounded-lg p-4 border">
-                      {/* Header: Token # + Active Badge + Type + Created Date */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-slate-700">
-                            Token #{index + 1}
-                          </span>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                            Active
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-xs text-slate-500">
-                            Created: {token.createdAt ? new Date(token.createdAt).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Metadata: ID + Source */}
-                      <div className="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2 sm:gap-6">
-                        <div className="text-xs">
-                          <span className="font-medium text-slate-600">ID: </span>
-                          <span className="text-slate-500 font-mono break-all">
-                            {token.id}
-                          </span>
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-slate-600">Source: </span>
-                          <span className="text-slate-500">
-                            {token.tokenSource || 'manual'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Token Values */}
-                      <div className="space-y-3">
-                        {token.refreshToken && (
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-slate-600">Refresh Token:</span>
-                              {token.refreshTokenExpiresAt && (
-                                <span className="text-xs text-slate-400">
-                                  Expires: {new Date(token.refreshTokenExpiresAt).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="text-xs font-mono bg-white p-2 rounded border break-all text-slate-700">
-                              {token.refreshToken}
-                            </div>
-                          </div>
-                        )}
-
-                        {token.accessToken && (
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-slate-600">Access Token:</span>
-                              {token.accessTokenExpiresAt && (
-                                <span className="text-xs text-slate-400">
-                                  Expires: {new Date(token.accessTokenExpiresAt).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs font-mono bg-white p-2 rounded border break-all text-slate-700">
-                              {token.accessToken}
-                            </div>
-                          </div>
-                        )}
-
-                        {token.generalToken && (
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-slate-600">General Token:</span>
-                              {token.generalTokenExpiresAt && (
-                                <span className="text-xs text-slate-400">
-                                  Expires: {new Date(token.generalTokenExpiresAt).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs font-mono bg-white p-2 rounded border break-all text-slate-700">
-                              {token.generalToken}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <Badge variant={stats.credentialStatus === 'active' ? 'default' : 'secondary'}>
+            {stats.credentialStatus === 'active' ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+        
+        <div className="pt-4 border-t mt-4">
+          <div className="text-sm text-slate-600 text-center">
+            <strong>Quick Summary:</strong> {stats.activeCredentials} active credentials available.
+            <br />
+            <span className="text-xs text-slate-500 mt-1 block">
+              View detailed credential information in the Credentials tab.
+            </span>
+          </div>
         </div>
       </div>
     </div>
