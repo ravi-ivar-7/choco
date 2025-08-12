@@ -34,9 +34,9 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (data.success) {
-        // Store token in localStorage
-        localStorage.setItem('choco_token', data.token)
-        localStorage.setItem('choco_user', JSON.stringify(data.user))
+        // Store token in localStorage from data.data
+        localStorage.setItem('choco_token', data.data.token)
+        localStorage.setItem('choco_user', JSON.stringify(data.data.user))
         
         // Redirect to admin dashboard
         router.push('/admin')

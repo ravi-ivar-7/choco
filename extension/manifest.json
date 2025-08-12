@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Choco - Team Access Manager",
   "version": "1.0.0",
-  "description": "Secure team access management for web platforms (maang.in)",
+  "description": "Secure team access management for web platforms",
   
   "permissions": [
     "storage",
@@ -13,10 +13,7 @@
   ],
   
   "host_permissions": [
-    "https://maang.in/*",
-    "https://*.maang.in/*",
-    "http://localhost:3000/*",
-    "https://algochoco.vercel.app/*"
+    "<all_urls>"
   ],
   
   "background": {
@@ -25,9 +22,13 @@
   
   "content_scripts": [
     {
-      "matches": ["https://maang.in/*", "https://*.maang.in/*"],
-      "js": ["content.js"],
-      "run_at": "document_start"
+      "matches": ["<all_urls>"],
+      "js": [
+        "lib/utils/notifications.js",
+        "lib/platforms/maang/index.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   
@@ -52,7 +53,7 @@
   "web_accessible_resources": [
     {
       "resources": ["assets/*"],
-      "matches": ["https://maang.in/*", "https://*.maang.in/*"]
+      "matches": ["<all_urls>"]
     }
   ]
 }

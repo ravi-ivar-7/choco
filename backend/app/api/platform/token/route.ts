@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { tokens } from '@/lib/schema';
-import { getAuthUser, getClientIP, getUserAgent } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth';
 import { decryptToken } from '@/lib/crypto';
 import { eq, and } from 'drizzle-orm';
 
-// GET /api/token/team - Get all active tokens for the team
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ 
-        success: false, 
-        message: 'Authentication required' 
+        success: false,
+        error: 'Authentication required',
+        message: 'Authentication required',
+        data: null
       }, { status: 401 });
     }
 
-    // Fetch all active tokens for the team
     const teamTokens = await db.select()
       .from(tokens)
       .where(and(
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       ))
       .orderBy(tokens.createdAt);
 
-    // Decrypt tokens for testing
     const decryptedTokens = teamTokens.map(token => {
       try {
         const decryptedData: any = {
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
           lastUsedAt: token.lastUsedAt
         };
         
-        // Decrypt individual tokens if they exist
         if (token.encryptedRefreshToken) {
           decryptedData.refreshToken = decryptToken(token.encryptedRefreshToken);
           decryptedData.refreshTokenExpiresAt = token.refreshTokenExpiresAt;
@@ -51,29 +49,33 @@ export async function GET(request: NextRequest) {
           decryptedData.generalTokenExpiresAt = token.generalTokenExpiresAt;
         }
         
-        // For backward compatibility, set 'token' to refreshToken if available
         if (decryptedData.refreshToken) {
           decryptedData.token = decryptedData.refreshToken;
         }
         
         return decryptedData;
       } catch (error) {
-        console.error(`Failed to decrypt tokens for ${token.id}:`, error);
+        console.error('Error processing token:', token.id, error);
         return null;
       }
     }).filter(Boolean);
 
     return NextResponse.json({
       success: true,
-      tokens: decryptedTokens,
-      count: decryptedTokens.length
+      error: null,
+      message: 'Tokens retrieved successfully',
+      data: {
+        tokens: decryptedTokens,
+        count: decryptedTokens.length
+      }
     });
 
   } catch (error) {
-    console.error('Team tokens fetch error:', error);
     return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
+      success: false,
+      error: 'Server error',
+      message: 'Internal server error',
+      data: null
     }, { status: 500 });
   }
 }

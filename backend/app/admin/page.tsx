@@ -101,8 +101,8 @@ export default function AdminDashboard() {
         }
 
         // Update user data from server verification
-        setUser(data.user)
-        localStorage.setItem('choco_user', JSON.stringify(data.user))
+        setUser(data.data.user)
+        localStorage.setItem('choco_user', JSON.stringify(data.data.user))
         
         // Load dashboard data after successful auth
         await loadDashboardData()
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
       })
       const teamsData = await teamsResponse.json()
       if (teamsData.success) {
-        setTeams(teamsData.teams)
+        setTeams(teamsData.data.teams)
       }
 
       // Load members
@@ -160,23 +160,25 @@ export default function AdminDashboard() {
       })
       const membersData = await membersResponse.json()
       if (membersData.success) {
-        setMembers(membersData.members)
+        setMembers(membersData.data.members)
       }
 
       // Load token info
-      const tokenResponse = await fetch('/api/maang/team', {
+      const tokenResponse = await fetch('/api/platform/token', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const tokenData = await tokenResponse.json()
       setTokenInfo(tokenData)
 
+      console.log('token data', tokenData)
+
       // Update stats
       setStats({
-        totalTeams: teamsData.teams?.length || 0,
-        totalUsers: membersData.members?.length || 0,
-        activeTokens: tokenData.success ? tokenData.count || 0 : 0,
-        lastTokenUpdate: tokenData.tokens?.length > 0 ? 'Recently' : 'Never',
-        tokenStatus: tokenData.success && tokenData.count > 0 ? 'active' : 'none',
+        totalTeams: teamsData.data?.teams?.length || 0,
+        totalUsers: membersData.data?.members?.length || 0,
+        activeTokens: tokenData.success ? tokenData.data?.count || 0 : 0,
+        lastTokenUpdate: tokenData.data?.tokens?.length > 0 ? 'Recently' : 'Never',
+        tokenStatus: tokenData.success && tokenData.data?.count > 0 ? 'active' : 'none',
         recentActivity: 0
       })
     } catch (error) {
@@ -198,7 +200,7 @@ export default function AdminDashboard() {
       })
       const teamsData = await teamsResponse.json()
       if (teamsData.success) {
-        setTeams(teamsData.teams)
+        setTeams(teamsData.data.teams)
       }
 
       // Load members
@@ -207,14 +209,14 @@ export default function AdminDashboard() {
       })
       const membersData = await membersResponse.json()
       if (membersData.success) {
-        setMembers(membersData.members)
+        setMembers(membersData.data.members)
       }
 
       // Update stats
       setStats(prev => ({
         ...prev,
-        totalTeams: teamsData.teams?.length || 0,
-        totalUsers: membersData.members?.length || 0,
+        totalTeams: teamsData.data.teams?.length || 0,
+        totalUsers: membersData.data.members?.length || 0,
       }))
     } catch (error) {
       console.error('Failed to refresh data:', error)

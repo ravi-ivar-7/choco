@@ -5,7 +5,6 @@ import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// POST /api/auth/login - Admin login
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -13,12 +12,13 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json({ 
-        success: false, 
-        message: 'Email and password are required' 
+        success: false,
+        error: 'Missing credentials',
+        message: 'Email and password are required',
+        data: null
       }, { status: 400 });
     }
 
-    // Find user by email
     const user = await db.select()
       .from(users)
       .where(and(
@@ -28,30 +28,27 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!user.length) {
-
-
       return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid credentials' 
+        success: false,
+        error: 'Authentication failed',
+        message: 'Invalid credentials',
+        data: null
       }, { status: 401 });
     }
 
     const userData = user[0];
 
-    // Validate password using bcrypt
     const isValidPassword = await bcrypt.compare(password, userData.password);
 
     if (!isValidPassword) {
-      // Log failed login attempt
-     
-
       return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid credentials' 
+        success: false,
+        error: 'Authentication failed',
+        message: 'Invalid credentials',
+        data: null
       }, { status: 401 });
     }
 
-    // Generate JWT token
     const JWT_SECRET = process.env.JWT_SECRET ;
     if (!JWT_SECRET) {
       throw new Error('JWT_SECRET environment variable is required');
@@ -66,29 +63,32 @@ export async function POST(request: NextRequest) {
       { expiresIn: '7d' }
     );
 
-    // Update last login time
     await db.update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(users.id, userData.id));
 
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Login successful',
-      token,
-      user: {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        teamId: userData.teamId
+      data: {
+        token,
+        user: {
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role,
+          teamId: userData.teamId
+        }
       }
     });
 
   } catch (error) {
-    console.error('Login error:', error);
     return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
+      success: false,
+      error: 'Server error',
+      message: 'Internal server error',
+      data: null
     }, { status: 500 });
   }
 }

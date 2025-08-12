@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { teams, users } from '@/lib/schema';
-import { getAuthUser, requireAdmin, getClientIP, getUserAgent } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-// GET /api/teams - List all teams
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
@@ -21,18 +20,22 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      teams: allTeams
+      error: null,
+      message: 'Teams retrieved successfully',
+      data: {
+        teams: allTeams
+      }
     });
   } catch (error) {
-    console.error('Teams fetch error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to fetch teams'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to fetch teams',
+      data: null
     }, { status: error instanceof Error && error.message === 'Authentication required' ? 401 : 500 });
   }
 }
 
-// POST /api/teams - Create new team
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
@@ -43,11 +46,12 @@ export async function POST(request: NextRequest) {
     if (!name || !platformAccountId) {
       return NextResponse.json({
         success: false,
-        message: 'Team name and Platform Account ID are required'
+        error: 'Missing required fields',
+        message: 'Team name and Platform Account ID are required',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if platformAccountId already exists
     const existingTeam = await db.select()
       .from(teams)
       .where(eq(teams.platformAccountId, platformAccountId))
@@ -56,7 +60,9 @@ export async function POST(request: NextRequest) {
     if (existingTeam.length > 0) {
       return NextResponse.json({
         success: false,
-        message: 'A team with this Platform Account ID already exists'
+        error: 'Platform account already exists',
+        message: 'A team with this Platform Account ID already exists',
+        data: null
       }, { status: 400 });
     }
 
@@ -70,19 +76,22 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Team created successfully',
-      team: newTeam
+      data: {
+        team: newTeam
+      }
     });
   } catch (error) {
-    console.error('Team creation error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to create team'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to create team',
+      data: null
     }, { status: 500 });
   }
 }
 
-// PUT /api/teams - Update team
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
@@ -93,11 +102,12 @@ export async function PUT(request: NextRequest) {
     if (!id || !name || !platformAccountId) {
       return NextResponse.json({
         success: false,
-        message: 'Team ID, name, and Platform Account ID are required'
+        error: 'Missing required fields',
+        message: 'Team ID, name, and Platform Account ID are required',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if team exists
     const existingTeam = await db.select()
       .from(teams)
       .where(eq(teams.id, id))
@@ -106,11 +116,12 @@ export async function PUT(request: NextRequest) {
     if (existingTeam.length === 0) {
       return NextResponse.json({
         success: false,
-        message: 'Team not found'
+        error: 'Team not found',
+        message: 'Team not found',
+        data: null
       }, { status: 404 });
     }
 
-    // Check if platformAccountId is used by another team
     const duplicateTeam = await db.select()
       .from(teams)
       .where(eq(teams.platformAccountId, platformAccountId))
@@ -119,7 +130,9 @@ export async function PUT(request: NextRequest) {
     if (duplicateTeam.length > 0 && duplicateTeam[0].id !== id) {
       return NextResponse.json({
         success: false,
-        message: 'Another team is already using this Platform Account ID'
+        error: 'Platform account already exists',
+        message: 'Another team is already using this Platform Account ID',
+        data: null
       }, { status: 400 });
     }
 
@@ -135,19 +148,22 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Team updated successfully',
-      team: updatedTeam[0]
+      data: {
+        team: updatedTeam[0]
+      }
     });
   } catch (error) {
-    console.error('Team update error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update team'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to update team',
+      data: null
     }, { status: 500 });
   }
 }
 
-// DELETE /api/teams - Delete team
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
@@ -157,11 +173,12 @@ export async function DELETE(request: NextRequest) {
     if (!teamId) {
       return NextResponse.json({
         success: false,
-        message: 'Team ID is required'
+        error: 'Missing team ID',
+        message: 'Team ID is required',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if team exists
     const existingTeam = await db.select()
       .from(teams)
       .where(eq(teams.id, teamId))
@@ -170,11 +187,12 @@ export async function DELETE(request: NextRequest) {
     if (existingTeam.length === 0) {
       return NextResponse.json({
         success: false,
-        message: 'Team not found'
+        error: 'Team not found',
+        message: 'Team not found',
+        data: null
       }, { status: 404 });
     }
 
-    // Check if team has members
     const teamMembers = await db.select()
       .from(users)
       .where(eq(users.teamId, teamId))
@@ -183,7 +201,9 @@ export async function DELETE(request: NextRequest) {
     if (teamMembers.length > 0) {
       return NextResponse.json({
         success: false,
-        message: 'Cannot delete team with existing members. Please remove all members first.'
+        error: 'Team has members',
+        message: 'Cannot delete team with existing members. Please remove all members first.',
+        data: null
       }, { status: 400 });
     }
 
@@ -191,13 +211,16 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Team deleted successfully'
+      error: null,
+      message: 'Team deleted successfully',
+      data: null
     });
   } catch (error) {
-    console.error('Team deletion error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete team'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to delete team',
+      data: null
     }, { status: 500 });
   }
 }

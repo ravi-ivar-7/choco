@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, teams } from '@/lib/schema';
-import { requireAdmin, getClientIP, getUserAgent } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { generateAndHashInitialPassword } from '@/lib/password-utils';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-// GET /api/members - List all members or members of a specific team
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
@@ -34,18 +33,22 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      members
+      error: null,
+      message: 'Members retrieved successfully',
+      data: {
+        members
+      }
     });
   } catch (error) {
-    console.error('Members fetch error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to fetch members'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to fetch members',
+      data: null
     }, { status: error instanceof Error && error.message === 'Authentication required' ? 401 : 500 });
   }
 }
 
-// POST /api/members - Create new member
 export async function POST(request: NextRequest) {
   try {
     const adminUser = await requireAdmin(request);
@@ -56,19 +59,21 @@ export async function POST(request: NextRequest) {
     if (!email || !name || !teamId) {
       return NextResponse.json({
         success: false,
-        message: 'Email, name, and team ID are required'
+        error: 'Missing required fields',
+        message: 'Email, name, and team ID are required',
+        data: null
       }, { status: 400 });
     }
 
-    // Validate role
     if (!['admin', 'member'].includes(role)) {
       return NextResponse.json({
         success: false,
-        message: 'Role must be either "admin" or "member"'
+        error: 'Invalid role',
+        message: 'Role must be either "admin" or "member"',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if email already exists
     const existingUser = await db.select()
       .from(users)
       .where(eq(users.email, email))
@@ -77,7 +82,9 @@ export async function POST(request: NextRequest) {
     if (existingUser.length > 0) {
       return NextResponse.json({
         success: false,
-        message: 'A user with this email already exists'
+        error: 'Email already exists',
+        message: 'A user with this email already exists',
+        data: null
       }, { status: 400 });
     }
 
@@ -96,9 +103,7 @@ export async function POST(request: NextRequest) {
 
     const memberId = createId();
     
-    // Generate initial password from email (without @domain.tld)
     const hashedPassword = await generateAndHashInitialPassword(email);
-    const initialPassword = email.split('@')[0]; // For logging purposes
     
     const newMember = await db.insert(users).values({
       id: memberId,
@@ -110,24 +115,24 @@ export async function POST(request: NextRequest) {
       isActive: true,
     }).returning();
 
-
-    console.log(`✅ Created user ${email} with initial password: ${initialPassword}`);
-
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Member created successfully',
-      member: newMember[0]
+      data: {
+        member: newMember[0]
+      }
     });
   } catch (error) {
-    console.error('Member creation error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to create member'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to create member',
+      data: null
     }, { status: 500 });
   }
 }
 
-// PUT /api/members - Update member
 export async function PUT(request: NextRequest) {
   try {
     const adminUser = await requireAdmin(request);
@@ -138,19 +143,21 @@ export async function PUT(request: NextRequest) {
     if (!id || !email || !name || !teamId) {
       return NextResponse.json({
         success: false,
-        message: 'Member ID, email, name, and team ID are required'
+        error: 'Missing required fields',
+        message: 'Member ID, email, name, and team ID are required',
+        data: null
       }, { status: 400 });
     }
 
-    // Validate role
     if (role && !['admin', 'member'].includes(role)) {
       return NextResponse.json({
         success: false,
-        message: 'Role must be either "admin" or "member"'
+        error: 'Invalid role',
+        message: 'Role must be either "admin" or "member"',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if member exists
     const existingMember = await db.select()
       .from(users)
       .where(eq(users.id, id))
@@ -159,11 +166,12 @@ export async function PUT(request: NextRequest) {
     if (existingMember.length === 0) {
       return NextResponse.json({
         success: false,
-        message: 'Member not found'
+        error: 'Member not found',
+        message: 'Member not found',
+        data: null
       }, { status: 404 });
     }
 
-    // Check if email is used by another user
     const duplicateUser = await db.select()
       .from(users)
       .where(eq(users.email, email))
@@ -172,7 +180,9 @@ export async function PUT(request: NextRequest) {
     if (duplicateUser.length > 0 && duplicateUser[0].id !== id) {
       return NextResponse.json({
         success: false,
-        message: 'Another user is already using this email'
+        error: 'Email already exists',
+        message: 'Another user is already using this email',
+        data: null
       }, { status: 400 });
     }
 
@@ -203,19 +213,22 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Member updated successfully',
-      member: updatedMember[0]
+      data: {
+        member: updatedMember[0]
+      }
     });
   } catch (error) {
-    console.error('Member update error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update member'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to update member',
+      data: null
     }, { status: 500 });
   }
 }
 
-// DELETE /api/members - Delete member
 export async function DELETE(request: NextRequest) {
   try {
     const adminUser = await requireAdmin(request);
@@ -225,11 +238,12 @@ export async function DELETE(request: NextRequest) {
     if (!memberId) {
       return NextResponse.json({
         success: false,
-        message: 'Member ID is required'
+        error: 'Missing member ID',
+        message: 'Member ID is required',
+        data: null
       }, { status: 400 });
     }
 
-    // Check if member exists
     const existingMember = await db.select()
       .from(users)
       .where(eq(users.id, memberId))
@@ -238,32 +252,35 @@ export async function DELETE(request: NextRequest) {
     if (existingMember.length === 0) {
       return NextResponse.json({
         success: false,
-        message: 'Member not found'
+        error: 'Member not found',
+        message: 'Member not found',
+        data: null
       }, { status: 404 });
     }
 
-    // Prevent deleting yourself
     if (existingMember[0].id === adminUser.id) {
       return NextResponse.json({
         success: false,
-        message: 'You cannot delete your own account'
+        error: 'Cannot delete self',
+        message: 'You cannot delete your own account',
+        data: null
       }, { status: 400 });
     }
-
-    const member = existingMember[0];
-
 
     await db.delete(users).where(eq(users.id, memberId));
 
     return NextResponse.json({
       success: true,
-      message: 'Member deleted successfully'
+      error: null,
+      message: 'Member deleted successfully',
+      data: null
     });
   } catch (error) {
-    console.error('Member deletion error:', error);
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete member'
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'Failed to delete member',
+      data: null
     }, { status: 500 });
   }
 }

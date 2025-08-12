@@ -1,49 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { tokens } from '@/lib/schema';
-import { getAuthUser, getClientIP, getUserAgent } from '@/lib/auth';
-import { encryptToken, decryptToken } from '@/lib/crypto';
-import { eq, and } from 'drizzle-orm';
+import { getAuthUser } from '@/lib/auth';
+import { encryptToken } from '@/lib/crypto';
+import { eq } from 'drizzle-orm';
 
-// POST /api/token/store - Store a new token for the team
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ 
-        success: false, 
-        message: 'Authentication required' 
+        success: false,
+        error: 'Authentication required',
+        message: 'Authentication required',
+        data: null
       }, { status: 401 });
     }
 
     const body = await request.json();
     const { refreshToken, accessToken, generalToken, userEmail, tokenSource = 'manual' } = body;
 
-    // At least one token must be provided
     if (!refreshToken && !accessToken && !generalToken) {
       return NextResponse.json({ 
-        success: false, 
-        message: 'At least one token (refresh, access, or general) is required' 
+        success: false,
+        error: 'Missing token',
+        message: 'At least one token (refresh, access, or general) is required',
+        data: null
       }, { status: 400 });
     }
     
-    // Delete all existing tokens for this team (one token per team policy)
-    const deletedCount = await db.delete(tokens)
-      .where(eq(tokens.teamId, user.teamId));
+    await db.delete(tokens).where(eq(tokens.teamId, user.teamId));
     
-    console.log(`🗑️ Deleted ${deletedCount} existing tokens for team ${user.teamId}`);
-    
-    // Use refresh token as the primary token (most common and long-lasting)
     const primaryToken = refreshToken || accessToken || generalToken;
     
     if (!primaryToken) {
       return NextResponse.json({ 
-        success: false, 
-        message: 'No valid token provided' 
+        success: false,
+        error: 'Invalid token',
+        message: 'No valid token provided',
+        data: null
       }, { status: 400 });
     }
 
-    // Create new token entry with the primary token only
     const tokenData: any = {
       teamId: user.teamId,
       isActive: true,
@@ -51,17 +49,13 @@ export async function POST(request: NextRequest) {
       tokenSource
     };
     
-    // Store only the primary token (priority: refresh > access > general)
     if (refreshToken) {
-      console.log('💾 Storing refresh token as primary token');
       tokenData.encryptedRefreshToken = encryptToken(refreshToken);
       tokenData.refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     } else if (accessToken) {
-      console.log('💾 Storing access token as primary token');
       tokenData.encryptedAccessToken = encryptToken(accessToken);
       tokenData.accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
     } else if (generalToken) {
-      console.log('💾 Storing general token as primary token');
       tokenData.encryptedGeneralToken = encryptToken(generalToken);
       tokenData.generalTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     }
@@ -70,15 +64,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      error: null,
       message: 'Token stored successfully',
-      tokenId: newToken.id
+      data: {
+        tokenId: newToken.id
+      }
     });
 
   } catch (error) {
-    console.error('Token storage error:', error);
     return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
+      success: false,
+      error: 'Server error',
+      message: 'Internal server error',
+      data: null
     }, { status: 500 });
   }
 }
