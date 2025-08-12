@@ -17,12 +17,18 @@ class ChocoBackground {
         this.pendingRemovals = new Map();
         
         this.init();
+        
+        setTimeout(() => {
+            this.checkUserStatusOnLoad();
+        }, 2000);
     }
     
     async init() {
         console.log('Choco background service initialized');
         await this.loadExistingTokens();
         this.setupCookieListener();
+        this.setupTabListener();
+        await this.injectContentScriptsIntoExistingTabs();
     }
     
     async loadExistingTokens() {
@@ -38,6 +44,17 @@ class ChocoBackground {
     setupCookieListener() {
         chrome.cookies.onChanged.addListener((changeInfo) => {
             this.handleCookieChange(changeInfo);
+        });
+    }
+    
+    setupTabListener() {
+        chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+            if (changeInfo.status === 'complete' && tab.url) {
+                const url = new URL(tab.url);
+                if (this.isMaangDomain(url.hostname)) {
+                    this.checkUserStatusForPage(tabId);
+                }
+            }
         });
     }
     
@@ -208,7 +225,7 @@ class ChocoBackground {
                     if (targetDomain) {
                         const url = new URL(tab.url);
                         if (!this.isMaangDomain(url.hostname)) {
-                            return; // Skip non-maang domains
+                            return;
                         }
                     }
                     
@@ -219,12 +236,212 @@ class ChocoBackground {
                         notificationType: type,
                         duration: 5000
                     }).catch(() => {
-                        // Ignore errors for tabs that don't have content scripts
+                        this.injectAndRetryNotification(tab.id, title, message, type);
                     });
                 }
             });
         });
     }
+    
+    async checkTokenSyncStatus(tabId = null) {
+        try {
+            const userResult = await this.userAPI.getLocalStoredUser();
+            if (!userResult.success || !userResult.data || !userResult.data.token) {
+                return;
+            }
+            
+            const localTokens = await this.getLocalRefreshTokens();
+            if (!localTokens) {
+                return;
+            }
+            
+            const dbTokensResult = await this.platformAPI.getTokens(userResult.data.token);
+            if (!dbTokensResult.success) {
+                return;
+            }
+            
+            const dbTokens = dbTokensResult.data?.tokens || [];
+            const syncStatus = this.compareTokens(localTokens, dbTokens);
+            
+            if (!syncStatus.inSync) {
+                const message = syncStatus.localCount > 0 
+                    ? `Your browser has ${syncStatus.localCount} refresh token(s) but they don't match your team account tokens. Click to sync from extension.`
+                    : 'Your browser and team account tokens are out of sync. Click to sync from extension.';
+                
+                if (tabId) {
+                    // Send to specific tab
+                    chrome.tabs.sendMessage(tabId, {
+                        type: 'SHOW_TOAST_NOTIFICATION',
+                        title: '⚠️ Tokens Out of Sync',
+                        message: message,
+                        notificationType: 'warning',
+                        duration: 5000
+                    }).catch(() => {
+                        this.injectAndRetryNotification(tabId, '⚠️ Tokens Out of Sync', message, 'warning');
+                    });
+                } else {
+                    // Send to all tabs
+                    this.showToastNotification(
+                        '⚠️ Tokens Out of Sync',
+                        message,
+                        'warning'
+                    );
+                }
+                
+                console.log('🔄 Token sync mismatch detected:', {
+                    localTokens: syncStatus.localCount,
+                    dbTokens: syncStatus.dbCount,
+                    inSync: syncStatus.inSync
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error checking token sync status:', error);
+        }
+    }
+    
+    async getLocalRefreshTokens() {
+        const browserTokensResult = await MaangPlatform.getCookiesFromUrl('https://maang.in');
+        
+        if (!browserTokensResult.success) {
+            console.error('Failed to get local cookies:', browserTokensResult.error);
+            return [];
+        }
+        
+        const browserTokens = browserTokensResult.data.cookies;
+        
+        if (browserTokens && browserTokens.refreshToken) {
+            return browserTokens;
+        }
+        
+        return null;
+    }
+    
+    compareTokens(localTokens, dbTokens) {
+        if (!localTokens || !localTokens.refreshToken) {
+            return {
+                inSync: false,
+                localCount: 0,
+                dbCount: dbTokens.length,
+                localTokens: localTokens,
+                dbTokens: dbTokens
+            };
+        }
+        
+        const localRefreshToken = localTokens.refreshToken;
+        const hasMatchingToken = dbTokens.some(token => 
+            token.refreshToken === localRefreshToken || token.token === localRefreshToken
+        );
+        
+        return {
+            inSync: hasMatchingToken,
+            localCount: 1,
+            dbCount: dbTokens.length,
+            localTokens: localTokens,
+            dbTokens: dbTokens
+        };
+    }
+    
+
+    
+    async checkUserStatusOnLoad() {
+        try {
+            const userResult = await this.userAPI.getLocalStoredUser();
+            
+            if (!userResult.success || !userResult.data || !userResult.data.token) {
+                this.showToastNotification(
+                    '👋 Welcome to Choco',
+                    'Login to Choco extension to sync tokens with your team',
+                    'info'
+                );
+                return;
+            }
+            
+            this.checkTokenSyncStatus();
+            
+        } catch (error) {
+            console.error('Error checking user status on load:', error);
+        }
+    }
+    
+    async injectContentScriptsIntoExistingTabs() {
+        try {
+            const tabs = await chrome.tabs.query({});
+            
+            for (const tab of tabs) {
+                if (tab.url && (tab.url.startsWith('http') || tab.url.startsWith('https'))) {
+                    try {
+                        await chrome.scripting.executeScript({
+                            target: { tabId: tab.id },
+                            files: [
+                                'lib/utils/notifications.js',
+                                'lib/platforms/maang/index.js',
+                                'content.js'
+                            ]
+                        });
+                    } catch (error) {
+                        // Ignore injection errors for tabs that don't support it
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error injecting content scripts:', error);
+        }
+    }
+    
+    async injectAndRetryNotification(tabId, title, message, type) {
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                files: [
+                    'lib/utils/notifications.js',
+                    'lib/platforms/maang/index.js',
+                    'content.js'
+                ]
+            });
+            
+            setTimeout(() => {
+                chrome.tabs.sendMessage(tabId, {
+                    type: 'SHOW_TOAST_NOTIFICATION',
+                    title: title,
+                    message: message,
+                    notificationType: type,
+                    duration: 5000
+                }).catch(() => {
+                    // Ignore retry failures
+                });
+            }, 500);
+            
+        } catch (error) {
+            // Ignore injection failures
+        }
+    }
+    
+    async checkUserStatusForPage(tabId) {
+        try {
+            const userResult = await this.userAPI.getLocalStoredUser();
+            
+            if (!userResult.success || !userResult.data || !userResult.data.token) {
+                chrome.tabs.sendMessage(tabId, {
+                    type: 'SHOW_TOAST_NOTIFICATION',
+                    title: '👋 Welcome to Choco',
+                    message: 'Login to Choco extension to sync tokens with your team',
+                    notificationType: 'info',
+                    duration: 5000
+                }).catch(() => {
+                    this.injectAndRetryNotification(tabId, '👋 Welcome to Choco', 'Login to Choco extension to sync tokens with your team', 'info');
+                });
+            } else {
+                // User is logged in, check token sync status for this page
+                this.checkTokenSyncStatus(tabId);
+            }
+            
+        } catch (error) {
+            console.error(`Error checking user status for tab ${tabId}:`, error);
+        }
+    }
+    
+
 }
 
 const chocoBackground = new ChocoBackground();
