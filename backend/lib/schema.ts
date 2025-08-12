@@ -40,7 +40,7 @@ export const tokens = pgTable('tokens', {
   // Metadata
   tokenSource: text('token_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'
   isActive: boolean('is_active').notNull().default(true),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   lastUsedAt: timestamp('last_used_at'),
