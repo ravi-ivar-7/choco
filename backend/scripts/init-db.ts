@@ -18,8 +18,6 @@ async function initializeDatabase() {
       platformAccountId: 'demo-account-123',
     });
 
-    console.log('✅ Created demo team');
-
     // Create demo admin user with password
     const adminId = createId();
     const adminEmail = 'admin@gmail.com';

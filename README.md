@@ -8,7 +8,6 @@
 - **Team Access Control**: Only authorized team members can access shared tokens
 - **Auto Token Refresh**: Seamless token validation and refresh for web platforms
 - **Real-time Sync**: Token updates sync instantly across all team members
-- **Audit Logs**: Complete audit trail of all token operations
 - **Admin Dashboard**: Web-based admin interface for team management
 
 ## 🏗 Architecture
@@ -277,4 +276,3 @@ For issues and questions:
 
 ---
 
-Built with ❤️ for secure team collaboration

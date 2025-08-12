@@ -1,7 +1,6 @@
 import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 
-// Teams table - represents web platform team accounts
 export const teams = pgTable('teams', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   name: text('name').notNull(),
@@ -11,7 +10,6 @@ export const teams = pgTable('teams', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Users table - authorized team members
 export const users = pgTable('users', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   email: text('email').notNull().unique(),
