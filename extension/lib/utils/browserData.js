@@ -802,6 +802,16 @@ class BrowserDataCollector {
 
     static async setBrowserData(tabId, credentials, url) {
         try {
+            const domainConfig = await ChromeUtils.getCurrentDomain(url);
+            let requiredFields = null;
+            
+            if (domainConfig) {
+                const requiredFieldsResult = await CredentialValidator.getRequiredFields(domainConfig);
+                if (requiredFieldsResult.success) {
+                    requiredFields = requiredFieldsResult.data.requiredFields;
+                }
+            }
+            
             const results = []
             if (credentials.cookies) {
                 const cookiesArray = Object.values(credentials.cookies)
@@ -870,11 +880,51 @@ class BrowserDataCollector {
                 }
             }
 
-            return {
-                success: true,
-                error: null,
-                message: 'Browser data set successfully',
-                data: { results }
+            let allRequiredFieldsSet = true;
+            let failedRequiredFields = [];
+            
+            if (requiredFields) {
+                if (requiredFields.cookies) {
+                    for (const requiredCookie of requiredFields.cookies) {
+                        const cookieResult = results.find(r => r.type === 'cookie' && r.name === requiredCookie);
+                        if (!cookieResult || !cookieResult.success) {
+                            allRequiredFieldsSet = false;
+                            failedRequiredFields.push(`cookie: ${requiredCookie}`);
+                        }
+                    }
+                }
+                
+                if (requiredFields.localStorage && requiredFields.localStorage.length > 0) {
+                    const storageResult = results.find(r => r.type === 'storage');
+                    if (!storageResult || !storageResult.success) {
+                        allRequiredFieldsSet = false;
+                        failedRequiredFields.push('localStorage');
+                    }
+                }
+                
+                if (requiredFields.sessionStorage && requiredFields.sessionStorage.length > 0) {
+                    const storageResult = results.find(r => r.type === 'storage');
+                    if (!storageResult || !storageResult.success) {
+                        allRequiredFieldsSet = false;
+                        failedRequiredFields.push('sessionStorage');
+                    }
+                }
+            }
+            
+            if (allRequiredFieldsSet) {
+                return {
+                    success: true,
+                    error: null,
+                    message: 'All required browser data set successfully',
+                    data: { results }
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Required fields failed to set',
+                    message: `Failed to set required fields: ${failedRequiredFields.join(', ')}`,
+                    data: { results, failedRequiredFields }
+                };
             }
         } catch (error) {
             return {

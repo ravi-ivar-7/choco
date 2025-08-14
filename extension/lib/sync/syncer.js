@@ -1,5 +1,5 @@
 class CredentialSyncer {
-    static async syncCredentials(domainConfig, userAPI, credentialsAPI) {
+    static async syncCredentialsToDatabase(domainConfig, userAPI, credentialsAPI) {
         try {
             if (!domainConfig || !domainConfig.key) {
                 return {

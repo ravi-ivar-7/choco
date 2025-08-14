@@ -233,7 +233,11 @@ class ChocoPopup {
                         this.currentUrl
                     )
                     if (setBrowserDataResult.success) {
+
+                        console.log('setBrowserDataResult success', setBrowserDataResult)
+                        console.log('teamCredential', teamCredential)
                         const validation = await CredentialValidator.validateCredentials(teamCredential, 'test_credentials')
+                        console.log('validation', validation)
                         if (validation.success) {
                             return {
                                 success: true,

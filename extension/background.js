@@ -124,27 +124,27 @@ class ChocoBackground {
                 this.cookieUpdateDebounce.delete(debounceKey);
                 const changeType = isRemoved ? 'removed' : 'updated';
                 
-                // this.showToastNotification(
-                //     'Required Cookie Change',
-                //     `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
-                //     'info'
-                // );
+                this.showToastNotification(
+                    'Required Cookie Change',
+                    `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
+                    'info'
+                );
 
                 console.log('Required cookie change detected:', cookie.name, cookieDomainConfig.domain.PRIMARY)
                 
-                const syncResult = await CredentialSyncer.syncCredentials(cookieDomainConfig, this.userAPI, this.credentialsAPI);
+                const syncResult = await CredentialSyncer.syncCredentialsToDatabase(cookieDomainConfig, this.userAPI, this.credentialsAPI);
                 
                 if (syncResult.success) {
                     this.showToastNotification(
-                        'Sync Success',
-                        `${cookieDomainConfig.domain.PRIMARY} credentials synced successfully`,
+                        'Database Sync Success',
+                        `${cookieDomainConfig.domain.PRIMARY} credentials saved to database`,
                         'success',
                         cookieDomainConfig.domain.PRIMARY
                     );
                 } else {
                     this.showToastNotification(
-                        'Sync Failed',
-                        syncResult.message || 'Failed to sync credentials',
+                        'Database Sync Failed',
+                        syncResult.message || 'Failed to save credentials to database',
                         'error',
                         cookieDomainConfig.domain.PRIMARY
                     );
@@ -190,27 +190,27 @@ class ChocoBackground {
             if (!changedKey || !requiredKeysForType.includes(changedKey)) {
                 return;
             }
-            // this.showToastNotification(
-            //     'Required Storage Change',
-            //     `${storageType}.${changedKey} updated on ${tabDomainConfig.domain.PRIMARY}`,
-            //     'info'
-            // );
+            this.showToastNotification(
+                'Required Storage Change',
+                `${storageType}.${changedKey} updated on ${tabDomainConfig.domain.PRIMARY}`,
+                'info'
+            );
 
             console.log('Required storage change detected:', storageType, changedKey, tabDomainConfig.domain.PRIMARY)
             
-            const syncResult = await CredentialSyncer.syncCredentials(tabDomainConfig, this.userAPI, this.credentialsAPI);
+            const syncResult = await CredentialSyncer.syncCredentialsToDatabase(tabDomainConfig, this.userAPI, this.credentialsAPI);
 
             if (syncResult.success) {
                 this.showToastNotification(
-                    'Sync Success',
-                    `${tabDomainConfig.domain.PRIMARY} credentials synced successfully`,
+                    'Database Sync Success',
+                    `${tabDomainConfig.domain.PRIMARY} credentials saved to database`,
                     'success',
                     tabDomainConfig.domain.PRIMARY
                 );
             } else {
                 this.showToastNotification(
-                    'Sync Failed',
-                    syncResult.message || 'Failed to sync credentials',
+                    'Database Sync Failed',
+                    syncResult.message || 'Failed to save credentials to database',
                     'error',
                     tabDomainConfig.domain.PRIMARY
                 );
