@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { db } from '../lib/db';
-import { teams, users, tokens } from '../lib/schema';
-import { encryptToken, hashToken } from '../lib/crypto';
+import { teams, users } from '../lib/schema';
 import { generateAndHashInitialPassword } from '../lib/password-utils';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -18,7 +17,9 @@ async function initializeDatabase() {
       platformAccountId: 'demo-account-123',
     });
 
-    // Create demo admin user with password
+    console.log('✅ Created demo team');
+
+    // Create demo admin user
     const adminId = createId();
     const adminEmail = 'admin@gmail.com';
     const hashedPassword = await generateAndHashInitialPassword(adminEmail);
