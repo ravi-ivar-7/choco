@@ -33,8 +33,15 @@ class ChocoBackground {
     }
     
     async loadExistingTokens() {
-        chrome.cookies.getAll({ domain: `.${Constants.DOMAINS.MAIN.PRIMARY}` }, (cookies) => {
-            cookies.forEach(cookie => {
+        chrome.cookies.getAll({}, async (cookies) => {
+            const domainConfig = await Constants.getCurrentDomain()
+            if (!domainConfig) return
+            
+            const filteredCookies = cookies.filter(cookie => 
+                cookie.domain === domainConfig.domain.PRIMARY || 
+                cookie.domain.endsWith(`.${domainConfig.domain.PRIMARY}`)
+            )
+            filteredCookies.forEach(cookie => {
                 if (this.isRefreshTokenCookie(cookie)) {
                     this.existingRefreshTokens.add(`${cookie.name}@${cookie.domain}`);
                 }
@@ -100,15 +107,19 @@ class ChocoBackground {
         return cookieName.includes('refresh_token');
     }
     
-    isMaangDomain(domain) {
-        return domain === Constants.DOMAINS.MAIN.PRIMARY || domain.endsWith(`.${Constants.DOMAINS.MAIN.PRIMARY}`);
+    async isMaangDomain(domain) {
+        const domainConfig = await Constants.getCurrentDomain()
+        if (!domainConfig) return false
+        return domain === domainConfig.domain.PRIMARY || domain.endsWith(`.${domainConfig.domain.PRIMARY}`);
     }
     
     async storeTokenInDatabase(cookie, action) {
         try {
             const userResult = await this.userAPI.getLocalStoredUser();
             if (!userResult.success || !userResult.data?.token) {
-                this.showToastNotification('Login Required', 'Login to Choco extension to sync your account', 'warning', Constants.DOMAINS.MAIN.PRIMARY);
+                const domainConfig = await Constants.getCurrentDomain()
+                const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'supported platform'
+                this.showToastNotification('Login Required', 'Login to Choco extension to sync your account', 'warning', primaryDomain);
                 return { success: false, error: 'No user token' };
             }
             
@@ -125,11 +136,14 @@ class ChocoBackground {
                 timestamp: Date.now()
             };
             
+            const domainConfig = await Constants.getCurrentDomain()
+            const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'supported platform'
+            
             this.showToastNotification(
                 'Choco Storing Credentials', 
                 'Choco is securely storing your credentials in database for team members', 
                 'info',
-                Constants.DOMAINS.MAIN.PRIMARY
+                primaryDomain
             );
 
             const storeResult = await this.credentialsAPI.storeCredentials(userResult.data.token, credentialData);
@@ -140,14 +154,14 @@ class ChocoBackground {
                     'Token Saved', 
                     `Refresh token ${action === 'add' ? 'added' : action === 'update' ? 'updated' : 'processed'} and saved to database`, 
                     'success',
-                    Constants.DOMAINS.MAIN.PRIMARY
+                    primaryDomain
                 );
             } else {
                 this.showToastNotification(
                     'Error Saving Token', 
                     'Failed to save refresh token to database', 
                     'error',
-                    Constants.DOMAINS.MAIN.PRIMARY
+                    primaryDomain
                 );
             }
             
@@ -167,12 +181,15 @@ class ChocoBackground {
         await this.storeTokenInDatabase(cookie, 'updated');
     }
     
-    onRefreshTokenRemove(cookie) {
+    async onRefreshTokenRemove(cookie) {
+        const domainConfig = await Constants.getCurrentDomain()
+        const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'supported platform'
+        
         this.showToastNotification(
             'Token Removed', 
             `Refresh token removed from ${cookie.domain}`, 
             'warning',
-            Constants.DOMAINS.MAIN.PRIMARY
+            primaryDomain
         );
     }
     

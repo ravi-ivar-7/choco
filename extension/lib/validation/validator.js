@@ -1,26 +1,85 @@
 class CredentialValidator {
-    static async validateCredentials(credentials, mode = 'match_browser', targetCredentials = null) {
+    static async getRequiredFields() {
         try {
-            const activeTabResult = await BrowserDataCollector.getActiveTab()
-            const currentTab = activeTabResult.success ? activeTabResult.data : null
-            const url = currentTab?.url || Constants.DOMAINS.MAIN.URL
-            const domain = new URL(url).hostname
+            const domainConfig = await Constants.getCurrentDomain()
+            if (!domainConfig) {
+                return {
+                    success: false,
+                    error: 'No supported domain detected',
+                    message: 'No supported domain detected',
+                    data: null
+                }
+            }
             
-            if (domain.includes(Constants.DOMAINS.MAIN.PRIMARY)) {
+            let requiredFields
+            let platform
+            if (domainConfig.key === 'MAANG') {
+                requiredFields = MaangValidation.requiredFields
+                platform = 'maang'
+            }
+            else if (domainConfig.key === 'DEVS') {
+                requiredFields = DevsValidation.requiredFields
+                platform = '100xdevs'
+            }
+            else {
+                return {
+                    success: false,
+                    error: `No validator available for domain: ${domainConfig.key}`,
+                    message: `No validator available for domain: ${domainConfig.key}`,
+                    data: null
+                }
+            }
+            
+            return {
+                success: true,
+                error: null,
+                message: `Required fields for ${platform} platform`,
+                data: {
+                    requiredFields: requiredFields,
+                    domainKey: domainConfig.key,
+                    domainConfig: domainConfig.domain
+                }
+            }
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+    
+    static async validateCredentials(credentials, mode , targetCredentials = null) {
+        try {
+            const domainConfig = await Constants.getCurrentDomain()
+            if (!domainConfig) {
+                return {
+                    success: false,
+                    error: 'No supported domain detected',
+                    message: 'No supported domain detected',
+                    data: null
+                }
+            }
+            
+            if (domainConfig.key === 'MAANG') {
                 return await MaangValidation.validateCredentials(credentials, mode, targetCredentials)
+            }
+            else if (domainConfig.key === 'DEVS') {
+                return await DevsValidation.validateCredentials(credentials, mode, targetCredentials)
             }
             
             return {
                 success: false,
-                platform: 'unknown',
-                error: `No validator available for domain: ${domain}`,
+                error: `No validator available for domain: ${domainConfig.key}`,
+                message: `No validator available for domain: ${domainConfig.key}`,
                 data: null
             }
         } catch (error) {
             return {
                 success: false,
-                platform: 'unknown',
                 error: error.message,
+                message: error.message,
                 data: null
             }
         }
@@ -53,6 +112,6 @@ class CredentialValidator {
  * EXTENSIBILITY:
  * - Add new platform validators by extending domain detection logic
  * - Add new modes by implementing them in platform-specific validators
- * - Maintain consistent return structure: { success, platform, message, data }
+ * - Maintain consistent return structure: { success, error, message, data }
  * - Use requiredFields constant for field definitions in new platforms
  */

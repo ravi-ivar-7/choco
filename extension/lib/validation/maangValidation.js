@@ -4,43 +4,53 @@ class MaangValidation {
         localStorage: ['az_user_tracking_id'],
         sessionStorage: []
     }
+
+    static extractCredentials(credentials) {
+        const credentialCookies = credentials.cookies || {}
+        const credentialLocalStorage = credentials.localStorage || {}
+        
+        const hasAccessToken = credentialCookies.access_token && credentialCookies.access_token.value
+        const hasRefreshToken = credentialCookies.refresh_token && credentialCookies.refresh_token.value
+        const hasAzTracking = credentialLocalStorage.az_user_tracking_id
+        
+        const hasAllRequired = !!(hasAccessToken && hasRefreshToken && hasAzTracking)
+        
+        return {
+            credentialCookies,
+            credentialLocalStorage,
+            hasAccessToken,
+            hasRefreshToken,
+            hasAzTracking,
+            hasAllRequired
+        }
+    }
     
-    static async validateCredentials(credentials, mode = 'match_browser', targetCredentials = null) {
+    static buildCredentialData(extracted) {
+        return {
+            cookies: {
+                access_token: extracted.hasAccessToken ? extracted.credentialCookies.access_token : null,
+                refresh_token: extracted.hasRefreshToken ? extracted.credentialCookies.refresh_token : null
+            },
+            localStorage: {
+                az_user_tracking_id: extracted.hasAzTracking ? extracted.credentialLocalStorage.az_user_tracking_id : null
+            }
+        }
+    }
+    
+    static async validateCredentials(credentials, mode , targetCredentials = null) {
         try {
-            const credentialCookies = credentials.cookies || {}
-            const credentialLocalStorage = credentials.localStorage || {}
-            
-            const hasAccessToken = credentialCookies.access_token && credentialCookies.access_token.value
-            const hasRefreshToken = credentialCookies.refresh_token && credentialCookies.refresh_token.value
-            const hasAzTracking = credentialLocalStorage.az_user_tracking_id
-            
-            const hasAllRequired = !!(hasAccessToken && hasRefreshToken && hasAzTracking)
-            
-            if (mode === 'validate_structure') {
+            if (!mode || !credentials) {
                 return {
-                    success: hasAllRequired,
-                    platform: 'maang',
-                    message: hasAllRequired ? 'All required Maang credentials present' : 'Missing required Maang credentials',
-                    data: {
-                        credentials: {
-                            cookies: {
-                                access_token: hasAccessToken ? credentialCookies.access_token : null,
-                                refresh_token: hasRefreshToken ? credentialCookies.refresh_token : null
-                            },
-                            localStorage: {
-                                az_user_tracking_id: hasAzTracking ? credentialLocalStorage.az_user_tracking_id : null
-                            }
-                        },
-                        validation: {
-                            accessToken: hasAccessToken,
-                            refreshToken: hasRefreshToken,
-                            azUserTrackingId: hasAzTracking
-                        }
-                    }
+                    success: false,
+                    error: 'Missing validation mode or credentials',
+                    message: 'Missing validation mode or credentials',
+                    data: null
                 }
             }
+            const extracted = this.extractCredentials(credentials)
             
-            if (mode === 'filter') {
+
+            if (mode === 'structure_filter') { // validate and filer
                 const filteredCredentials = {
                     cookies: {},
                     localStorage: {},
@@ -48,14 +58,14 @@ class MaangValidation {
                 }
                 
                 this.requiredFields.cookies.forEach(cookieName => {
-                    if (credentialCookies[cookieName]) {
-                        filteredCredentials.cookies[cookieName] = credentialCookies[cookieName]
+                    if (extracted.credentialCookies[cookieName]) {
+                        filteredCredentials.cookies[cookieName] = extracted.credentialCookies[cookieName]
                     }
                 })
                 
                 this.requiredFields.localStorage.forEach(key => {
-                    if (credentialLocalStorage[key]) {
-                        filteredCredentials.localStorage[key] = credentialLocalStorage[key]
+                    if (extracted.credentialLocalStorage[key]) {
+                        filteredCredentials.localStorage[key] = extracted.credentialLocalStorage[key]
                     }
                 })
                 
@@ -67,119 +77,62 @@ class MaangValidation {
                 })
                 
                 return {
-                    success: true,
-                    platform: 'maang',
-                    message: 'Credentials filtered to required fields only',
+                    success: extracted.hasAllRequired,
+                    error: extracted.hasAllRequired ? null : 'Missing required Maang credentials',
+                    message: extracted.hasAllRequired ? 'Credentials validated and filtered' : 'Missing required Maang credentials',
                     data: {
-                        credentials: filteredCredentials
-                    }
-                }
-            }
-            
-            if (!hasAllRequired) {
-                return {
-                    success: false,
-                    platform: 'maang',
-                    message: 'Missing required Maang credentials',
-                    data: {
-                        credentials: {
-                            cookies: {
-                                access_token: hasAccessToken ? credentialCookies.access_token : null,
-                                refresh_token: hasRefreshToken ? credentialCookies.refresh_token : null
-                            },
-                            localStorage: {
-                                az_user_tracking_id: hasAzTracking ? credentialLocalStorage.az_user_tracking_id : null
-                            }
-                        },
+                        credentials: filteredCredentials,
                         validation: {
-                            accessToken: hasAccessToken,
-                            refreshToken: hasRefreshToken,
-                            azUserTrackingId: hasAzTracking
+                            accessToken: extracted.hasAccessToken,
+                            refreshToken: extracted.hasRefreshToken,
+                            azUserTrackingId: extracted.hasAzTracking
                         }
                     }
                 }
             }
             
-            const validationResults = {
-                accessToken: false,
-                refreshToken: false,
-                azUserTrackingId: false
-            }
-            
-            let targetCreds = null
-            let targetCookies = {}
-            let targetLocalStorage = {}
-            
-            if (mode === 'match_browser') {
-                const currentBrowserData = await BrowserDataCollector.getBrowserData()
-                if (!currentBrowserData.success) {
-                    return {
-                        success: false,
-                        platform: 'maang',
-                        error: 'Could not fetch current browser data',
-                        data: null
-                    }
-                }
-                targetCreds = currentBrowserData.data.credentials
-                targetCookies = targetCreds.cookies || {}
-                targetLocalStorage = targetCreds.localStorage || {}
-            } else if (mode === 'match_provided') {
+            if (mode === 'match_provided') {
                 if (!targetCredentials) {
                     return {
                         success: false,
-                        platform: 'maang',
                         error: 'Target credentials required for match_provided mode',
                         data: null
                     }
                 }
-                targetCreds = targetCredentials
-                targetCookies = targetCreds.cookies || {}
-                targetLocalStorage = targetCreds.localStorage || {}
-            } else {
+                
+                const targetExtracted = this.extractCredentials(targetCredentials)
+                
+                const validationResults = {
+                    accessToken: targetExtracted.hasAccessToken && extracted.hasAccessToken && 
+                        extracted.credentialCookies.access_token.value === targetExtracted.credentialCookies.access_token.value,
+                    refreshToken: targetExtracted.hasRefreshToken && extracted.hasRefreshToken && 
+                        extracted.credentialCookies.refresh_token.value === targetExtracted.credentialCookies.refresh_token.value,
+                    azUserTrackingId: targetExtracted.hasAzTracking && extracted.hasAzTracking && 
+                        extracted.credentialLocalStorage.az_user_tracking_id === targetExtracted.credentialLocalStorage.az_user_tracking_id
+                }
+                
+                const success = validationResults.accessToken && validationResults.refreshToken && validationResults.azUserTrackingId
+                
                 return {
-                    success: false,
-                    platform: 'maang',
-                    error: `Unsupported validation mode: ${mode}`,
-                    data: null
+                    success,
+                    error: success ? null : 'No matching Maang credentials found',
+                    message: success ? 'Maang credentials validated' : 'No matching Maang credentials found',
+                    data: {
+                        credentials: this.buildCredentialData(extracted),
+                        validation: validationResults
+                    }
                 }
             }
             
-            const targetHasAccessToken = targetCookies.access_token && targetCookies.access_token.value
-            const targetHasRefreshToken = targetCookies.refresh_token && targetCookies.refresh_token.value
-            const targetHasAzTracking = targetLocalStorage.az_user_tracking_id
-            
-            if (targetHasAccessToken && credentialCookies.access_token) {
-                validationResults.accessToken = credentialCookies.access_token.value === targetCookies.access_token.value
+            if (mode === 'test_credentials') {
+                return this.test_credentials(credentials)
             }
-            
-            if (targetHasRefreshToken && credentialCookies.refresh_token) {
-                validationResults.refreshToken = credentialCookies.refresh_token.value === targetCookies.refresh_token.value
-            }
-            
-            if (targetHasAzTracking && credentialLocalStorage.az_user_tracking_id) {
-                validationResults.azUserTrackingId = credentialLocalStorage.az_user_tracking_id === targetLocalStorage.az_user_tracking_id
-            }
-            
-            const targetHasAllCredentials = targetHasAccessToken && targetHasRefreshToken && targetHasAzTracking
-            const allValidationsPassed = validationResults.accessToken && validationResults.refreshToken && validationResults.azUserTrackingId
-            const success = targetHasAllCredentials && allValidationsPassed
             
             return {
-                success,
-                platform: 'maang',
-                message: success ? 'Maang credentials validated' : 'No matching Maang credentials found',
-                data: {
-                    credentials: {
-                        cookies: {
-                            access_token: credentialCookies.access_token,
-                            refresh_token: credentialCookies.refresh_token
-                        },
-                        localStorage: {
-                            az_user_tracking_id: credentialLocalStorage.az_user_tracking_id
-                        }
-                    },
-                    validation: validationResults
-                }
+                success: false,
+                error: `Unsupported validation mode: ${mode}`,
+                message: `Unsupported validation mode: ${mode}`,
+                data: null
             }
         } catch (error) {
             return {
@@ -190,4 +143,41 @@ class MaangValidation {
             }
         }
     }
+
+    static test_credentials(credentials) {
+        const extracted = this.extractCredentials(credentials)
+        
+        return {
+            success: extracted.hasAllRequired,
+            error: extracted.hasAllRequired ? null : 'Missing required Maang credentials',
+            message: extracted.hasAllRequired ? 'All required credentials present' : 'Missing required Maang credentials',
+            data: {
+                credentials: this.buildCredentialData(extracted),
+                validation: {
+                    accessToken: extracted.hasAccessToken,
+                    refreshToken: extracted.hasRefreshToken,
+                    azUserTrackingId: extracted.hasAzTracking
+                }
+            }
+        }
+    }
+
+    static test_credentials(credentials) {
+        const extracted = this.extractCredentials(credentials)
+        
+        return {
+            success: extracted.hasAllRequired,
+            error: extracted.hasAllRequired ? null : 'Missing required Maang credentials',
+            message: extracted.hasAllRequired ? 'All required credentials present' : 'Missing required Maang credentials',
+            data: {
+                credentials: this.buildCredentialData(extracted),
+                validation: {
+                    accessToken: extracted.hasAccessToken,
+                    refreshToken: extracted.hasRefreshToken,
+                    azUserTrackingId: extracted.hasAzTracking
+                }
+            }
+        }
+    }
+
 }
