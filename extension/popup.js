@@ -210,7 +210,7 @@ class ChocoPopup {
             }
 
             const teamCredentialsResponse = await this.credentialsAPI.getCredentials(userValidation.data.token)
-
+            console.log(teamCredentialsResponse, 'team credentials')
             const credentials = teamCredentialsResponse.data?.credentials
             if (!teamCredentialsResponse.success || !credentials || credentials.length === 0) {
                 return { success: false, error: 'No credentials', message: 'Your teammates haven\'t set up web platform access yet', data: null }
@@ -218,6 +218,7 @@ class ChocoPopup {
 
             for (const teamCredential of credentials) {
                 const validation = await CredentialValidator.validateCredentials(teamCredential, 'structure_filter')
+ 
                 if (!validation.success) {
                     continue
                 }

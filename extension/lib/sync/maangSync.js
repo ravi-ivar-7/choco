@@ -43,33 +43,43 @@ class MaangSync {
                     data: null
                 };
             }
-
-
-            const syncResult = await credentialsAPI.storeCredentials(userValidation.data.token, credentials);
+            
+            const existingCredsResult = await credentialsAPI.getCredentials(userValidation.data.token);
+            
+            let shouldStore = true;
+            const existingCredentials = existingCredsResult.data?.credentials || [];
+            if (existingCredsResult.success && existingCredentials.length > 0) {
+                for (let i = 0; i < existingCredentials.length; i++) {
+                    const storedCred = existingCredentials[i];
+                    
+                    const comparisonResult = await CredentialValidator.validateCredentials(
+                        credentials,
+                        'match_provided',
+                        storedCred
+                    );
+                    
+                    if (comparisonResult.success) {
+                        shouldStore = false;
+                       console.log('Credentials already stored')
+                        break;
+                    }
+                }
+            }
+            
+            let syncResult = { success: true };
+            if (shouldStore) {
+                syncResult = await credentialsAPI.storeCredentials(userValidation.data.token, credentials);
+            }
             
             if (syncResult.success) {
-                try {
-                    const tabs = await chrome.tabs.query({ url: `*://*.${domainConfig.domain.PRIMARY}/*` });
-                    if (tabs && tabs.length > 0) {
-                        for (const tab of tabs.filter(tab => tab && tab.id)) {
-                            await chrome.scripting.executeScript({
-                                target: { tabId: tab.id },
-                                func: (title, message, type) => {
-                                    if (typeof window.NotificationHandler !== 'undefined') {
-                                        const handler = new window.NotificationHandler();
-                                        handler.handleMessage({
-                                            type: 'SHOW_TOAST_NOTIFICATION',
-                                            title, message, notificationType: type, duration: 5000
-                                        });
-                                    }
-                                },
-                                args: ['Sync Success', 'MAANG credentials synced successfully', 'success']
-                            });
-                        }
-                    }
-                } catch (notificationError) {
-                    console.log('Could not show notification:', notificationError.message);
-                }
+                const domainKey = `${domainConfig.key.toLowerCase()}_credentials_lastupdate`;
+                await StorageUtils.set({
+                    [domainKey]: new Date().toISOString()
+                });
+            }
+            
+            if (syncResult.success) {
+                console.log('MAANG credentials synced successfully');
             }
 
             return {

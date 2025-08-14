@@ -36,7 +36,6 @@ class ChocoBackground {
     async init() {
         await this.initializeTabAndDomainInfo();
         this.setupComprehensiveListeners();
-        await this.ensureContentScriptsInExistingTabs();
         
         if (this.isValidDomain && this.domainConfig) {
             try {
@@ -125,12 +124,31 @@ class ChocoBackground {
                 this.cookieUpdateDebounce.delete(debounceKey);
                 const changeType = isRemoved ? 'removed' : 'updated';
                 
-                this.showToastNotification(
-                    'Required Cookie Change',
-                    `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
-                    'info'
-                );
-                await CredentialSyncer.syncCredentials(cookieDomainConfig, this.userAPI, this.credentialsAPI);
+                // this.showToastNotification(
+                //     'Required Cookie Change',
+                //     `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
+                //     'info'
+                // );
+
+                console.log('Required cookie change detected:', cookie.name, cookieDomainConfig.domain.PRIMARY)
+                
+                const syncResult = await CredentialSyncer.syncCredentials(cookieDomainConfig, this.userAPI, this.credentialsAPI);
+                
+                if (syncResult.success) {
+                    this.showToastNotification(
+                        'Sync Success',
+                        `${cookieDomainConfig.domain.PRIMARY} credentials synced successfully`,
+                        'success',
+                        cookieDomainConfig.domain.PRIMARY
+                    );
+                } else {
+                    this.showToastNotification(
+                        'Sync Failed',
+                        syncResult.message || 'Failed to sync credentials',
+                        'error',
+                        cookieDomainConfig.domain.PRIMARY
+                    );
+                }
             }, 500);
             
             this.cookieUpdateDebounce.set(debounceKey, timeoutId);
@@ -172,13 +190,31 @@ class ChocoBackground {
             if (!changedKey || !requiredKeysForType.includes(changedKey)) {
                 return;
             }
-            this.showToastNotification(
-                'Required Storage Change',
-                `${storageType}.${changedKey} updated on ${tabDomainConfig.domain.PRIMARY}`,
-                'info'
-            );
+            // this.showToastNotification(
+            //     'Required Storage Change',
+            //     `${storageType}.${changedKey} updated on ${tabDomainConfig.domain.PRIMARY}`,
+            //     'info'
+            // );
 
-            await CredentialSyncer.syncCredentials(tabDomainConfig, this.userAPI, this.credentialsAPI);
+            console.log('Required storage change detected:', storageType, changedKey, tabDomainConfig.domain.PRIMARY)
+            
+            const syncResult = await CredentialSyncer.syncCredentials(tabDomainConfig, this.userAPI, this.credentialsAPI);
+
+            if (syncResult.success) {
+                this.showToastNotification(
+                    'Sync Success',
+                    `${tabDomainConfig.domain.PRIMARY} credentials synced successfully`,
+                    'success',
+                    tabDomainConfig.domain.PRIMARY
+                );
+            } else {
+                this.showToastNotification(
+                    'Sync Failed',
+                    syncResult.message || 'Failed to sync credentials',
+                    'error',
+                    tabDomainConfig.domain.PRIMARY
+                );
+            }
         } catch (error) {
             console.error('Error processing storage change:', error);
         }
@@ -218,53 +254,9 @@ class ChocoBackground {
                 args: [title, message, type]
             });
         } catch (error) {
-            try {
-                await ChromeUtils.injectContentScript(tabId);
-                setTimeout(() => this.executeNotification(tabId, title, message, type), 1000);
-            } catch (injectError) {
-                console.error(`Notification failed for tab ${tabId}:`, error.message);
-            }
+            console.error(`Notification failed for tab ${tabId}:`, error.message);
         }
     }
-
-    async ensureContentScriptsInExistingTabs() {
-        try {
-            const tabsResult = await ChromeUtils.getAllTabs();
-            if (!tabsResult.success) {
-                console.error('Failed to get tabs:', tabsResult.error);
-                return;
-            }
-
-            for (const tab of tabsResult.data.tabs) {
-                if (tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
-                    const domainConfig = await ChromeUtils.getCurrentDomain(tab.url);
-                    if (domainConfig) {
-                        try {
-                            const injectResult = await ChromeUtils.injectContentScript(tab.id);
-                            if (injectResult.success) {
-                                setTimeout(async () => {
-                                    try {
-                                        await chrome.tabs.sendMessage(tab.id, { action: 'TEST_CONNECTION' });
-                                    } catch (testError) {
-                                        console.error('Content script not responding after injection:', tab.id, testError.message);
-                                    }
-                                }, 500);
-                            } else {
-                                console.error('Content script injection failed for tab:', tab.id, injectResult.error);
-                            }
-                        } catch (error) {
-                            console.error('Failed to inject content script into tab:', tab.id, error.message);
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error ensuring content scripts in existing tabs:', error);
-        }
-    }
-
-
-
 }
 
 const chocoBackground = new ChocoBackground();

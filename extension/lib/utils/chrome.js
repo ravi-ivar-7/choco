@@ -81,13 +81,16 @@ class ChromeUtils {
         'content.js'
     ]) {
         try {
-            // Check if scripts are already injected
+            // Check if scripts are already injected (more comprehensive check)
             const checkResult = await chrome.scripting.executeScript({
                 target: { tabId },
                 func: () => {
+                    // Check for multiple key classes to ensure all scripts are loaded
                     return typeof window.ChromeUtils !== 'undefined' && 
                            typeof window.NotificationHandler !== 'undefined' &&
-                           typeof window.Constants !== 'undefined';
+                           typeof window.Constants !== 'undefined' &&
+                           typeof window.BrowserDataCollector !== 'undefined' &&
+                           typeof window.NotificationUtils !== 'undefined';
                 }
             });
             
@@ -96,7 +99,7 @@ class ChromeUtils {
                 return {
                     success: true,
                     error: null,
-                    message: 'Content scripts already injected',
+                    message: 'Content scripts already loaded',
                     data: { tabId, files, alreadyInjected: true }
                 };
             }
