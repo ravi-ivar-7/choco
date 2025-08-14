@@ -1,4 +1,4 @@
-class DevsSync {
+class DevsDBSync {
     static async syncCredentials(domainConfig) {
         try {
             if (!domainConfig) {
@@ -21,7 +21,7 @@ class DevsSync {
                 };
             }
 
-            const validationResult = await CredentialValidator.validateCredentials(credentialsResult.data.credentials, 'structure_filter');
+            const validationResult = await CredentialValidator.validateCredentials(credentialsResult.data.credentials, 'structure_filter', null, domainConfig);
             if (!validationResult.success || !validationResult.data?.credentials) {
                 return {
                     success: false,

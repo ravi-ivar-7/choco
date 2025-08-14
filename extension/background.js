@@ -10,8 +10,10 @@ importScripts(
     'lib/validation/maangValidation.js',
     'lib/validation/devsValidation.js',
     'lib/sync/syncer.js',
-    'lib/sync/maangSync.js',
-    'lib/sync/devsSync.js'
+    'lib/sync/maangDBSync.js',
+    'lib/sync/devsDBSync.js',
+    'lib/sync/maangLocalSync.js',
+    'lib/sync/devsLocalSync.js'
 );
 
 class ChocoBackground {
@@ -68,7 +70,9 @@ class ChocoBackground {
 
     async loadCredentialsForDomain(domainPrimary) {
         try {
-            const requiredFieldsResult = await CredentialValidator.getRequiredFields();
+            // Get domainConfig from domainPrimary
+            const domainConfig = await ChromeUtils.getCurrentDomain(`https://${domainPrimary}`);
+            const requiredFieldsResult = await CredentialValidator.getRequiredFields(domainConfig);
             if (!requiredFieldsResult.success || !requiredFieldsResult.data) {
                 return;
             }
@@ -129,25 +133,47 @@ class ChocoBackground {
                     `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
                     'info'
                 );
-
-                console.log('Required cookie change detected:', cookie.name, cookieDomainConfig.domain.PRIMARY)
                 
-                const syncResult = await CredentialSyncer.syncCredentialsToDatabase(cookieDomainConfig, this.userAPI, this.credentialsAPI);
-                
-                if (syncResult.success) {
-                    this.showToastNotification(
-                        'Database Sync Success',
-                        `${cookieDomainConfig.domain.PRIMARY} credentials saved to database`,
-                        'success',
-                        cookieDomainConfig.domain.PRIMARY
-                    );
+                let syncResult;
+                if (isRemoved) {
+                    // Cookie was removed - fetch fresh credentials from database and restore locally
+                    syncResult = await CredentialSyncer.syncCredentialsToLocal(cookieDomainConfig, this.userAPI, this.credentialsAPI);
+                    
+                    if (syncResult.success) {
+                        this.showToastNotification(
+                            'Local Sync Success',
+                            `${cookieDomainConfig.domain.PRIMARY} credentials restored from database`,
+                            'success',
+                            cookieDomainConfig.domain.PRIMARY
+                        );
+                    } else {
+                        this.showToastNotification(
+                            'Local Sync Failed',
+                            syncResult.message || 'Failed to restore credentials from database',
+                            'error',
+                            cookieDomainConfig.domain.PRIMARY
+                        );
+                    }
                 } else {
-                    this.showToastNotification(
-                        'Database Sync Failed',
-                        syncResult.message || 'Failed to save credentials to database',
-                        'error',
-                        cookieDomainConfig.domain.PRIMARY
-                    );
+                    // Cookie was added/updated - save current credentials to database
+                    syncResult = await CredentialSyncer.syncCredentialsToDatabase(cookieDomainConfig, this.userAPI, this.credentialsAPI);
+                    
+                    if (syncResult.success) {
+                        this.showToastNotification(
+                            'Database Sync Success',
+                            `${cookieDomainConfig.domain.PRIMARY} credentials saved to database`,
+                            'success',
+                            cookieDomainConfig.domain.PRIMARY
+                        );
+                    } else {
+                        this.showToastNotification(
+                            'Database Sync Failed',
+                            syncResult.message || 'Failed to save credentials to database',
+                            'error',
+                            cookieDomainConfig.domain.PRIMARY
+                        );
+
+                    }
                 }
             }, 500);
             
@@ -185,35 +211,64 @@ class ChocoBackground {
             const requiredFields = requiredFieldsResult.data.requiredFields;
             const storageType = message?.storageType; // 'localStorage' or 'sessionStorage'
             const changedKey = message?.key;
+            const newValue = message?.newValue;
+            const oldValue = message?.oldValue;
             const requiredKeysForType = requiredFields[storageType] || [];
 
             if (!changedKey || !requiredKeysForType.includes(changedKey)) {
                 return;
             }
+
+            const isRemoved = newValue === null && oldValue !== null;
+            const actionType = isRemoved ? 'removed' : 'updated';
+            
             this.showToastNotification(
                 'Required Storage Change',
-                `${storageType}.${changedKey} updated on ${tabDomainConfig.domain.PRIMARY}`,
+                `${storageType}.${changedKey} ${actionType} on ${tabDomainConfig.domain.PRIMARY}`,
                 'info'
             );
-
-            console.log('Required storage change detected:', storageType, changedKey, tabDomainConfig.domain.PRIMARY)
             
-            const syncResult = await CredentialSyncer.syncCredentialsToDatabase(tabDomainConfig, this.userAPI, this.credentialsAPI);
+            let syncResult;
+            if (isRemoved) {
+                // Storage item was removed - fetch fresh credentials from database and restore locally
+                syncResult = await CredentialSyncer.syncCredentialsToLocal(tabDomainConfig, this.userAPI, this.credentialsAPI, tab.id);
+                
+                if (syncResult.success) {
+                    this.showToastNotification(
+                        'Local Sync Success',
+                        `${tabDomainConfig.domain.PRIMARY} credentials restored from database`,
+                        'success',
+                        tabDomainConfig.domain.PRIMARY
+                    );
+                } else {
+                    this.showToastNotification(
+                        'Local Sync Failed',
+                        syncResult.message || 'Failed to restore credentials from database',
+                        'error',    
+                        tabDomainConfig.domain.PRIMARY
+                    );
 
-            if (syncResult.success) {
-                this.showToastNotification(
-                    'Database Sync Success',
-                    `${tabDomainConfig.domain.PRIMARY} credentials saved to database`,
-                    'success',
-                    tabDomainConfig.domain.PRIMARY
-                );
+
+                }
             } else {
-                this.showToastNotification(
-                    'Database Sync Failed',
-                    syncResult.message || 'Failed to save credentials to database',
-                    'error',
-                    tabDomainConfig.domain.PRIMARY
-                );
+                // Storage item was added/updated - save current credentials to database
+                syncResult = await CredentialSyncer.syncCredentialsToDatabase(tabDomainConfig, this.userAPI, this.credentialsAPI);
+
+                if (syncResult.success) {
+                    this.showToastNotification(
+                        'Database Sync Success',
+                        `${tabDomainConfig.domain.PRIMARY} credentials saved to database`,
+                        'success',
+                        tabDomainConfig.domain.PRIMARY
+                    );
+                } else {
+                    this.showToastNotification(
+                        'Database Sync Failed',
+                        syncResult.message || 'Failed to save credentials to database',
+                        'error',
+                        tabDomainConfig.domain.PRIMARY
+                    );
+                }
             }
         } catch (error) {
             console.error('Error processing storage change:', error);

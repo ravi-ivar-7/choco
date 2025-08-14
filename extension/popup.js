@@ -122,7 +122,7 @@ class ChocoPopup {
                 return
             }
 
-            const filterResult = await CredentialValidator.validateCredentials(browserDataResult.data.credentials, 'structure_filter')
+            const filterResult = await CredentialValidator.validateCredentials(browserDataResult.data.credentials, 'structure_filter', null, this.domainConfig)
             const credentials = filterResult.success ? filterResult.data.credentials : browserDataResult.data.credentials
 
             if (filterResult.success) {
@@ -144,7 +144,8 @@ class ChocoPopup {
                         const comparisonResult = await CredentialValidator.validateCredentials(
                             credentials, 
                             'match_provided', 
-                            storedCred
+                            storedCred,
+                            this.domainConfig
                         )
                         
                         if (comparisonResult.success) {
@@ -210,14 +211,14 @@ class ChocoPopup {
             }
 
             const teamCredentialsResponse = await this.credentialsAPI.getCredentials(userValidation.data.token)
-            console.log(teamCredentialsResponse, 'team credentials')
+
             const credentials = teamCredentialsResponse.data?.credentials
             if (!teamCredentialsResponse.success || !credentials || credentials.length === 0) {
                 return { success: false, error: 'No credentials', message: 'Your teammates haven\'t set up web platform access yet', data: null }
             }
 
             for (const teamCredential of credentials) {
-                const validation = await CredentialValidator.validateCredentials(teamCredential, 'structure_filter')
+                const validation = await CredentialValidator.validateCredentials(teamCredential, 'structure_filter', null, this.domainConfig)
  
                 if (!validation.success) {
                     continue
@@ -227,17 +228,16 @@ class ChocoPopup {
 
                         continue
                     }
+                    // Create a copy to prevent mutation of original credential object
+                    const credentialCopy = JSON.parse(JSON.stringify(teamCredential));
                     const setBrowserDataResult = await BrowserDataCollector.setBrowserData(
                         this.tabId,
-                        teamCredential,
+                        credentialCopy,
                         this.currentUrl
                     )
                     if (setBrowserDataResult.success) {
 
-                        console.log('setBrowserDataResult success', setBrowserDataResult)
-                        console.log('teamCredential', teamCredential)
-                        const validation = await CredentialValidator.validateCredentials(teamCredential, 'test_credentials')
-                        console.log('validation', validation)
+                        const validation = await CredentialValidator.validateCredentials(teamCredential, 'test_credentials', null, this.domainConfig)
                         if (validation.success) {
                             return {
                                 success: true,

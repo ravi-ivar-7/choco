@@ -1,7 +1,11 @@
 class CredentialValidator {
-    static async getRequiredFields() {
+    static async getRequiredFields(domainConfig = null) {
         try {
-            const domainConfig = await ChromeUtils.getCurrentDomain()
+            // If domainConfig is not provided, get it from current browser context
+            if (!domainConfig) {
+                domainConfig = await ChromeUtils.getCurrentDomain();
+            }
+            
             if (!domainConfig) {
                 return {
                     success: false,
@@ -48,9 +52,13 @@ class CredentialValidator {
         }
     }
     
-    static async validateCredentials(credentials, mode , targetCredentials = null) {
+    static async validateCredentials(credentials, mode, targetCredentials = null, domainConfig = null) {
         try {
-            const domainConfig = await ChromeUtils.getCurrentDomain()
+            // If domainConfig is not provided, get it from current browser context
+            if (!domainConfig) {
+                domainConfig = await ChromeUtils.getCurrentDomain();
+            }
+            
             if (!domainConfig) {
                 return {
                     success: false,
@@ -61,10 +69,20 @@ class CredentialValidator {
             }
             
             if (domainConfig.key === 'MAANG') {
-                return await MaangValidation.validateCredentials(credentials, mode, targetCredentials)
+                const result = await MaangValidation.validateCredentials(credentials, mode, targetCredentials);
+                // Add domain info to result for structure_filter mode
+                if (mode === 'structure_filter' && result.success) {
+                    result.data.domain = domainConfig.domain.PRIMARY;
+                }
+                return result;
             }
             else if (domainConfig.key === 'DEVS') {
-                return await DevsValidation.validateCredentials(credentials, mode, targetCredentials)
+                const result = await DevsValidation.validateCredentials(credentials, mode, targetCredentials);
+                // Add domain info to result for structure_filter mode
+                if (mode === 'structure_filter' && result.success) {
+                    result.data.domain = domainConfig.domain.PRIMARY;
+                }
+                return result;
             }
             
             return {

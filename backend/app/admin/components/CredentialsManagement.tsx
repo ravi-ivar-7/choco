@@ -34,6 +34,7 @@ export default function CredentialsManagement() {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [selectedCredentials, setSelectedCredentials] = useState<string[]>([])
+  const [viewingCredential, setViewingCredential] = useState<Credential | null>(null)
 
   const loadCredentials = async () => {
     try {
@@ -69,13 +70,10 @@ export default function CredentialsManagement() {
   }
 
   const handleDelete = async (credentialId: string) => {
-    if (!confirm('Are you sure you want to delete this credential?')) {
-      return
-    }
-
+    if (!confirm('Are you sure you want to delete this credential?')) return
+    
+    setActionLoading(credentialId)
     try {
-      setActionLoading(credentialId)
-      
       const token = localStorage.getItem('choco_token')
       if (!token) {
         alert('No authentication token found')
@@ -103,7 +101,11 @@ export default function CredentialsManagement() {
   }
 
   const handleView = (credential: Credential) => {
-    alert(`Credential Details:\nID: ${credential.id}\nBrowser: ${credential.browser}\nPlatform: ${credential.platform}\nCookies: ${Object.keys(credential.cookies || {}).length}\nCreated: ${new Date(credential.createdAt).toLocaleDateString()}`)
+    setViewingCredential(credential)
+  }
+
+  const closeViewModal = () => {
+    setViewingCredential(null)
   }
 
   const handleRefresh = () => {
@@ -189,8 +191,35 @@ export default function CredentialsManagement() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow-sm border p-8">
+          <div className="flex items-center justify-center space-x-3">
+            <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+            <span className="text-slate-600">Loading credentials...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-red-800 font-medium">Error loading credentials</div>
+          <div className="text-red-600 text-sm mt-1">{error}</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="mt-3"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Credentials Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      {!isLoading && !error && (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b">
@@ -327,10 +356,15 @@ export default function CredentialsManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(credential.id)}
-                        className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                        disabled={actionLoading === credential.id}
+                        className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Delete</span>
+                        {actionLoading === credential.id ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3 h-3" />
+                        )}
+                        <span>{actionLoading === credential.id ? 'Deleting...' : 'Delete'}</span>
                       </Button>
                     </div>
                   </td>
@@ -349,14 +383,163 @@ export default function CredentialsManagement() {
           </div>
         )}
       </div>
+      )}
 
       {/* Summary Footer */}
-      {credentials.length > 0 && (
+      {!isLoading && !error && credentials.length > 0 && (
         <div className="bg-slate-50 rounded-lg p-4">
           <div className="flex items-center justify-between text-sm text-slate-600">
             <span>Total: {credentials.length} credentials</span>
             <span>Active: {credentials.filter(c => c.isActive).length}</span>
             <span>Selected: {selectedCredentials.length}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed View Modal */}
+      {viewingCredential && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Credential Details - {viewingCredential.id.substring(0, 8)}...
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={closeViewModal}
+                className="flex items-center space-x-1"
+              >
+                <span>Close</span>
+              </Button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-3">Basic Information</h4>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-slate-600">ID:</span>
+                        <div className="font-mono text-slate-900">{viewingCredential.id}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Status:</span>
+                        <div>
+                          <Badge className={viewingCredential.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
+                            {viewingCredential.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Source:</span>
+                        <div className="text-slate-900">{viewingCredential.credentialSource}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Browser:</span>
+                        <div className="text-slate-900">{viewingCredential.browser || 'Unknown'}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Platform:</span>
+                        <div className="text-slate-900">{viewingCredential.platform || 'Unknown'}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">IP Address:</span>
+                        <div className="text-slate-900">{viewingCredential.ipAddress || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Created:</span>
+                        <div className="text-slate-900">{formatDate(viewingCredential.createdAt)}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Last Used:</span>
+                        <div className="text-slate-900">{viewingCredential.lastUsedAt ? formatDate(viewingCredential.lastUsedAt) : 'Never'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cookies */}
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-3">Cookies ({getCookieCount(viewingCredential.cookies)})</h4>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                      {JSON.stringify(viewingCredential.cookies, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Local Storage */}
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-3">Local Storage ({getStorageCount(viewingCredential.localStorage)})</h4>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                      {JSON.stringify(viewingCredential.localStorage, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Session Storage */}
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-3">Session Storage ({getStorageCount(viewingCredential.sessionStorage)})</h4>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                      {JSON.stringify(viewingCredential.sessionStorage, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* User Agent */}
+                {viewingCredential.userAgent && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-3">User Agent</h4>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="text-xs text-slate-700 break-all">
+                        {viewingCredential.userAgent}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fingerprint */}
+                {viewingCredential.fingerprint && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-3">Fingerprint</h4>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                        {JSON.stringify(viewingCredential.fingerprint, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Metadata */}
+                {viewingCredential.metadata && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-3">Metadata</h4>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                        {JSON.stringify(viewingCredential.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Browser History */}
+                {viewingCredential.browserHistory && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-3">Browser History</h4>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                        {JSON.stringify(viewingCredential.browserHistory, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

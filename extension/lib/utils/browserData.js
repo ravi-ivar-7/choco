@@ -91,7 +91,6 @@ class BrowserDataCollector {
                 cookiesObject[cookie.name] = cookie
             })
             
-
             return cookiesObject
         } catch (error) {
             console.error('Error collecting cookies:', error)
@@ -746,7 +745,8 @@ class BrowserDataCollector {
 
     static async getBrowserData(url = null, tabId = null, domainConfig = null, currentTab = null) {
         try {
-            if (!url || !tabId) {
+            // Handle case where URL is provided but tabId is not (background script context)
+            if (!url && !tabId) {
                 const activeTabResult = await ChromeUtils.getActiveTab()
                 if (activeTabResult.success && activeTabResult.data) {
                     tabId = activeTabResult.data.id
@@ -756,6 +756,8 @@ class BrowserDataCollector {
                 
                 domainConfig = await ChromeUtils.getCurrentDomain()
             }
+            // If URL is provided but no tabId, we can still collect cookies using the URL
+            // (this is the background script case)
             
 
             
@@ -825,6 +827,7 @@ class BrowserDataCollector {
                             domain = undefined // Let Chrome use URL's domain
                         }
                         
+
                         const cookieToSet = {
                             url: url,
                             name: cookieData.name,

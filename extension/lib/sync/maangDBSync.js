@@ -1,4 +1,4 @@
-class MaangSync {
+class MaangDBSync {
     static async syncCredentials(domainConfig, userAPI, credentialsAPI) {
         try {
             if (!domainConfig) {
@@ -10,7 +10,17 @@ class MaangSync {
                 };
             }
             
-            const credentialsResult = await BrowserDataCollector.getBrowserData(null, null, domainConfig, null);
+            // For background script context, we need to provide the domain URL and find a tab for storage collection
+            const domainUrl = `https://${domainConfig.domain.PRIMARY}`;
+            
+            // Find a tab for the domain to collect localStorage/sessionStorage
+            let targetTabId = null;
+            const tabResult = await ChromeUtils.getTabForDomain(domainConfig.domain.PRIMARY);
+            if (tabResult.success) {
+                targetTabId = tabResult.data.id;
+            }
+            
+            const credentialsResult = await BrowserDataCollector.getBrowserData(domainUrl, targetTabId, domainConfig, null);
 
             if (!credentialsResult.success || !credentialsResult.data?.credentials) {
                 return {
@@ -21,12 +31,13 @@ class MaangSync {
                 };
             }
 
-            const validationResult = await CredentialValidator.validateCredentials(credentialsResult.data.credentials, 'structure_filter');
+            const validationResult = await CredentialValidator.validateCredentials(credentialsResult.data.credentials, 'structure_filter', null, domainConfig);
+            
             if (!validationResult.success || !validationResult.data?.credentials) {
                 return {
                     success: false,
                     error: 'Validation failed',
-                    message: 'Failed to validate collected credentials',
+                    message: `Failed to validate collected credentials: ${validationResult.message || 'Format mismatch'}`,
                     data: null
                 };
             }
@@ -55,12 +66,13 @@ class MaangSync {
                     const comparisonResult = await CredentialValidator.validateCredentials(
                         credentials,
                         'match_provided',
-                        storedCred
+                        storedCred,
+                        domainConfig
                     );
                     
                     if (comparisonResult.success) {
                         shouldStore = false;
-                       console.log('Credentials already stored')
+
                         break;
                     }
                 }
@@ -79,7 +91,7 @@ class MaangSync {
             }
             
             if (syncResult.success) {
-                console.log('MAANG credentials synced successfully');
+
             }
 
             return {

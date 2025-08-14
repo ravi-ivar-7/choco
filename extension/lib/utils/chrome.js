@@ -291,6 +291,67 @@ class ChromeUtils {
             }
         }
     }
+
+    static async getTabForDomain(domain) {
+        try {
+            return new Promise(resolve => {
+                chrome.tabs.query({}, tabs => {
+                    // First try to find a tab with the exact domain
+                    let matchingTab = tabs.find(tab => {
+                        try {
+                            const tabUrl = new URL(tab.url);
+                            return tabUrl.hostname === domain || tabUrl.hostname === `www.${domain}`;
+                        } catch {
+                            return false;
+                        }
+                    });
+
+                    if (matchingTab) {
+                        resolve({
+                            success: true,
+                            data: matchingTab,
+                            error: null
+                        });
+                        return;
+                    }
+
+                    // If no exact match, try active tab as fallback
+                    const activeTab = tabs.find(tab => tab.active && tab.windowId === chrome.windows.WINDOW_ID_CURRENT);
+                    if (activeTab) {
+                        resolve({
+                            success: true,
+                            data: activeTab,
+                            error: null
+                        });
+                        return;
+                    }
+
+                    // If no active tab, use any available tab
+                    if (tabs.length > 0) {
+                        resolve({
+                            success: true,
+                            data: tabs[0],
+                            error: null
+                        });
+                        return;
+                    }
+
+                    // No tabs available
+                    resolve({
+                        success: false,
+                        data: null,
+                        error: `No suitable tab found for domain: ${domain}`
+                    });
+                });
+            });
+        } catch (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message
+            };
+        }
+    }
 }
 
 // Make ChromeUtils available globally for content script context
