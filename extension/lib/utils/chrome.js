@@ -71,12 +71,41 @@ class ChromeUtils {
         }
     }
 
-    static async injectContentScript(tabId, files = ['content.js']) {
+    static async injectContentScript(tabId, files = [
+        'lib/config/constants.js',
+        'lib/utils/chrome.js',
+        'lib/utils/notifications.js',
+        'lib/utils/browserData.js',
+        'scripts/monitorStorage.js',
+        'scripts/notificationHandler.js',
+        'content.js'
+    ]) {
         try {
+            // Check if scripts are already injected
+            const checkResult = await chrome.scripting.executeScript({
+                target: { tabId },
+                func: () => {
+                    return typeof window.ChromeUtils !== 'undefined' && 
+                           typeof window.NotificationHandler !== 'undefined' &&
+                           typeof window.Constants !== 'undefined';
+                }
+            });
+            
+            // If scripts already loaded, return success without re-injecting
+            if (checkResult && checkResult[0] && checkResult[0].result) {
+                return {
+                    success: true,
+                    error: null,
+                    message: 'Content scripts already injected',
+                    data: { tabId, files, alreadyInjected: true }
+                };
+            }
+            
+            // Scripts not loaded, inject them
             await chrome.scripting.executeScript({
                 target: { tabId },
                 files
-            })
+            });
             return {
                 success: true,
                 error: null,
@@ -84,6 +113,7 @@ class ChromeUtils {
                 data: { tabId, files }
             }
         } catch (error) {
+            console.error('📜 Content script injection failed for tab:', tabId, error.message);
             return {
                 success: false,
                 error: 'Script injection error',
@@ -202,4 +232,65 @@ class ChromeUtils {
             }
         }
     }
+    
+    static async getCurrentDomain(url = null) {
+        try {
+            let hostname
+            
+            if (url) {
+                hostname = new URL(url).hostname
+            } else {
+                // Fallback: get current tab URL if no URL provided
+                const activeTabResult = await ChromeUtils.getActiveTab()
+                if (!activeTabResult.success) {
+                    return null
+                }
+                hostname = new URL(activeTabResult.data.url).hostname
+            }
+            
+            for (const [key, domain] of Object.entries(Constants.DOMAINS)) {
+                if (hostname === domain.PRIMARY || hostname.endsWith(`.${domain.PRIMARY}`)) {
+                    return { key, domain }
+                }
+            }
+            
+            return null
+        } catch (error) {
+            return null
+        }
+    }
+    
+    static async getActiveTab() {
+        try {
+            return new Promise(resolve => {
+                chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+                    const activeTab = tabs[0]
+                    if (activeTab) {
+                        resolve({
+                            success: true,
+                            data: activeTab,
+                            error: null
+                        })
+                    } else {
+                        resolve({
+                            success: false,
+                            data: null,
+                            error: 'No active tab found'
+                        })
+                    }
+                })
+            })
+        } catch (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message
+            }
+        }
+    }
+}
+
+// Make ChromeUtils available globally for content script context
+if (typeof window !== 'undefined') {
+    window.ChromeUtils = ChromeUtils;
 }

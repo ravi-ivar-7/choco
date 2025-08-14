@@ -1,24 +1,24 @@
 class ChocoPopup {
     constructor() {
-        this.backendUrl = Constants.BACKEND_URL
-        this.userAPI = new UserAPI(this.backendUrl)
-        this.credentialsAPI = new CredentialsAPI(this.backendUrl)
+        this.backendUrl = Constants.BACKEND_URL;
+        this.userAPI = new UserAPI(this.backendUrl);
+        this.credentialsAPI = new CredentialsAPI(this.backendUrl);
         
         // Initialize all required details
-        this.currentTab = null
-        this.tabId = null
-        this.currentUrl = null
-        this.domainConfig = null
-        this.isValidDomain = false
+        this.currentTab = null;
+        this.tabId = null;
+        this.currentUrl = null;
+        this.domainConfig = null;
+        this.isValidDomain = false;
         
-        this.init()
+        this.init();
     }
 
     async init() {
         // Gather all required details during initialization
-        await this.initializeTabAndDomainInfo()
+        await this.initializeTabAndDomainInfo();
         
-        this.bindEvents()
+        this.bindEvents();
         
         if (this.isValidDomain) {
             this.updateStatus('none', '👋 Welcome to Choco Team Access Manager', 'Click "Check Token Status" to get started')
@@ -37,26 +37,23 @@ class ChocoPopup {
     async initializeTabAndDomainInfo() {
         try {
             // Get current active tab
-            const activeTabResult = await BrowserDataCollector.getActiveTab()
+            const activeTabResult = await ChromeUtils.getActiveTab();
             if (activeTabResult.success && activeTabResult.data) {
-                this.currentTab = activeTabResult.data
-                this.tabId = activeTabResult.data.id
-                this.currentUrl = activeTabResult.data.url
-
+                this.currentTab = activeTabResult.data;
+                this.tabId = activeTabResult.data.id;
+                this.currentUrl = activeTabResult.data.url;
             }
             
 
-            this.domainConfig = await Constants.getCurrentDomain(this.currentUrl)
+            this.domainConfig = await ChromeUtils.getCurrentDomain(this.currentUrl);
             if (this.domainConfig) {
-                this.isValidDomain = true
-
+                this.isValidDomain = true;
             } else {
-                this.isValidDomain = false
-
+                this.isValidDomain = false;
             }
         } catch (error) {
-            console.error('Failed to initialize tab and domain info:', error)
-            this.isValidDomain = false
+            console.error('Failed to initialize tab and domain info:', error);
+            this.isValidDomain = false;
         }
     }
 
@@ -280,7 +277,7 @@ class ChocoPopup {
 
     async showRefreshNotification(customMessage = null) {
         try {
-            const domainConfig = await Constants.getCurrentDomain()
+            const domainConfig = await ChromeUtils.getCurrentDomain()
             if (!domainConfig) {
 
                 return
@@ -321,7 +318,7 @@ class ChocoPopup {
                     }
                 }
             } else {
-                const domainConfig = await Constants.getCurrentDomain()
+                const domainConfig = await ChromeUtils.getCurrentDomain()
                 const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'unknown'
 
             }
@@ -424,7 +421,7 @@ class ChocoPopup {
     }
 
     async openWebPlatform() {
-        const domainConfig = await Constants.getCurrentDomain()
+        const domainConfig = await ChromeUtils.getCurrentDomain()
         if (!domainConfig) {
             console.error('openWebPlatform: No supported domain detected')
             return { success: false, error: 'Unsupported platform' }

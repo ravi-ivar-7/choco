@@ -31,8 +31,11 @@
       "matches": ["<all_urls>"],
       "js": [
         "lib/config/constants.js",
+        "lib/utils/chrome.js",
         "lib/utils/notifications.js",
         "lib/utils/browserData.js",
+        "scripts/monitorStorage.js",
+        "scripts/notificationHandler.js",
         "content.js"
       ],
       "run_at": "document_idle"

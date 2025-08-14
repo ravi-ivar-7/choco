@@ -410,3 +410,8 @@ class NotificationUtils {
         return div.innerHTML
     }
 }
+
+// Make NotificationUtils available globally for content script context
+if (typeof window !== 'undefined') {
+    window.NotificationUtils = NotificationUtils;
+}

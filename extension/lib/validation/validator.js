@@ -1,7 +1,7 @@
 class CredentialValidator {
     static async getRequiredFields() {
         try {
-            const domainConfig = await Constants.getCurrentDomain()
+            const domainConfig = await ChromeUtils.getCurrentDomain()
             if (!domainConfig) {
                 return {
                     success: false,
@@ -36,8 +36,6 @@ class CredentialValidator {
                 message: `Required fields for ${platform} platform`,
                 data: {
                     requiredFields: requiredFields,
-                    domainKey: domainConfig.key,
-                    domainConfig: domainConfig.domain
                 }
             }
         } catch (error) {
@@ -52,7 +50,7 @@ class CredentialValidator {
     
     static async validateCredentials(credentials, mode , targetCredentials = null) {
         try {
-            const domainConfig = await Constants.getCurrentDomain()
+            const domainConfig = await ChromeUtils.getCurrentDomain()
             if (!domainConfig) {
                 return {
                     success: false,
