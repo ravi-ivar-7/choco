@@ -35,6 +35,7 @@
         "lib/utils/notifications.js",
         "lib/utils/browserData.js",
         "scripts/monitorStorage.js",
+        "scripts/notificationQueue.js",
         "scripts/notificationHandler.js",
         "content.js"
       ],

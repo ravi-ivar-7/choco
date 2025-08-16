@@ -4,6 +4,7 @@
 @import url('./profile.css');
 @import url('./settings.css');
 @import url('./credentials.css');
+@import url('./notificationQueue.css');
 
 /* Base styles and reset */
 * {

@@ -384,13 +384,24 @@ class ChocoBackground {
             await chrome.scripting.executeScript({
                 target: { tabId },
                 func: (title, message, type) => {
-                    if (typeof window.NotificationHandler !== 'undefined') {
-                        const handler = new window.NotificationHandler();
-                        handler.handleMessage({
-                            type: 'SHOW_TOAST_NOTIFICATION',
-                            title, message, notificationType: type, duration: 5000
+                    // Add to notification queue
+                    if (typeof window.ChocoNotificationQueue !== 'undefined') {
+                        window.ChocoNotificationQueue.add({
+                            title: title,
+                            message: message,
+                            type: type,
+                            timestamp: new Date()
                         });
                     }
+                    
+                    // Show traditional toast notification
+                    // if (typeof window.NotificationHandler !== 'undefined') {
+                    //     const handler = new window.NotificationHandler();
+                    //     handler.handleMessage({
+                    //         type: 'SHOW_TOAST_NOTIFICATION',
+                    //         title, message, notificationType: type, duration: 5000
+                    //     });
+                    // }
                 },
                 args: [title, message, type]
             });

@@ -3,17 +3,33 @@ function setupStorageChangeMonitoring() {
     window.addEventListener('storage', (event) => {
         
         // Send storage change message to background script
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage({
-                type: 'STORAGE_CHANGED',
-                key: event.key,
-                oldValue: event.oldValue,
-                newValue: event.newValue,
-                storageType: event.storageArea === localStorage ? 'localStorage' : 'sessionStorage',
-                url: window.location.href
-            }).catch(error => {
-                console.log('Failed to send storage change message:', error);
-            });
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+            try {
+                // Check if extension context is still valid
+                if (!chrome.runtime.id) {
+                    return;
+                }
+                chrome.runtime.sendMessage({
+                    type: 'STORAGE_CHANGED',
+                    key: event.key,
+                    oldValue: event.oldValue,
+                    newValue: event.newValue,
+                    storageType: event.storageArea === localStorage ? 'localStorage' : 'sessionStorage',
+                    url: window.location.href
+                }).catch(error => {
+                    // Extension context invalidated - silently ignore
+                    if (error.message?.includes('Extension context invalidated')) {
+                        return;
+                    }
+                    console.log('Failed to send storage change message:', error);
+                });
+            } catch (error) {
+                // Extension context invalidated - silently ignore
+                if (error.message?.includes('Extension context invalidated')) {
+                    return;
+                }
+                console.log('Chrome runtime error:', error);
+            }
         }
     });
     
@@ -28,17 +44,33 @@ function setupStorageChangeMonitoring() {
         
         if (oldValue !== value) {
             
-            if (typeof chrome !== 'undefined' && chrome.runtime) {
-                chrome.runtime.sendMessage({
-                    type: 'STORAGE_CHANGED',
-                    key,
-                    oldValue,
-                    newValue: value,
-                    storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
-                    url: window.location.href
-                }).catch(error => {
-                    console.log('Failed to send storage change message:', error);
-                });
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                try {
+                    // Check if extension context is still valid
+                    if (!chrome.runtime.id) {
+                        return;
+                    }
+                    chrome.runtime.sendMessage({
+                        type: 'STORAGE_CHANGED',
+                        key,
+                        oldValue,
+                        newValue: value,
+                        storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
+                        url: window.location.href
+                    }).catch(error => {
+                        // Extension context invalidated - silently ignore
+                        if (error.message?.includes('Extension context invalidated')) {
+                            return;
+                        }
+                        console.log('Failed to send storage change message:', error);
+                    });
+                } catch (error) {
+                    // Extension context invalidated - silently ignore
+                    if (error.message?.includes('Extension context invalidated')) {
+                        return;
+                    }
+                    console.log('Chrome runtime error:', error);
+                }
             }
         }
         
@@ -51,17 +83,33 @@ function setupStorageChangeMonitoring() {
         
         if (oldValue !== null) {
             
-            if (typeof chrome !== 'undefined' && chrome.runtime) {
-                chrome.runtime.sendMessage({
-                    type: 'STORAGE_CHANGED',
-                    key,
-                    oldValue,
-                    newValue: null,
-                    storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
-                    url: window.location.href
-                }).catch(error => {
-                    console.log('Failed to send storage change message:', error);
-                });
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                try {
+                    // Check if extension context is still valid
+                    if (!chrome.runtime.id) {
+                        return;
+                    }
+                    chrome.runtime.sendMessage({
+                        type: 'STORAGE_CHANGED',
+                        key,
+                        oldValue,
+                        newValue: null,
+                        storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
+                        url: window.location.href
+                    }).catch(error => {
+                        // Extension context invalidated - silently ignore
+                        if (error.message?.includes('Extension context invalidated')) {
+                            return;
+                        }
+                        console.log('Failed to send storage change message:', error);
+                    });
+                } catch (error) {
+                    // Extension context invalidated - silently ignore
+                    if (error.message?.includes('Extension context invalidated')) {
+                        return;
+                    }
+                    console.log('Chrome runtime error:', error);
+                }
             }
         }
         
@@ -70,18 +118,34 @@ function setupStorageChangeMonitoring() {
     
     Storage.prototype.clear = function() {
         
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage({
-                type: 'STORAGE_CHANGED',
-                key: null,
-                oldValue: null,
-                newValue: null,
-                storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
-                action: 'clear',
-                url: window.location.href
-            }).catch(error => {
-                console.log('Failed to send storage change message:', error);
-            });
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+            try {
+                // Check if extension context is still valid
+                if (!chrome.runtime.id) {
+                    return;
+                }
+                chrome.runtime.sendMessage({
+                    type: 'STORAGE_CHANGED',
+                    key: null,
+                    oldValue: null,
+                    newValue: null,
+                    storageType: this === localStorage ? 'localStorage' : 'sessionStorage',
+                    action: 'clear',
+                    url: window.location.href
+                }).catch(error => {
+                    // Extension context invalidated - silently ignore
+                    if (error.message?.includes('Extension context invalidated')) {
+                        return;
+                    }
+                    console.log('Failed to send storage change message:', error);
+                });
+            } catch (error) {
+                // Extension context invalidated - silently ignore
+                if (error.message?.includes('Extension context invalidated')) {
+                    return;
+                }
+                console.log('Chrome runtime error:', error);
+            }
         }
         
         return originalClear.call(this);

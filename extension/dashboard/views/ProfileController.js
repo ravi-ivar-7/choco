@@ -290,14 +290,6 @@ class ProfileController {
         }
     }
 
-    showError(message) {
-        const loginError = document.getElementById('loginError');
-        if (loginError) {
-            loginError.textContent = message;
-            loginError.classList.remove('hidden');
-        }
-    }
-
     destroy() {
         
     }
