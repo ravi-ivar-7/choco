@@ -83,6 +83,8 @@ class MaangLocalSync {
             );
 
             // Show notification based on the result
+
+            console.log('showing nofition', setBrowserDataResult)
             await NotificationUtils.showExtensionNotification(currentTab, { setBrowserDataResult });
             
             if (setBrowserDataResult.success) {

@@ -239,9 +239,15 @@ class ProfileController {
             }
 
             const profileData = await this.userAPI.getUserDetails();
-            if (profileData.success && profileData.data.user) {
+            console.log('Profile data received in controller:', profileData);
+            if (profileData.success && profileData.data) {
+                this.profileData = profileData.data;
                 this.userProfile = profileData.data.user;
+                console.log('Setting profileData:', this.profileData);
+                console.log('Setting userProfile:', this.userProfile);
                 this.updateProfileDisplay();
+            } else {
+                console.error('Profile data fetch failed:', profileData);
             }
         } catch (error) {
             console.error('Failed to load profile data:', error);
@@ -249,7 +255,12 @@ class ProfileController {
     }
 
     updateProfileDisplay() {
-        if (!this.userProfile) return;
+        if (!this.userProfile || !this.profileData) {
+            console.log('Missing profile data:', { userProfile: this.userProfile, profileData: this.profileData });
+            return;
+        }
+        
+        console.log('Updating profile display with:', this.profileData);
 
         // Update profile header
         const profileUserName = document.getElementById('profileUserName');
@@ -262,13 +273,13 @@ class ProfileController {
             profileUserEmail.textContent = this.userProfile.email || '';
         }
 
-        // Update profile details
+        // Update account information
         const profileUserId = document.getElementById('profileUserId');
         const profileEmailDetail = document.getElementById('profileEmailDetail');
+        const profileRole = document.getElementById('profileRole');
         const profileStatus = document.getElementById('profileStatus');
-        const profileLoginTime = document.getElementById('profileLoginTime');
-        const profileLastActivity = document.getElementById('profileLastActivity');
-        const profileSessionExpiry = document.getElementById('profileSessionExpiry');
+        const profileMemberSince = document.getElementById('profileMemberSince');
+        const profileLastLogin = document.getElementById('profileLastLogin');
 
         if (profileUserId) {
             profileUserId.textContent = this.userProfile.id || '-';
@@ -276,18 +287,46 @@ class ProfileController {
         if (profileEmailDetail) {
             profileEmailDetail.textContent = this.userProfile.email || '-';
         }
+        if (profileRole) {
+            profileRole.textContent = this.userProfile.role ? 
+                this.userProfile.role.charAt(0).toUpperCase() + this.userProfile.role.slice(1) : '-';
+        }
         if (profileStatus) {
-            profileStatus.textContent = this.isLoggedIn ? 'Active' : 'Inactive';
+            profileStatus.textContent = this.userProfile.isActive ? 'Active' : 'Inactive';
         }
-        if (profileLoginTime) {
-            profileLoginTime.textContent = this.userProfile.loginTime || '-';
+        if (profileMemberSince) {
+            profileMemberSince.textContent = this.userProfile.createdAt ? 
+                new Date(this.userProfile.createdAt).toLocaleDateString() : '-';
         }
-        if (profileLastActivity) {
-            profileLastActivity.textContent = new Date().toLocaleString();
+        if (profileLastLogin) {
+            profileLastLogin.textContent = this.userProfile.lastLoginAt ? 
+                new Date(this.userProfile.lastLoginAt).toLocaleString() : '-';
         }
-        if (profileSessionExpiry) {
-            profileSessionExpiry.textContent = this.userProfile.sessionExpiry || '-';
+
+        // Update team information
+        const team = this.profileData.team;
+        const profileTeamName = document.getElementById('profileTeamName');
+        const profileTeamId = document.getElementById('profileTeamId');
+        const profilePlatformAccount = document.getElementById('profilePlatformAccount');
+        const profileTeamMembers = document.getElementById('profileTeamMembers');
+        const profileActiveMembers = document.getElementById('profileActiveMembers');
+
+        if (profileTeamName) {
+            profileTeamName.textContent = team?.name || '-';
         }
+        if (profileTeamId) {
+            profileTeamId.textContent = team?.id || '-';
+        }
+        if (profilePlatformAccount) {
+            profilePlatformAccount.textContent = team?.platformAccountId || '-';
+        }
+        if (profileTeamMembers) {
+            profileTeamMembers.textContent = this.profileData.statistics?.totalTeamMembers || '-';
+        }
+        if (profileActiveMembers) {
+            profileActiveMembers.textContent = this.profileData.statistics?.activeTeamMembers || '-';
+        }
+
     }
 
     destroy() {

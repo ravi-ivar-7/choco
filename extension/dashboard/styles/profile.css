@@ -1,31 +1,34 @@
-/* Profile Page Styles - Simple Working Solution */
+/* Profile Page Styles - Responsive */
 #profilePage {
-    padding: 20px;
-    padding-bottom: 40px; /* Reduced bottom padding */
-    overflow: visible;
+    padding: 16px;
+    padding-bottom: 40px;
+    overflow-y: auto;
     height: 100%;
+    max-width: 100%;
 }
 
 /* Login Form */
 .login-form { 
-    max-width: 100%;
+    max-width: 500px;
     width: 100%;
     margin: 0 auto 30px auto;
     background: rgba(21, 24, 28, 0.6);
     border: 1px solid rgba(240, 246, 252, 0.1);
     border-radius: 12px;
-    padding: 24px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 /* User Profile Section */
 .user-profile-section {
-    max-width: 100%;
+    max-width: 800px;
     width: 100%;
     margin: 0 auto 20px auto;
     background: rgba(21, 24, 28, 0.6);
     border: 1px solid rgba(240, 246, 252, 0.1);
     border-radius: 12px;
     padding: 20px;
+    box-sizing: border-box;
 }
 
 .profile-nav {
@@ -49,6 +52,7 @@
     align-items: center;
     justify-content: center;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .profile-avatar {
@@ -95,10 +99,10 @@
 }
 
 .profile-details {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 16px;
-    flex-shrink: 0;
+    margin-top: 20px;
 }
 
 .detail-card {
@@ -106,21 +110,26 @@
     border: 1px solid rgba(240, 246, 252, 0.1);
     border-radius: 12px;
     padding: 16px;
+    box-sizing: border-box;
 }
 
 .detail-card h3 {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: #ffffff;
-    margin: 0 0 12px 0;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .detail-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 8px 0;
     border-bottom: 1px solid rgba(240, 246, 252, 0.05);
+    gap: 12px;
 }
 
 .detail-row:last-child {
@@ -128,15 +137,19 @@
 }
 
 .detail-label {
-    font-size: 13px;
+    font-size: 12px;
     color: #8b949e;
     font-weight: 500;
+    flex-shrink: 0;
+    min-width: 120px;
 }
 
 .detail-value {
-    font-size: 13px;
+    font-size: 12px;
     color: #c9d1d9;
-    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+    flex: 1;
 }
 
 .info-title {
@@ -241,14 +254,130 @@
     border-color: rgba(248, 81, 73, 0.3);
 }
 
-/* Responsive profile page */
-@media (max-width: 450px) {
-    .profile-section {
+/* Credential list styling */
+.credential-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.credential-item {
+    background: rgba(110, 118, 129, 0.1);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.credential-platform {
+    color: #58a6ff;
+    font-weight: 500;
+}
+
+.credential-browser {
+    color: #c9d1d9;
+}
+
+.credential-date {
+    color: #8b949e;
+    font-size: 11px;
+}
+
+/* Form styling */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(110, 118, 129, 0.1);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #58a6ff;
+    background: rgba(110, 118, 129, 0.2);
+}
+
+.profile-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.profile-actions .btn {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+    #profilePage {
+        padding: 12px;
+    }
+    
+    .login-form {
+        padding: 16px;
+    }
+    
+    .user-profile-section {
+        padding: 16px;
+    }
+    
+    .profile-details {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .detail-card {
         padding: 12px;
     }
     
     .profile-header {
-        padding: 16px;
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .profile-info {
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    #profilePage {
+        padding: 8px;
+    }
+    
+    .login-form {
+        padding: 12px;
+    }
+    
+    .user-profile-section {
+        padding: 12px;
     }
     
     .profile-avatar {
@@ -261,8 +390,49 @@
         font-size: 16px;
     }
     
-    .info-grid {
-        grid-template-columns: 1fr;
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .detail-label {
+        min-width: auto;
+    }
+    
+    .detail-value {
+        text-align: left;
+    }
+    
+    .credential-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        justify-content: flex-start;
+        padding: 6px 8px;
+    }
+    
+    .credential-platform,
+    .credential-browser,
+    .credential-date {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+    }
+    
+    .credential-list {
+        gap: 6px;
+        width: 100%;
+    }
+    
+    .profile-actions {
+        flex-direction: column;
         gap: 8px;
+    }
+    
+    .profile-actions .btn {
+        flex: none;
+        min-width: auto;
+        max-width: none;
     }
 }
