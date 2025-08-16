@@ -271,8 +271,6 @@ class HomeController {
                         [domainKey]: new Date().toISOString()
                     })
                     this.updateHomeStatusCard('success', '🎉 Great! Your team has you covered')
-                    
-                    this.showRefreshNotification('🎉 Team access ready! Refresh this page to login automatically.')
 
                 } else {
                     this.updateHomeStatusCard('inactive', '🔑 Web Platform Access Required')
@@ -305,6 +303,7 @@ class HomeController {
                 return { success: false, error: 'No credentials', message: 'Your teammates haven\'t set up web platform access yet', data: null }
             }
 
+            // Only try the first valid credential
             for (const teamCredential of credentials) {
                 const validation = await CredentialValidator.validateCredentials(teamCredential, 'structure_filter', null, this.domainConfig)
                 console.log('validation in handleTokenFromDB ',validation)
@@ -314,7 +313,6 @@ class HomeController {
                 }
                 try {
                     if (!this.tabId) {
-
                         continue
                     }
                     // Create a copy to prevent mutation of original credential object
@@ -324,8 +322,12 @@ class HomeController {
                         credentialCopy,
                         this.currentUrl
                     )
-                    if (setBrowserDataResult.success) {
 
+                    // Show notification based on the actual result
+                    const currentTab = { id: this.tabId, url: this.currentUrl };
+                    await NotificationUtils.showExtensionNotification(currentTab, { setBrowserDataResult });
+
+                    if (setBrowserDataResult.success) {
                         const validation = await CredentialValidator.validateCredentials(teamCredential, 'test_credentials', null, this.domainConfig)
                         console.log('validation in handleTokenFromDB ',validation)
                         if (validation.success) {
@@ -343,10 +345,30 @@ class HomeController {
                                 data: { credentials: teamCredential, setBrowserDataResult, validated: false }
                             }
                         }
+                    } else {
+                        // Return after first attempt (success or failure)
+                        return {
+                            success: false,
+                            error: 'Failed to apply team credentials',
+                            message: setBrowserDataResult.message || 'Failed to apply credentials',
+                            data: { credentials: teamCredential, setBrowserDataResult }
+                        }
                     }
                 } catch (error) {
                     console.error('Error setting browser data for credential:', error)
-                    continue
+                    // Show error notification
+                    const currentTab = { id: this.tabId, url: this.currentUrl };
+                    await NotificationUtils.showExtensionNotification(currentTab, {
+                        title: 'Application Failed',
+                        message: error.message || 'Failed to apply team credentials',
+                        notificationType: 'failure'
+                    });
+                    return {
+                        success: false,
+                        error: error.message,
+                        message: 'Error applying team credentials',
+                        data: null
+                    }
                 }
             }
 
@@ -369,70 +391,6 @@ class HomeController {
             }
         }
     }
-
-    async showRefreshNotification(customMessage = null) {
-        try { 
-            if (!this.currentTab || !this.currentTab.id) {
-                console.log('No current tab available for notification');
-                return;
-            }
-            
-            const tabs = [this.currentTab]; 
-            if (tabs && tabs.length > 0) {
-                for (const tab of tabs) {
-                    try {
-                        await chrome.scripting.executeScript({
-                            target: { tabId: tab.id },
-                            func: (title, message, type) => {
-                                if (typeof window.NotificationHandler !== 'undefined') {
-                                    const handler = new window.NotificationHandler();
-                                    handler.handleMessage({
-                                        type: 'SHOW_TOAST_NOTIFICATION',
-                                        title, message, notificationType: type, duration: 5000
-                                    });
-                                }
-                            },
-                            args: ['Team Access Ready', customMessage || '🔄 Your team has web platform access ready! Please refresh this page to access the platform with shared credentials.', 'success']
-                        });
-
-                        await chrome.scripting.executeScript({
-                            target: { tabId: tab.id },
-                            func: (title, message, type) => {
-                                if (typeof window.NotificationHandler !== 'undefined') {
-                                    const handler = new window.NotificationHandler();
-                                    handler.handleMessage({
-                                        type: 'SHOW_DIALOG_NOTIFICATION',
-                                        title, message, notificationType: type,
-                                        actionButton: {
-                                            text: 'Refresh Page',
-                                            href: '/',
-                                            target: '_self'
-                                        },
-                                        cancelButton: {
-                                            text: 'Later',
-                                            href: null,
-                                            target: '_self'
-                                        }
-                                    });
-                                }
-                            },
-                            args: ['Team Access Ready', 'Your team credentials are now active. Refresh this page to login automatically.', 'success']
-                        });
-                    } catch (error) {
-                        console.error('❌ showRefreshNotification: Error injecting script to tab:', error)
-                    }
-                }
-            } else {
-                const domainConfig = await ChromeUtils.getCurrentDomain()
-                const primaryDomain = domainConfig ? domainConfig.domain.PRIMARY : 'unknown'
-
-            }
-        } catch (error) {
-            console.error('❌ showRefreshNotification: Outer error:', error)
-        }
-    }
-
-    
 
     async handleRefresh() {
         try {

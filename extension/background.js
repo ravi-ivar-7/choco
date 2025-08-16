@@ -37,8 +37,10 @@ class ChocoBackground {
     }
 
     async init() {
+        await this.validateStoredTabs();
         await this.initializeTabAndDomainInfo();
         this.setupComprehensiveListeners();
+        this.setupTabLifecycleListeners();
         
         if (this.isValidDomain && this.domainConfig) {
             try {
@@ -47,6 +49,56 @@ class ChocoBackground {
                 console.error('Failed to load credentials for current domain:', error);
             }
         }
+    }
+
+    async validateStoredTabs() {
+        try {
+            const result = await StorageUtils.get(['selectedPlatform']);
+            if (result.success && result.data.selectedPlatform?.tab) {
+                const storedTab = result.data.selectedPlatform.tab;
+                try {
+                    await chrome.tabs.get(storedTab.id);
+                    console.log('Stored tab is valid:', storedTab.id);
+                } catch (tabError) {
+                    console.log('Cleaning up invalid stored tab:', storedTab.id);
+                    await StorageUtils.remove(['selectedPlatform']);
+                }
+            }
+        } catch (error) {
+            console.warn('Error validating stored tabs:', error.message);
+        }
+    }
+
+    setupTabLifecycleListeners() {
+        // Clean up storage when tabs are closed
+        chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+            try {
+                const result = await StorageUtils.get(['selectedPlatform']);
+                if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
+                    console.log('Cleaning up storage for closed tab:', tabId);
+                    await StorageUtils.remove(['selectedPlatform']);
+                }
+            } catch (error) {
+                console.warn('Error cleaning up closed tab:', error.message);
+            }
+        });
+
+        // Update stored tab URL when it changes
+        chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+            if (changeInfo.url) {
+                try {
+                    const result = await StorageUtils.get(['selectedPlatform']);
+                    if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
+                        console.log('Updating stored tab URL for tab:', tabId);
+                        const updatedPlatform = { ...result.data.selectedPlatform };
+                        updatedPlatform.tab.url = tab.url;
+                        await StorageUtils.set({ selectedPlatform: updatedPlatform });
+                    }
+                } catch (error) {
+                    console.warn('Error updating stored tab URL:', error.message);
+                }
+            }
+        });
     }
 
     async initializeTabAndDomainInfo() {
@@ -134,7 +186,7 @@ class ChocoBackground {
                 this.cookieUpdateDebounce.delete(debounceKey);
                 const changeType = isRemoved ? 'removed' : 'updated';
                 
-                this.showToastNotification(
+                this.showNotification(
                     'Required Cookie Change',
                     `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
                     'info'
@@ -146,14 +198,14 @@ class ChocoBackground {
                     syncResult = await CredentialSyncer.syncCredentialsToLocal(cookieDomainConfig, this.userAPI, this.credentialsAPI);
                     
                     if (syncResult.success) {
-                        this.showToastNotification(
+                        this.showNotification(
                             'Local Sync Success',
                             `${cookieDomainConfig.domain.PRIMARY} credentials restored from database`,
                             'success',
                             cookieDomainConfig.domain.PRIMARY
                         );
                     } else {
-                        this.showToastNotification(
+                        this.showNotification(
                             'Local Sync Failed',
                             syncResult.message || 'Failed to restore credentials from database',
                             'error',
@@ -165,14 +217,14 @@ class ChocoBackground {
                     syncResult = await CredentialSyncer.syncCredentialsToDatabase(cookieDomainConfig, this.userAPI, this.credentialsAPI);
                     
                     if (syncResult.success) {
-                        this.showToastNotification(
+                        this.showNotification(
                             'Database Sync Success',
                             `${cookieDomainConfig.domain.PRIMARY} credentials saved to database`,
                             'success',
                             cookieDomainConfig.domain.PRIMARY
                         );
                     } else {
-                        this.showToastNotification(
+                        this.showNotification(
                             'Database Sync Failed',
                             syncResult.message || 'Failed to save credentials to database',
                             'error',
@@ -262,7 +314,7 @@ class ChocoBackground {
             const isRemoved = newValue === null && oldValue !== null;
             const actionType = isRemoved ? 'removed' : 'updated';
             
-            this.showToastNotification(
+            this.showNotification(
                 'Required Storage Change',
                 `${storageType}.${changedKey} ${actionType} on ${tabDomainConfig.domain.PRIMARY}`,
                 'info'
@@ -274,14 +326,14 @@ class ChocoBackground {
                 syncResult = await CredentialSyncer.syncCredentialsToLocal(tabDomainConfig, this.userAPI, this.credentialsAPI, tab.id);
                 
                 if (syncResult.success) {
-                    this.showToastNotification(
+                    this.showNotification(
                         'Local Sync Success',
                         `${tabDomainConfig.domain.PRIMARY} credentials restored from database`,
                         'success',
                         tabDomainConfig.domain.PRIMARY
                     );
                 } else {
-                    this.showToastNotification(
+                    this.showNotification(
                         'Local Sync Failed',
                         syncResult.message || 'Failed to restore credentials from database',
                         'error',    
@@ -295,14 +347,14 @@ class ChocoBackground {
                 syncResult = await CredentialSyncer.syncCredentialsToDatabase(tabDomainConfig, this.userAPI, this.credentialsAPI);
 
                 if (syncResult.success) {
-                    this.showToastNotification(
+                    this.showNotification(
                         'Database Sync Success',
                         `${tabDomainConfig.domain.PRIMARY} credentials saved to database`,
                         'success',
                         tabDomainConfig.domain.PRIMARY
                     );
                 } else {
-                    this.showToastNotification(
+                    this.showNotification(
                         'Database Sync Failed',
                         syncResult.message || 'Failed to save credentials to database',
                         'error',
@@ -317,7 +369,7 @@ class ChocoBackground {
 
 
 
-    async showToastNotification(title, message, type, targetDomain = null) {
+    async showNotification(title, message, type, targetDomain = null) {
         try {
             let tabs = [];
             
@@ -338,6 +390,7 @@ class ChocoBackground {
                             }
                         } catch (tabError) {
                             console.warn('Stored tab no longer valid:', tabError.message);
+                            // Tab cleanup is handled centrally by tab lifecycle listeners
                         }
                     }
                 }
@@ -363,14 +416,14 @@ class ChocoBackground {
             });
 
             for (const tab of validTabs) {
-                await this.executeNotification(tab.id, title, message, type);
+                await this.executeNotificationQueue(tab.id, title, message, type);
             }
         } catch (error) {
             console.error('Failed to show notification:', error.message);
         }
     }
 
-    async executeNotification(tabId, title, message, type) {
+    async executeNotificationQueue(tabId, title, message, type) {
         try {
             // Get tab info to check if it's accessible
             const tab = await chrome.tabs.get(tabId);

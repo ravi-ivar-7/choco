@@ -484,20 +484,15 @@ class CredentialsController {
                     }
                 } catch (tabError) {
                     console.warn('Stored tab no longer valid:', tabError.message);
+                    // Tab cleanup is handled centrally by background.js tab lifecycle listeners
                 }
             }
             
-            // Fallback to active tab if stored tab not available
+            // If no valid tab available, require platform selection from parent
             if (!currentTab) {
-                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-                if (!tabs || tabs.length === 0) {
-                    throw new Error('No tab available for credential application');
-                }
-                currentTab = tabs[0];
-                tabId = currentTab.id;
+                throw new Error('No valid tab available. Please select a platform first.');
             }
 
-            // Apply credentials
             const credentialCopy = JSON.parse(JSON.stringify(credential));
             const setBrowserDataResult = await BrowserDataCollector.setBrowserData(
                 currentTab.id,
@@ -505,24 +500,15 @@ class CredentialsController {
                 currentTab.url
             );
 
+            // Show notification based on the actual result
+            await this.showNotification(currentTab, { setBrowserDataResult });
+
             if (setBrowserDataResult.success) {
-                // Show success notification
-                if (typeof addToNotificationQueue === 'function') {
-                    addToNotificationQueue({
-                        title: 'Credentials Applied',
-                        message: `Successfully applied credentials from ${credential.credentialSource || 'team member'}`,
-                        type: 'success'
-                    });
-                }
-                
                 button.innerHTML = '✅ Applied!';
                 setTimeout(() => {
                     button.disabled = false;
                     button.innerHTML = 'Apply';
                 }, 2000);
-
-                // Refresh tab
-                chrome.tabs.reload(currentTab.id);
             } else {
                 throw new Error(setBrowserDataResult.message || 'Failed to apply credentials');
             }
@@ -619,6 +605,11 @@ class CredentialsController {
                 <div class="credentials-subtitle">${message}</div>
             </div>
         `;
+    }
+
+    async showNotification(currentTab, options = {}) {
+        // Use the general notification utility
+        return await NotificationUtils.showExtensionNotification(currentTab, options);
     }
 
     destroy() {

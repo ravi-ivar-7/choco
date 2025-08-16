@@ -12,6 +12,9 @@ class NavbarController {
     }
 
     async init() {
+        console.log('NavbarController: Initializing...');
+        
+        // Initialize DOM elements
         this.platformDropdownBtn = document.getElementById('platformDropdownBtn');
         this.platformDropdownMenu = document.getElementById('platformDropdownMenu');
         this.selectedPlatformIcon = document.getElementById('selectedPlatformIcon');
@@ -19,12 +22,22 @@ class NavbarController {
         this.userName = document.getElementById('userName');
         this.navTabs = document.querySelectorAll('.nav-tab');
 
+        if (!this.platformDropdownBtn || !this.platformDropdownMenu) {
+            console.error('Platform dropdown elements not found!');
+            return;
+        }
+
+        // Bind events
         this.bindEvents();
         this.bindUserProfileEvents();
-        
-        // Handle all platform detection and management
-        await this.initializePlatformDetection();
+
+        // Load stored user
         await this.loadStoredUser();
+        
+        // Initialize platform detection (this will auto-select platforms)
+        await this.initializePlatformDetection();
+        
+        console.log('NavbarController: Initialized');
     }
 
     bindEvents() {
@@ -43,7 +56,8 @@ class NavbarController {
 
         // Navigation tab events
         this.navTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
+            tab.addEventListener('click', (e) => {
+                e.stopPropagation();
                 this.switchTab(tab.id.replace('Tab', ''));
             });
         });
@@ -86,7 +100,7 @@ class NavbarController {
                 <span>${platform.platformName}</span>
                 <span class="platform-status">Available</span>
             `;
-            // Remove click handler - platforms are display-only
+            // platforms are display-only
             this.platformDropdownMenu.appendChild(option);
         });
 
@@ -285,31 +299,9 @@ class NavbarController {
                 const activeBrowserTab = browserTabs.find(tab => tab.active) || 
                                        browserTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
                 
-                if (activeBrowserTab) {
-                    console.log('Active browser tab URL:', activeBrowserTab.url);
-                    
-                    // Check if current tab matches any platform domain
-                    const matchingPlatform = allPlatforms.find(platform => {
-                        const primaryDomain = platform.domainConfig.domain.PRIMARY;
-                        const matches = activeBrowserTab.url && activeBrowserTab.url.includes(primaryDomain);
-                        console.log(`URL ${activeBrowserTab.url} matches ${primaryDomain}:`, matches);
-                        return matches;
-                    });
-                    
-                    if (matchingPlatform) {
-                        console.log('Auto-selecting platform:', matchingPlatform.platformName);
-                        // Update the platform with actual browser tab info
-                        matchingPlatform.tab = activeBrowserTab;
-                        this.updateSelectedPlatform(matchingPlatform);
-                        
-                        // Save to storage
-                        if (typeof StorageUtils !== 'undefined') {
-                            await StorageUtils.set({ selectedPlatform: matchingPlatform });
-                            console.log('Platform auto-selected and saved:', matchingPlatform.platformName);
-                        }
-                        return;
-                    }
-                }
+                // Auto-detect platform based on current tab and update stored tab
+                await this.detectCurrentPlatform();
+                
             } catch (error) {
                 console.error('Failed to check current tab:', error);
             }
@@ -320,6 +312,83 @@ class NavbarController {
         } catch (error) {
             console.error('Platform detection failed:', error);
             await this.loadStoredPlatform();
+        }
+    }
+
+    async detectCurrentPlatform() {
+        try {
+            // Step 1: Get most recent non-extension tab
+            let activeBrowserTab = null;
+            try {
+                const allTabs = await chrome.tabs.query({});
+                // Filter out extension tabs and find most recently accessed website tab
+                const browserTabs = allTabs.filter(tab => 
+                    tab.url && 
+                    !tab.url.startsWith('chrome-extension://') && 
+                    !tab.url.startsWith('moz-extension://') &&
+                    !tab.url.startsWith('chrome://') &&
+                    !tab.url.startsWith('about:')
+                );
+                
+                // Sort by lastAccessed to get most recent
+                browserTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+                
+                if (browserTabs.length > 0) {
+                    activeBrowserTab = browserTabs[0];
+                    console.log('Most recent website tab:', activeBrowserTab.url);
+                }
+            } catch (error) {
+                console.warn('Could not get browser tabs:', error);
+            }
+            
+            // Step 2: Load stored platform and update its tab to current tab
+            const result = await StorageUtils.get(['selectedPlatform']);
+            if (result.success && result.data.selectedPlatform) {
+                const storedPlatform = result.data.selectedPlatform;
+                
+                // Update stored platform with current active tab
+                if (activeBrowserTab) {
+                    storedPlatform.tab = activeBrowserTab;
+                    await StorageUtils.set({ selectedPlatform: storedPlatform });
+                    console.log('Updated stored platform with current tab:', activeBrowserTab.url);
+                }
+                
+                this.updateSelectedPlatform(storedPlatform);
+                return;
+            }
+            
+            // Step 3: No stored platform, try to auto-detect from current tab
+            if (activeBrowserTab && this.availablePlatforms) {
+                for (const platform of this.availablePlatforms) {
+                    // Extract domain from platform's domainConfig
+                    const platformUrl = platform.domainConfig?.domain?.URL;
+                    if (platformUrl) {
+                        try {
+                            const platformDomain = new URL(platformUrl).hostname;
+                            const currentDomain = new URL(activeBrowserTab.url).hostname;
+                            
+                            console.log(`Checking platform ${platform.platformName}: ${platformDomain} vs current: ${currentDomain}`);
+                            
+                            if (currentDomain.includes(platformDomain) || platformDomain.includes(currentDomain)) {
+                                console.log('Auto-selecting platform:', platform.platformName);
+                                // Update the platform with actual browser tab info
+                                platform.tab = activeBrowserTab;
+                                this.updateSelectedPlatform(platform);
+                                
+                                // Save to storage
+                                await StorageUtils.set({ selectedPlatform: platform });
+                                console.log('Platform auto-selected and saved:', platform.platformName);
+                                return;
+                            }
+                        } catch (error) {
+                            console.warn('Error parsing URLs for platform detection:', error);
+                        }
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.error('Platform detection failed:', error);
         }
     }
 

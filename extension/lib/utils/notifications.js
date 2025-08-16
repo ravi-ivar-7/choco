@@ -2,30 +2,56 @@ class NotificationUtils {
     static NOTIFICATION_TYPES = {
         SUCCESS: 'success',
         ERROR: 'error',
+        FAILURE: 'failure',
         WARNING: 'warning',
         INFO: 'info'
     }
 
     static NOTIFICATION_THEMES = {
         success: {
-            background: '#10b981',
-            border: '#059669',
-            icon: '✅'
+            background: 'rgba(13, 17, 23, 0.95)',
+            border: '#3fb950',
+            icon: '✅',
+            textColor: '#f0f6fc',
+            accentColor: '#3fb950',
+            primaryButton: '#3fb950',
+            secondaryButton: '#58a6ff'
         },
         error: {
-            background: '#ef4444',
-            border: '#dc2626',
-            icon: '❌'
+            background: 'rgba(13, 17, 23, 0.95)',
+            border: '#f85149',
+            icon: '❌',
+            textColor: '#f0f6fc',
+            accentColor: '#f85149',
+            primaryButton: '#f85149',
+            secondaryButton: '#6e7681'
+        },
+        failure: {
+            background: 'rgba(13, 17, 23, 0.95)',
+            border: '#da3633',
+            icon: '⛔',
+            textColor: '#f0f6fc',
+            accentColor: '#da3633',
+            primaryButton: '#da3633',
+            secondaryButton: '#6e7681'
         },
         warning: {
-            background: '#f59e0b',
-            border: '#d97706',
-            icon: '⚠️'
+            background: 'rgba(13, 17, 23, 0.95)',
+            border: '#d29922',
+            icon: '⚠️',
+            textColor: '#f0f6fc',
+            accentColor: '#d29922',
+            primaryButton: '#d29922',
+            secondaryButton: '#58a6ff'
         },
         info: {
-            background: '#3b82f6',
-            border: '#2563eb',
-            icon: '🔔'
+            background: 'rgba(13, 17, 23, 0.95)',
+            border: '#58a6ff',
+            icon: '🔔',
+            textColor: '#f0f6fc',
+            accentColor: '#58a6ff',
+            primaryButton: '#58a6ff',
+            secondaryButton: '#6e7681'
         }
     }
 
@@ -201,19 +227,23 @@ class NotificationUtils {
     static applyToastNotificationStyles(element, theme) {
         Object.assign(element.style, {
             background: theme.background,
-            color: 'white',
+            color: theme.textColor,
             padding: '16px 20px',
             marginBottom: '12px',
             borderRadius: '8px',
             borderLeft: `4px solid ${theme.border}`,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15)',
             minWidth: '300px',
+            maxWidth: '450px',
             pointerEvents: 'auto',
             cursor: 'pointer',
             transform: 'translateX(100%)',
             transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out',
             opacity: '0',
-            position: 'relative'
+            position: 'relative',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '14px',
+            lineHeight: '1.5'
         })
     }
 
@@ -224,44 +254,55 @@ class NotificationUtils {
             left: '50%',
             transform: 'translate(-50%, -50%)',
             background: theme.background,
-            color: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            border: `2px solid ${theme.border}`,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            minWidth: '400px',
-            maxWidth: '500px',
+            color: theme.textColor,
+            padding: '28px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.border}`,
+            boxShadow: '0 16px 32px rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(10px)',
+            minWidth: '420px',
+            maxWidth: '520px',
             pointerEvents: 'auto',
             zIndex: '10001',
             opacity: '0',
-            transition: 'opacity 0.3s ease-in-out'
+            transition: 'opacity 0.3s ease-in-out',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif',
+            fontSize: '14px',
+            lineHeight: '1.5'
         })
     }
 
     static createToastNotificationHTML(title, message, theme, dismissible) {
+        const isWarning = theme.textColor === '#1f2937';
+        const closeButtonColor = theme.textColor;
+        const closeButtonBg = isWarning ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)';
+        const closeButtonHover = isWarning ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)';
+        
         const closeButton = dismissible ? `
             <button class="notification-close" style="
-                background: rgba(255, 255, 255, 0.2);
+                background: ${closeButtonBg};
                 border: none;
-                color: white;
-                width: 20px;
-                height: 20px;
+                color: ${closeButtonColor};
+                width: 22px;
+                height: 22px;
                 border-radius: 50%;
                 cursor: pointer;
-                font-size: 12px;
+                font-size: 14px;
+                font-weight: bold;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
-            ">×</button>
+                transition: background-color 0.2s ease;
+            " onmouseover="this.style.background='${closeButtonHover}'" onmouseout="this.style.background='${closeButtonBg}'">×</button>
         ` : ''
 
         return `
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <span style="font-size: 18px; flex-shrink: 0;">${theme.icon}</span>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${this.escapeHTML(title)}</div>
-                    <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">${this.escapeHTML(message)}</div>
+            <div style="display: flex; align-items: flex-start; gap: 14px;">
+                <span style="font-size: 20px; flex-shrink: 0; margin-top: 1px;">${theme.icon}</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px; color: ${theme.textColor};">${this.escapeHTML(title)}</div>
+                    <div style="font-size: 14px; opacity: 0.9; line-height: 1.5; color: ${theme.textColor};">${this.escapeHTML(message)}</div>
                 </div>
                 ${closeButton}
             </div>
@@ -270,9 +311,17 @@ class NotificationUtils {
 
     static createDialogNotificationHTML(title, message, theme, buttons = []) {
         const buttonsHTML = buttons.map(button => {
-            const buttonStyle = button.style === 'primary' ? 
-                'background: rgba(255, 255, 255, 0.9); color: #333; font-weight: 600;' :
-                'background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3);'
+            let buttonStyle, hoverStyle;
+            
+            if (button.style === 'primary') {
+                const primaryColor = theme.primaryButton;
+                buttonStyle = `background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%); color: #ffffff; font-weight: 600; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);`;
+                hoverStyle = `background: ${primaryColor}; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3);`;
+            } else {
+                const secondaryColor = theme.secondaryButton;
+                buttonStyle = `background: rgba(110, 118, 129, 0.1); color: ${secondaryColor}; border: 1px solid ${secondaryColor}40;`;
+                hoverStyle = `background: ${secondaryColor}20; border-color: ${secondaryColor}80; color: ${secondaryColor};`;
+            }
             
             const href = button.href ? `href="${button.href}"` : ''
             const target = button.target ? `target="${button.target}"` : ''
@@ -282,30 +331,33 @@ class NotificationUtils {
             return `
                 <${tag} ${href} ${target} class="dialog-button" style="
                     ${buttonStyle}
-                    border: none;
-                    padding: 12px 24px;
+                    padding: 10px 16px;
                     border-radius: 6px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: 13px;
+                    font-weight: 500;
                     text-decoration: none;
-                    display: inline-block;
+                    display: inline-flex;
+                    align-items: center;
                     text-align: center;
-                    margin: 0 8px;
+                    margin: 0 6px;
                     transition: all 0.2s ease;
-                ">${this.escapeHTML(button.text)}</${closeTag}>
+                    min-width: 80px;
+                    gap: 6px;
+                " onmouseover="this.style.cssText += '${hoverStyle}'" onmouseout="this.style.cssText = this.style.cssText.replace('${hoverStyle}', '')">${this.escapeHTML(button.text)}</${closeTag}>
             `
         }).join('')
 
         return `
             <div style="text-align: center;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
-                    <span style="font-size: 24px;">${theme.icon}</span>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 20px;">
+                    <span style="font-size: 28px; color: ${theme.accentColor};">${theme.icon}</span>
                     <div>
-                        <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">${this.escapeHTML(title)}</div>
-                        <div style="font-size: 14px; opacity: 0.9; line-height: 1.5;">${this.escapeHTML(message)}</div>
+                        <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px; color: ${theme.textColor};">${this.escapeHTML(title)}</div>
+                        <div style="font-size: 14px; opacity: 0.9; line-height: 1.5; color: ${theme.textColor};">${this.escapeHTML(message)}</div>
                     </div>
                 </div>
-                <div style="display: flex; justify-content: center; gap: 8px;">
+                <div style="display: flex; justify-content: center; gap: 12px; margin-top: 24px;">
                     ${buttonsHTML}
                 </div>
             </div>
@@ -405,9 +457,143 @@ class NotificationUtils {
     }
 
     static escapeHTML(text) {
-        const div = document.createElement('div')
-        div.textContent = text
-        return div.innerHTML
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // General notification function for extension-wide use
+    static async showExtensionNotification(currentTab, options = {}) {
+        console.log('showing notification', currentTab)
+        try {
+            if (!currentTab || !currentTab.id) {
+                console.log('No current tab available for notification');
+                return { success: false, error: 'No tab available' };
+            }
+
+            let notificationData = {};
+
+            // If setBrowserDataResult is provided, parse it automatically
+            if (options.setBrowserDataResult) {
+                notificationData = this.parseSetBrowserDataResult(options.setBrowserDataResult);
+            } 
+            // Otherwise use provided parameters
+            else if (options.title && options.message) {
+                notificationData = {
+                    title: options.title,
+                    dialogMessage: options.message,
+                    toastMessage: options.toastMessage || options.message,
+                    notificationType: options.notificationType || 'info',
+                    actionButton: options.actionButton || null,
+                    cancelButton: options.cancelButton || null
+                };
+            }
+            // Default fallback
+            else {
+                notificationData = {
+                    title: 'Notification',
+                    dialogMessage: 'Operation completed',
+                    toastMessage: 'Operation completed',
+                    notificationType: 'info',
+                    actionButton: { text: 'OK', href: null, target: '_self' },
+                    cancelButton: null
+                };
+            }
+
+            // Determine notification type (dialog vs toast)
+            const notificationType = options.type || 'SHOW_DIALOG_NOTIFICATION';
+
+            // Execute notification in content script
+            await chrome.scripting.executeScript({
+                target: { tabId: currentTab.id },
+                func: (title, message, type, actionBtn, cancelBtn, notifType) => {
+                    console.log('Script injected - checking NotificationHandler:', typeof window.NotificationHandler);
+                    console.log('Notification data:', { title, message, type, actionBtn, cancelBtn, notifType });
+                    
+                    if (typeof window.NotificationHandler !== 'undefined') {
+                        console.log('NotificationHandler found, creating instance...');
+                        const handler = new window.NotificationHandler();
+                        handler.handleMessage({
+                            type: notifType,
+                            title, 
+                            message, 
+                            notificationType: type,
+                            actionButton: actionBtn,
+                            cancelButton: cancelBtn
+                        });
+                        console.log('Notification message sent to handler');
+                    } else {
+                        console.error('NotificationHandler not found in window object');
+                        console.log('Available window objects:', Object.keys(window).filter(key => key.includes('Notification')));
+                    }
+                },
+                args: [
+                    notificationData.title, 
+                    notificationData.dialogMessage, 
+                    notificationData.notificationType, 
+                    notificationData.actionButton, 
+                    notificationData.cancelButton,
+                    notificationType
+                ]
+            });
+
+            return { success: true, data: notificationData };
+
+        } catch (error) {
+            console.error('❌ Error showing extension notification:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Parse setBrowserDataResult to determine notification content
+    static parseSetBrowserDataResult(setBrowserDataResult) {
+        let failedItems = [];
+        let successfulItems = [];
+        let totalItems = 0;
+        
+        if (setBrowserDataResult?.data?.results) {
+            setBrowserDataResult.data.results.forEach(result => {
+                totalItems++;
+                if (result.success) {
+                    successfulItems.push(`${result.type}: ${result.name || 'data'}`);
+                } else {
+                    failedItems.push(`${result.type}: ${result.name || 'data'}`);
+                }
+            });
+        }
+
+        // Determine notification type and messages based on results
+        if (setBrowserDataResult.success && failedItems.length === 0) {
+            // Complete success
+            return {
+                title: 'Credentials Applied Successfully',
+                toastMessage: `✅ All credentials applied: ${successfulItems.join(', ')}. Refresh to login.`,
+                dialogMessage: `All credentials applied: ${successfulItems.join(', ')}. May not work on first try - refresh to test. If it doesn't work, try another credential or login manually.`,
+                notificationType: 'success',
+                actionButton: { text: 'Refresh Page', href: '/', target: '_self' },
+                cancelButton: { text: 'Later', href: null, target: '_self' }
+            };
+        } else if (successfulItems.length > 0 && failedItems.length > 0) {
+            // Partial success
+            return {
+                title: 'Credentials Partially Applied',
+                toastMessage: `⚠️ Failed: ${failedItems.join(', ')}. Success: ${successfulItems.join(', ')}. May or may not work.`,
+                dialogMessage: `Mixed results - Failed: ${failedItems.join(', ')}. Applied: ${successfulItems.join(', ')}. May work or may not work - refresh to test, or try another credential.`,
+                notificationType: 'warning',
+                actionButton: { text: 'Refresh Page', href: '/', target: '_self' },
+                cancelButton: { text: 'Try Another', href: null, target: '_self' }
+            };
+        } else {
+            // Complete failure
+            return {
+                title: 'Credentials Failed',
+                toastMessage: `❌ All failed: ${failedItems.join(', ')}. Try another credential.`,
+                dialogMessage: `All credential fields failed: ${failedItems.join(', ')}. Please try selecting another credential or login manually.`,
+                notificationType: 'failure',
+                actionButton: { text: 'Try Another', href: null, target: '_self' },
+                cancelButton: { text: 'Login Manually', href: null, target: '_self' }
+            };
+        }
     }
 }
 
