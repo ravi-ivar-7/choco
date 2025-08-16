@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Dashboard initializing...');
     
     try {
         // Check if required classes are available
@@ -41,7 +40,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.pageLoader = pageLoader;
         window.navbarController = navbarController;
         
-        console.log('Dashboard fully initialized');
     } catch (error) {
         console.error('Failed to initialize dashboard:', error);
         document.body.innerHTML = '<div style="color: red; padding: 20px;">Critical Error: ' + error.message + '</div>';

@@ -20,7 +20,6 @@ class PlatformUtils {
                     platformIcon: domain.ICON
                 });
             });
-            console.log('Created platforms from Constants:', supportedTabs.map(p => p.platformName));
         } else {
             console.error('Constants.DOMAINS not available');
         }
@@ -37,7 +36,6 @@ class PlatformUtils {
         try {
             // Get all tabs, not just current window (extension popup is in different window)
             const allTabs = await chrome.tabs.query({});
-            console.log('All tabs:', allTabs.map(t => ({ id: t.id, url: t.url, active: t.active })));
             
             // Find the most recently active non-extension tab
             const browserTabs = allTabs.filter(tab => 
@@ -51,30 +49,24 @@ class PlatformUtils {
                                    browserTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
             
             if (activeBrowserTab) {
-                console.log('Active browser tab URL:', activeBrowserTab.url);
                 
                 // Check if browser tab URL matches any supported platform domain
                 const currentTabPlatform = supportedTabs.find(platform => {
                     const primaryDomain = platform.domainConfig.domain.PRIMARY;
-                    console.log('Checking against domain:', primaryDomain);
                     
                     // Check if browser tab URL contains the primary domain
                     const matches = activeBrowserTab.url && activeBrowserTab.url.includes(primaryDomain);
-                    console.log(`URL ${activeBrowserTab.url} matches ${primaryDomain}:`, matches);
                     
                     return matches;
                 });
                 
                 if (currentTabPlatform) {
-                    console.log('Found matching platform:', currentTabPlatform.platformName);
                     // Update the platform with actual browser tab info
                     currentTabPlatform.tab = activeBrowserTab;
                     currentTabPlatforms = [currentTabPlatform];
                 } else {
-                    console.log('No matching platform found for browser tab');
                 }
             } else {
-                console.log('No browser tabs found');
             }
         } catch (error) {
             console.error('Failed to get tabs:', error);

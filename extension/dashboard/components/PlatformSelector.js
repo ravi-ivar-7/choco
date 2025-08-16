@@ -71,7 +71,6 @@ class PlatformSelector {
         
         option.classList.add('selected'); 
         setTimeout(() => { 
-            console.log('Platform selected from selector:', platform);
             this.hide();
         }, 300);
     }

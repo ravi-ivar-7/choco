@@ -58,9 +58,7 @@ class ChocoBackground {
                 const storedTab = result.data.selectedPlatform.tab;
                 try {
                     await chrome.tabs.get(storedTab.id);
-                    console.log('Stored tab is valid:', storedTab.id);
                 } catch (tabError) {
-                    console.log('Cleaning up invalid stored tab:', storedTab.id);
                     await StorageUtils.remove(['selectedPlatform']);
                 }
             }
@@ -75,7 +73,6 @@ class ChocoBackground {
             try {
                 const result = await StorageUtils.get(['selectedPlatform']);
                 if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
-                    console.log('Cleaning up storage for closed tab:', tabId);
                     await StorageUtils.remove(['selectedPlatform']);
                 }
             } catch (error) {
@@ -89,7 +86,6 @@ class ChocoBackground {
                 try {
                     const result = await StorageUtils.get(['selectedPlatform']);
                     if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
-                        console.log('Updating stored tab URL for tab:', tabId);
                         const updatedPlatform = { ...result.data.selectedPlatform };
                         updatedPlatform.tab.url = tab.url;
                         await StorageUtils.set({ selectedPlatform: updatedPlatform });
@@ -386,7 +382,6 @@ class ChocoBackground {
                             const currentTab = await chrome.tabs.get(storedTab.id);
                             if (currentTab && currentTab.url === storedTab.url) {
                                 tabs = [currentTab];
-                                console.log('Using stored tab for notification:', currentTab.id);
                             }
                         } catch (tabError) {
                             console.warn('Stored tab no longer valid:', tabError.message);

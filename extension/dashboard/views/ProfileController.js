@@ -239,12 +239,9 @@ class ProfileController {
             }
 
             const profileData = await this.userAPI.getUserDetails();
-            console.log('Profile data received in controller:', profileData);
             if (profileData.success && profileData.data) {
                 this.profileData = profileData.data;
                 this.userProfile = profileData.data.user;
-                console.log('Setting profileData:', this.profileData);
-                console.log('Setting userProfile:', this.userProfile);
                 this.updateProfileDisplay();
             } else {
                 console.error('Profile data fetch failed:', profileData);
@@ -256,11 +253,9 @@ class ProfileController {
 
     updateProfileDisplay() {
         if (!this.userProfile || !this.profileData) {
-            console.log('Missing profile data:', { userProfile: this.userProfile, profileData: this.profileData });
             return;
         }
         
-        console.log('Updating profile display with:', this.profileData);
 
         // Update profile header
         const profileUserName = document.getElementById('profileUserName');

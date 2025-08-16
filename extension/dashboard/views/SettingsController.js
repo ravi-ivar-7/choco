@@ -5,8 +5,6 @@ class SettingsController {
 
     async init() {
         try {
-            console.log('SettingsController initializing...');
-            console.log('Settings page showing coming soon message');
         } catch (error) {
             console.error('SettingsController initialization failed:', error);
         }
@@ -17,7 +15,6 @@ class SettingsController {
     }
 
     destroy() {
-        console.log('SettingsController destroyed');
     }
 }
 

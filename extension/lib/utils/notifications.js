@@ -464,10 +464,8 @@ class NotificationUtils {
 
     // General notification function for extension-wide use
     static async showExtensionNotification(currentTab, options = {}) {
-        console.log('showing notification', currentTab)
         try {
             if (!currentTab || !currentTab.id) {
-                console.log('No current tab available for notification');
                 return { success: false, error: 'No tab available' };
             }
 
@@ -507,11 +505,8 @@ class NotificationUtils {
             await chrome.scripting.executeScript({
                 target: { tabId: currentTab.id },
                 func: (title, message, type, actionBtn, cancelBtn, notifType) => {
-                    console.log('Script injected - checking NotificationHandler:', typeof window.NotificationHandler);
-                    console.log('Notification data:', { title, message, type, actionBtn, cancelBtn, notifType });
                     
                     if (typeof window.NotificationHandler !== 'undefined') {
-                        console.log('NotificationHandler found, creating instance...');
                         const handler = new window.NotificationHandler();
                         handler.handleMessage({
                             type: notifType,
@@ -521,10 +516,8 @@ class NotificationUtils {
                             actionButton: actionBtn,
                             cancelButton: cancelBtn
                         });
-                        console.log('Notification message sent to handler');
                     } else {
                         console.error('NotificationHandler not found in window object');
-                        console.log('Available window objects:', Object.keys(window).filter(key => key.includes('Notification')));
                     }
                 },
                 args: [

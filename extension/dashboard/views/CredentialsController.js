@@ -6,7 +6,6 @@ class CredentialsController {
 
     async init() {
         try {
-            console.log('CredentialsController initializing...');
             
             // Initialize API
             if (typeof CredentialsAPI !== 'undefined' && typeof Constants !== 'undefined') {
@@ -16,7 +15,6 @@ class CredentialsController {
             // Load and display credentials directly
             await this.loadAndDisplayCredentials();
             
-            console.log('CredentialsController initialized successfully');
         } catch (error) {
             console.error('CredentialsController initialization failed:', error);
         }
@@ -38,11 +36,8 @@ class CredentialsController {
 
             // Get credentials
             const result = await this.credentialsAPI.getCredentials(userResult.data.chocoUser.token);
-            console.log('Raw API response:', result);
             if (result.success) {
                 this.credentials = result.data.credentials || [];
-                console.log('Parsed credentials:', this.credentials);
-                console.log('First credential isActive:', this.credentials[0]?.isActive, typeof this.credentials[0]?.isActive);
                 this.displayCredentials(this.credentials);
             } else {
                 this.showError('Failed to load credentials: ' + result.message);
@@ -63,14 +58,12 @@ class CredentialsController {
                 if (cookieData && typeof cookieData === 'object') {
                     // Check if cookie has expirationDate (Chrome cookie format)
                     if (cookieData.expirationDate && cookieData.expirationDate < now) {
-                        console.log(`Cookie ${name} expired:`, new Date(cookieData.expirationDate * 1000));
                         return true;
                     }
                     // Check if cookie has expires field (standard cookie format)
                     if (cookieData.expires) {
                         const expiryTime = new Date(cookieData.expires).getTime() / 1000;
                         if (expiryTime < now) {
-                            console.log(`Cookie ${name} expired:`, new Date(expiryTime * 1000));
                             return true;
                         }
                     }
@@ -82,7 +75,6 @@ class CredentialsController {
         if (credential.localStorage) {
             for (const [key, value] of Object.entries(credential.localStorage)) {
                 if (this.isTokenExpired(value, now)) {
-                    console.log(`LocalStorage ${key} token expired`);
                     return true;
                 }
             }
@@ -92,7 +84,6 @@ class CredentialsController {
         if (credential.sessionStorage) {
             for (const [key, value] of Object.entries(credential.sessionStorage)) {
                 if (this.isTokenExpired(value, now)) {
-                    console.log(`SessionStorage ${key} token expired`);
                     return true;
                 }
             }
@@ -613,7 +604,6 @@ class CredentialsController {
     }
 
     destroy() {
-        console.log('CredentialsController destroyed');
     }
 }
 

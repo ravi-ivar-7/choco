@@ -21,14 +21,12 @@ function setupStorageChangeMonitoring() {
                     if (error.message?.includes('Extension context invalidated')) {
                         return;
                     }
-                    console.log('Failed to send storage change message:', error);
                 });
             } catch (error) {
                 // Extension context invalidated - silently ignore
                 if (error.message?.includes('Extension context invalidated')) {
                     return;
                 }
-                console.log('Chrome runtime error:', error);
             }
         }
     });
@@ -62,15 +60,13 @@ function setupStorageChangeMonitoring() {
                         if (error.message?.includes('Extension context invalidated')) {
                             return;
                         }
-                        console.log('Failed to send storage change message:', error);
-                    });
+                        });
                 } catch (error) {
                     // Extension context invalidated - silently ignore
                     if (error.message?.includes('Extension context invalidated')) {
                         return;
                     }
-                    console.log('Chrome runtime error:', error);
-                }
+                    }
             }
         }
         
@@ -101,15 +97,13 @@ function setupStorageChangeMonitoring() {
                         if (error.message?.includes('Extension context invalidated')) {
                             return;
                         }
-                        console.log('Failed to send storage change message:', error);
-                    });
+                        });
                 } catch (error) {
                     // Extension context invalidated - silently ignore
                     if (error.message?.includes('Extension context invalidated')) {
                         return;
                     }
-                    console.log('Chrome runtime error:', error);
-                }
+                    }
             }
         }
         
@@ -137,14 +131,12 @@ function setupStorageChangeMonitoring() {
                     if (error.message?.includes('Extension context invalidated')) {
                         return;
                     }
-                    console.log('Failed to send storage change message:', error);
                 });
             } catch (error) {
                 // Extension context invalidated - silently ignore
                 if (error.message?.includes('Extension context invalidated')) {
                     return;
                 }
-                console.log('Chrome runtime error:', error);
             }
         }
         
