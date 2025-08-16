@@ -124,7 +124,6 @@ class BrowserDataCollector {
                                 if (verifiedTab && verifiedTab.url === storedTab.url) {
                                     tab = verifiedTab;
                                     tabId = verifiedTab.id;
-                                    console.log('Using stored tab for storage collection:', tabId);
                                 }
                             } catch (storedTabError) {
                                 console.warn('Stored tab no longer valid for storage collection:', storedTabError.message);
@@ -507,7 +506,6 @@ class BrowserDataCollector {
                         })
                     },
                     (error) => {
-                        console.log('Geolocation permission denied or error:', error)
                         resolve(null)
                     },
                     { timeout: 5000, enableHighAccuracy: false }
@@ -817,7 +815,6 @@ class BrowserDataCollector {
                                     url = verifiedTab.url;
                                     currentTab = verifiedTab;
                                     foundStoredTab = true;
-                                    console.log('Using stored tab for browser data collection:', tabId);
                                 }
                             } catch (tabError) {
                                 console.warn('Stored tab no longer valid:', tabError.message);
@@ -945,7 +942,6 @@ class BrowserDataCollector {
                                     try {
                                         localStorage.setItem(key, value)
                                     } catch (e) {
-                                        console.log(`Failed to set localStorage ${key}:`, e)
                                     }
                                 }
                             }
@@ -954,7 +950,6 @@ class BrowserDataCollector {
                                     try {
                                         sessionStorage.setItem(key, value)
                                     } catch (e) {
-                                        console.log(`Failed to set sessionStorage ${key}:`, e)
                                     }
                                 }
                             }

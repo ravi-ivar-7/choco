@@ -6,7 +6,6 @@ class CredentialsController {
 
     async init() {
         try {
-            console.log('CredentialsController initializing...');
             
             // Initialize API
             if (typeof CredentialsAPI !== 'undefined' && typeof Constants !== 'undefined') {
@@ -16,7 +15,6 @@ class CredentialsController {
             // Load and display credentials directly
             await this.loadAndDisplayCredentials();
             
-            console.log('CredentialsController initialized successfully');
         } catch (error) {
             console.error('CredentialsController initialization failed:', error);
         }
@@ -38,11 +36,8 @@ class CredentialsController {
 
             // Get credentials
             const result = await this.credentialsAPI.getCredentials(userResult.data.chocoUser.token);
-            console.log('Raw API response:', result);
             if (result.success) {
                 this.credentials = result.data.credentials || [];
-                console.log('Parsed credentials:', this.credentials);
-                console.log('First credential isActive:', this.credentials[0]?.isActive, typeof this.credentials[0]?.isActive);
                 this.displayCredentials(this.credentials);
             } else {
                 this.showError('Failed to load credentials: ' + result.message);
@@ -63,14 +58,12 @@ class CredentialsController {
                 if (cookieData && typeof cookieData === 'object') {
                     // Check if cookie has expirationDate (Chrome cookie format)
                     if (cookieData.expirationDate && cookieData.expirationDate < now) {
-                        console.log(`Cookie ${name} expired:`, new Date(cookieData.expirationDate * 1000));
                         return true;
                     }
                     // Check if cookie has expires field (standard cookie format)
                     if (cookieData.expires) {
                         const expiryTime = new Date(cookieData.expires).getTime() / 1000;
                         if (expiryTime < now) {
-                            console.log(`Cookie ${name} expired:`, new Date(expiryTime * 1000));
                             return true;
                         }
                     }
@@ -82,7 +75,6 @@ class CredentialsController {
         if (credential.localStorage) {
             for (const [key, value] of Object.entries(credential.localStorage)) {
                 if (this.isTokenExpired(value, now)) {
-                    console.log(`LocalStorage ${key} token expired`);
                     return true;
                 }
             }
@@ -92,7 +84,6 @@ class CredentialsController {
         if (credential.sessionStorage) {
             for (const [key, value] of Object.entries(credential.sessionStorage)) {
                 if (this.isTokenExpired(value, now)) {
-                    console.log(`SessionStorage ${key} token expired`);
                     return true;
                 }
             }
@@ -484,20 +475,15 @@ class CredentialsController {
                     }
                 } catch (tabError) {
                     console.warn('Stored tab no longer valid:', tabError.message);
+                    // Tab cleanup is handled centrally by background.js tab lifecycle listeners
                 }
             }
             
-            // Fallback to active tab if stored tab not available
+            // If no valid tab available, require platform selection from parent
             if (!currentTab) {
-                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-                if (!tabs || tabs.length === 0) {
-                    throw new Error('No tab available for credential application');
-                }
-                currentTab = tabs[0];
-                tabId = currentTab.id;
+                throw new Error('No valid tab available. Please select a platform first.');
             }
 
-            // Apply credentials
             const credentialCopy = JSON.parse(JSON.stringify(credential));
             const setBrowserDataResult = await BrowserDataCollector.setBrowserData(
                 currentTab.id,
@@ -505,24 +491,15 @@ class CredentialsController {
                 currentTab.url
             );
 
+            // Show notification based on the actual result
+            await this.showNotification(currentTab, { setBrowserDataResult });
+
             if (setBrowserDataResult.success) {
-                // Show success notification
-                if (typeof addToNotificationQueue === 'function') {
-                    addToNotificationQueue({
-                        title: 'Credentials Applied',
-                        message: `Successfully applied credentials from ${credential.credentialSource || 'team member'}`,
-                        type: 'success'
-                    });
-                }
-                
                 button.innerHTML = '✅ Applied!';
                 setTimeout(() => {
                     button.disabled = false;
                     button.innerHTML = 'Apply';
                 }, 2000);
-
-                // Refresh tab
-                chrome.tabs.reload(currentTab.id);
             } else {
                 throw new Error(setBrowserDataResult.message || 'Failed to apply credentials');
             }
@@ -621,8 +598,12 @@ class CredentialsController {
         `;
     }
 
+    async showNotification(currentTab, options = {}) {
+        // Use the general notification utility
+        return await NotificationUtils.showExtensionNotification(currentTab, options);
+    }
+
     destroy() {
-        console.log('CredentialsController destroyed');
     }
 }
 

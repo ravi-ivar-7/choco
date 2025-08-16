@@ -95,3 +95,16 @@ export function getClientIP(request: NextRequest): string {
 export function getUserAgent(request: NextRequest): string {
   return request.headers.get('user-agent') || 'unknown';
 }
+
+export function verifyToken(token: string): any {
+  try {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    console.error('Token verification error:', error instanceof Error ? error.message : String(error));
+    return null;
+  }
+}

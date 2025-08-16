@@ -5,7 +5,7 @@
 class NotificationQueue {
     constructor() {
         this.queue = [];
-        this.maxSize = 10;
+        this.maxSize = 15;
         this.isMinimized = true;
         this.container = null;
         this.init();

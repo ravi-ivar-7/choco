@@ -230,14 +230,54 @@ class UserAPI {
                 }
             }
 
-            return {
-                success: true,
-                error: null,
-                message: 'User details retrieved successfully',
-                data: {
-                    user: storedData.user,
-                    token: storedData.token,
-                    isLoggedIn: true
+            // Call profile API to get comprehensive user information
+            try {
+                const response = await fetch(`${Constants.BACKEND_URL}api/auth/profile`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${storedData.token}`
+                    }
+                });
+
+                const profileData = await response.json();
+                if (profileData.success) {
+                    return {
+                        success: true,
+                        error: null,
+                        message: 'User details retrieved successfully',
+                        data: {
+                            ...profileData.data,
+                            token: storedData.token,
+                            isLoggedIn: true
+                        }
+                    }
+                } else {
+                    // Fallback to stored data if API fails
+                    console.warn('Profile API failed, using stored data:', profileData.message);
+                    return {
+                        success: true,
+                        error: null,
+                        message: 'User details retrieved from local storage',
+                        data: {
+                            user: storedData.user,
+                            token: storedData.token,
+                            isLoggedIn: true
+                        }
+                    }
+                }
+            } catch (apiError) {
+                console.warn('Profile API request failed, using stored data:', apiError.message);
+                // Fallback to stored data if API request fails
+                return {
+                    success: true,
+                    error: null,
+                    message: 'User details retrieved from local storage',
+                    data: {
+                        user: storedData.user,
+                        token: storedData.token,
+                        isLoggedIn: true
+                    }
                 }
             }
         } catch (error) {
