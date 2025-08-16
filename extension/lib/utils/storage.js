@@ -49,12 +49,29 @@ class StorageUtils {
 
     static async get(keys) {
         try {
-            const result = await chrome.storage.local.get(keys)
-            return {
-                success: true,
-                error: null,
-                message: 'Data retrieved successfully',
-                data: result
+            // Try Chrome storage first (extension environment)
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const result = await chrome.storage.local.get(keys)
+                return {
+                    success: true,
+                    error: null,
+                    message: 'Data retrieved successfully',
+                    data: result
+                }
+            } else {
+                // Fallback to localStorage (dashboard environment)
+                const result = {}
+                const keyArray = Array.isArray(keys) ? keys : [keys]
+                keyArray.forEach(key => {
+                    const value = localStorage.getItem(key)
+                    result[key] = value ? JSON.parse(value) : null
+                })
+                return {
+                    success: true,
+                    error: null,
+                    message: 'Data retrieved successfully',
+                    data: result
+                }
             }
         } catch (error) {
             return {
@@ -68,7 +85,15 @@ class StorageUtils {
 
     static async set(items) {
         try {
-            await chrome.storage.local.set(items)
+            // Try Chrome storage first (extension environment)
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                await chrome.storage.local.set(items)
+            } else {
+                // Fallback to localStorage (dashboard environment)
+                Object.keys(items).forEach(key => {
+                    localStorage.setItem(key, JSON.stringify(items[key]))
+                })
+            }
             return {
                 success: true,
                 error: null,

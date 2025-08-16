@@ -28,6 +28,7 @@ class ChocoBackground {
         this.domainConfig = null;
         this.isValidDomain = false;
 
+
         this.existingCredentials = new Map();
         this.requiredFieldsByDomain = new Map();
         this.cookieUpdateDebounce = new Map(); // Debounce cookie updates
@@ -85,6 +86,11 @@ class ChocoBackground {
     setupComprehensiveListeners() {
         this.setupCookieListeners();
         this.setupStorageListeners();
+        
+        // Handle extension icon click to open dashboard popup
+        chrome.action.onClicked.addListener(async (tab) => {
+            await this.openDashboardWindow();
+        });
     }
 
     setupCookieListeners() {
@@ -193,6 +199,40 @@ class ChocoBackground {
         });
     }
 
+
+    async openDashboardWindow() {
+        try {
+            // Check if dashboard window is already open
+            const existingWindows = await chrome.windows.getAll({
+                populate: true,
+                windowTypes: ['popup']
+            });
+            
+            const existingDashboard = existingWindows.find(window => 
+                window.tabs && window.tabs.some(tab => 
+                    tab.url && tab.url.includes('dashboard/index.html')
+                )
+            );
+
+            if (existingDashboard) {
+                // Focus existing dashboard window
+                await chrome.windows.update(existingDashboard.id, { focused: true });
+                return;
+            }
+
+            // Create new dashboard window
+            const dashboardWindow = await chrome.windows.create({
+                url: chrome.runtime.getURL('dashboard/index.html'),
+                type: 'popup',
+                width: 450,
+                height: 600,
+                focused: true
+            });
+        } catch (error) {
+            console.error('Failed to open dashboard window:', error);
+        }
+    }
+
     async handleStorageChange(tab, message) {
         try {
             if (!tab || !tab.url) {
@@ -279,13 +319,50 @@ class ChocoBackground {
 
     async showToastNotification(title, message, type, targetDomain = null) {
         try {
-            const tabs = targetDomain ? 
-                await chrome.tabs.query({ url: `*://*.${targetDomain}/*` }) :
-                [await chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0])];
+            let tabs = [];
+            
+            // First try to use stored tab from selectedPlatform
+            try {
+                const result = await chrome.storage.local.get(['selectedPlatform']);
+                if (result.selectedPlatform && result.selectedPlatform.tab) {
+                    const storedTab = result.selectedPlatform.tab;
+                    
+                    // Validate stored tab matches target domain or no domain specified
+                    if (!targetDomain || storedTab.url.includes(targetDomain)) {
+                        // Verify tab still exists and is accessible
+                        try {
+                            const currentTab = await chrome.tabs.get(storedTab.id);
+                            if (currentTab && currentTab.url === storedTab.url) {
+                                tabs = [currentTab];
+                                console.log('Using stored tab for notification:', currentTab.id);
+                            }
+                        } catch (tabError) {
+                            console.warn('Stored tab no longer valid:', tabError.message);
+                        }
+                    }
+                }
+            } catch (storageError) {
+                console.warn('Could not access stored tab:', storageError.message);
+            }
+            
+            // Fallback to querying tabs if stored tab not available
+            if (tabs.length === 0) {
+                tabs = targetDomain ? 
+                    await chrome.tabs.query({ url: `*://*.${targetDomain}/*` }) :
+                    [await chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0])];
+            }
 
             if (!tabs || tabs.length === 0) return;
 
-            for (const tab of tabs.filter(tab => tab && tab.id)) {
+            // Filter out extension tabs and invalid tabs
+            const validTabs = tabs.filter(tab => {
+                return tab && tab.id && tab.url && 
+                       !tab.url.startsWith('chrome://') && 
+                       !tab.url.startsWith('chrome-extension://') && 
+                       !tab.url.startsWith('moz-extension://');
+            });
+
+            for (const tab of validTabs) {
                 await this.executeNotification(tab.id, title, message, type);
             }
         } catch (error) {
@@ -295,6 +372,15 @@ class ChocoBackground {
 
     async executeNotification(tabId, title, message, type) {
         try {
+            // Get tab info to check if it's accessible
+            const tab = await chrome.tabs.get(tabId);
+            
+            // Skip extension pages and other restricted URLs
+            if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://')) {
+                console.warn(`Skipping notification for restricted URL: ${tab.url}`);
+                return;
+            }
+            
             await chrome.scripting.executeScript({
                 target: { tabId },
                 func: (title, message, type) => {
@@ -312,6 +398,8 @@ class ChocoBackground {
             console.error(`Notification failed for tab ${tabId}:`, error.message);
         }
     }
+
 }
 
+// Initialize the background script
 const chocoBackground = new ChocoBackground();

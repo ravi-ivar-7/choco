@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choco - Team Access Manager</title>
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/navbar.css">
+    <link rel="stylesheet" href="styles/home.css">
+    <link rel="stylesheet" href="styles/profile.css">
+    <link rel="stylesheet" href="styles/credentials.css">
+    <link rel="stylesheet" href="styles/settings.css">
+    <link rel="stylesheet" href="styles/footer.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <div class="navbar-left">
+                <div class="logo">🍫</div>
+                <div class="brand">
+                    <div class="title">Choco</div>
+                    <div class="subtitle">Team Access Manager</div>
+                </div>
+            </div>
+            
+            <div class="navbar-center">
+                <!-- Platform Dropdown -->
+                <div class="platform-dropdown">
+                    <button id="platformDropdownBtn" class="dropdown-btn" disabled>
+                        <span id="selectedPlatformIcon" class="platform-icon">🖥️</span>
+                        <span id="selectedPlatformName">Select Platform</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="platformDropdownMenu" class="dropdown-menu hidden">
+                        <!-- Platform options will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navbar-right">
+                <!-- User Profile -->
+                <div class="user-profile">
+                    <span id="userName" class="user-name">Not logged in</span>
+                    <div class="user-avatar">👤</div>
+                    <span id="profileToggleArrow" class="profile-arrow">▼</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button id="homeTab" class="nav-tab active">
+                <span>🏠</span>
+                <span>Home</span>
+            </button>
+            <button id="credentialsTab" class="nav-tab">
+                <span>🔑</span>
+                <span>Credentials</span>
+            </button>
+            <button id="settingsTab" class="nav-tab">
+                <span>⚙️</span>
+                <span>Settings</span>
+            </button>
+        </div>
+
+        <!-- Platform Selector (Initial Setup) -->
+        <div id="platformSelector" class="platform-selector hidden">
+            <div class="selector-header">
+                <div class="selector-title">Select Platform</div>
+                <div class="selector-subtitle">Choose which platform to manage</div>
+            </div>
+            <div id="platformOptions" class="platform-options">
+                <!-- Platform options will be populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content content-area" id="pageContainer" style="overflow-y: auto; height: calc(100vh - 104px);">
+            <!-- Dynamic page content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Lib modules -->
+    <script src="../lib/config/constants.js"></script>
+    <script src="../lib/api/user.js"></script>
+    <script src="../lib/api/credentials.js"></script>
+    <script src="../lib/utils/chrome.js"></script>
+    <script src="../lib/utils/storage.js"></script>
+    <script src="../lib/utils/notifications.js"></script>
+    <script src="../lib/utils/browserData.js"></script>
+    <script src="../lib/validation/maangValidation.js"></script>
+    <script src="../lib/validation/validator.js"></script>
+    
+    <!-- Dashboard components -->
+    <script src="components/FooterStatus.js"></script>
+    <script src="components/PlatformSelector.js"></script>
+    <script src="utils/PlatformUtils.js"></script>
+    <script src="utils/PageLoader.js"></script>
+    <script src="components/NavbarController.js"></script>
+    <script src="views/HomeController.js"></script>
+    <script src="views/ProfileController.js"></script>
+    <script src="views/CredentialsController.js"></script>
+    <script src="views/SettingsController.js"></script>
+    
+    <!-- Main script -->
+    <script src="main.js"></script>
+
+    <!-- Global Footer Status -->
+    <div id="footerStatus" class="footer-status">
+        <div class="footer-status-content">
+            <span id="footerStatusIcon" class="footer-status-icon">ℹ️</span>
+            <span id="footerStatusMessage" class="footer-status-message">Ready</span>
+            <span id="footerStatusDetails" class="footer-status-details"></span>
+        </div>
+        <button id="footerStatusClose" class="footer-status-close" title="Close">×</button>
+    </div>
+</body>
+</html>

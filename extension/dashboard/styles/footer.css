@@ -1,0 +1,184 @@
+/* Footer Status Styles */
+.footer-status {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(20px);
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.95));
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px 12px 0 0;
+    margin: 0 8px 0 8px;
+    color: white;
+}
+
+.footer-status-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.footer-status-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.footer-status-message {
+    flex: 1;
+    font-weight: 500;
+    font-size: 12px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.footer-status-details {
+    margin-left: 8px;
+    opacity: 0.8;
+    font-weight: 400;
+    font-size: 11px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.footer-status-close {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 12px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+}
+
+.footer-status-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.footer-status-close:active {
+    transform: scale(0.95);
+}
+
+/* Animation for showing/hiding */
+.footer-status.show {
+    animation: slideUp 0.3s ease-out;
+}
+
+.footer-status.hide {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+/* Ensure main content has bottom padding to avoid footer overlap */
+.main-content {
+    padding-bottom: 45px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .footer-status {
+        padding: 6px 12px;
+        font-size: 11px;
+        margin: 0 2px 0 2px;
+        min-height: 36px;
+    }
+    
+    .footer-status-icon {
+        margin-right: 6px;
+        font-size: 12px;
+    }
+    
+    .footer-status-message {
+        font-size: 11px;
+    }
+    
+    .footer-status-details {
+        font-size: 10px;
+        max-width: 100px;
+        margin-left: 6px;
+    }
+    
+    .footer-status-close {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        margin-left: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-status {
+        padding: 5px 10px;
+        font-size: 10px;
+        margin: 0 4px 0 4px;
+        border-radius: 8px 8px 0 0;
+        min-height: 32px;
+    }
+    
+    .footer-status-details {
+        display: none; /* Hide details on very small screens */
+    }
+    
+    .footer-status-close {
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+        margin-left: 6px;
+    }
+}
+
+/* Loading animation for loading status */
+.footer-status-loading .footer-status-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
