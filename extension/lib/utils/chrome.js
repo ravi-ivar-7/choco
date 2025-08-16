@@ -77,6 +77,7 @@ class ChromeUtils {
         'lib/utils/notifications.js',
         'lib/utils/browserData.js',
         'scripts/monitorStorage.js',
+        'scripts/notificationQueue.js',
         'scripts/notificationHandler.js',
         'content.js'
     ]) {
@@ -90,7 +91,8 @@ class ChromeUtils {
                            typeof window.NotificationHandler !== 'undefined' &&
                            typeof window.Constants !== 'undefined' &&
                            typeof window.BrowserDataCollector !== 'undefined' &&
-                           typeof window.NotificationUtils !== 'undefined';
+                           typeof window.NotificationUtils !== 'undefined' &&
+                           typeof window.ChocoNotificationQueue !== 'undefined';
                 }
             });
             

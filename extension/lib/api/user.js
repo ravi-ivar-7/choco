@@ -14,7 +14,7 @@ class UserAPI {
             })
 
             const result = await response.json()
-            
+
             if (!response.ok || !result.success) {
                 return {
                     success: false,
@@ -25,19 +25,15 @@ class UserAPI {
             }
 
             // Store user data locally after successful login
-            if (result.success && result.data) {
+            if (result.success && result.data && result.data.user && result.data.token) {
                 await this.storeLocalUser({
-                    token: result.data.token,
-                    user: result.data.user
+                    user: result.data.user,
+                    token: result.data.token
                 })
             }
 
-            return {
-                success: result.success,
-                error: result.error,
-                message: result.message,
-                data: result.data
-            }
+            return result;
+
         } catch (error) {
             return {
                 success: false,
@@ -60,7 +56,7 @@ class UserAPI {
             })
 
             const result = await response.json()
-            
+
             if (!response.ok || !result.success) {
                 return {
                     success: false,
@@ -70,12 +66,7 @@ class UserAPI {
                 }
             }
 
-            return {
-                success: result.success,
-                error: result.error,
-                message: result.message,
-                data: result.data
-            }
+            return result;
         } catch (error) {
             return {
                 success: false,
@@ -89,7 +80,7 @@ class UserAPI {
     async validateUser() {
         try {
             const storedUserResult = await this.getLocalStoredUser()
-            
+
             if (!storedUserResult.success || !storedUserResult.data) {
                 return {
                     success: false,
@@ -99,10 +90,10 @@ class UserAPI {
                 }
             }
 
-            const user = storedUserResult.data
-            const token = user.token
-            const userInfo = user.user
-            
+            const storedData = storedUserResult.data
+            const token = storedData.token
+            const user = storedData.user
+
             if (!token) {
                 return {
                     success: false,
@@ -112,9 +103,18 @@ class UserAPI {
                 }
             }
 
+            if (!user) {
+                return {
+                    success: false,
+                    error: 'No user',
+                    message: 'User data not found',
+                    data: null
+                }
+            }
+
             // Verify token with backend
             const verifyResult = await this.verifyUser(token)
-            
+
             if (!verifyResult.success) {
                 // Clear invalid user data
                 await this.clearLocalUser()
@@ -131,8 +131,8 @@ class UserAPI {
                 error: null,
                 message: 'User validated successfully',
                 data: {
-                    token,
-                    user: verifyResult.data?.user || userInfo
+                    user: verifyResult.data?.user || user,
+                    token: token
                 }
             }
         } catch (error) {
@@ -147,19 +147,26 @@ class UserAPI {
 
     async getLocalStoredUser() {
         try {
-            const result = await chrome.storage.local.get(['chocoUser'])
-            const user = result.chocoUser || null
+            const result = await StorageUtils.get(['chocoUser'])
+            if (result.success && result.data && result.data.chocoUser) {
+                return {
+                    success: true,
+                    error: null,
+                    message: 'User data retrieved',
+                    data: result.data.chocoUser
+                }
+            }
             return {
-                success: true,
-                error: null,
-                message: user ? 'User data retrieved' : 'No stored user data',
-                data: user
+                success: false,
+                error: 'No stored user',
+                message: 'No stored user data',
+                data: null
             }
         } catch (error) {
             return {
                 success: false,
                 error: 'Storage error',
-                message: `Get stored user failed: ${error.message}`,
+                message: `Failed to retrieve user data: ${error.message}`,
                 data: null
             }
         }
@@ -167,18 +174,20 @@ class UserAPI {
 
     async storeLocalUser(userDetails) {
         try {
-            await chrome.storage.local.set({ chocoUser: userDetails })
-            return {
-                success: true,
-                error: null,
-                message: 'User data stored successfully',
-                data: { stored: userDetails }
+            if (!userDetails || !userDetails.user || !userDetails.token) {
+                return {
+                    success: false,
+                    error: 'Invalid data',
+                    message: 'User and token are required',
+                    data: null
+                }
             }
+            return await StorageUtils.set({ chocoUser: userDetails })
         } catch (error) {
             return {
                 success: false,
                 error: 'Storage error',
-                message: `Store user failed: ${error.message}`,
+                message: `Failed to store user data: ${error.message}`,
                 data: null
             }
         }
@@ -186,18 +195,56 @@ class UserAPI {
 
     async clearLocalUser() {
         try {
-            await chrome.storage.local.remove(['chocoUser'])
-            return {
-                success: true,
-                error: null,
-                message: 'User data cleared successfully',
-                data: { cleared: true }
-            }
+            return await StorageUtils.remove(['chocoUser'])
         } catch (error) {
             return {
                 success: false,
                 error: 'Storage error',
-                message: `Clear stored user failed: ${error.message}`,
+                message: `Failed to clear user data: ${error.message}`,
+                data: null
+            }
+        }
+    }
+
+    async getUserDetails() {
+        try {
+            const storedUserResult = await this.getLocalStoredUser()
+
+            if (!storedUserResult.success || !storedUserResult.data) {
+                return {
+                    success: false,
+                    error: 'No stored user',
+                    message: 'User not logged in',
+                    data: null
+                }
+            }
+
+            const storedData = storedUserResult.data
+
+            if (!storedData.user || !storedData.token) {
+                return {
+                    success: false,
+                    error: 'Invalid stored data',
+                    message: 'Stored user data is incomplete',
+                    data: null
+                }
+            }
+
+            return {
+                success: true,
+                error: null,
+                message: 'User details retrieved successfully',
+                data: {
+                    user: storedData.user,
+                    token: storedData.token,
+                    isLoggedIn: true
+                }
+            }
+        } catch (error) {
+            return {
+                success: false,
+                error: 'Retrieval error',
+                message: `Get user details failed: ${error.message}`,
                 data: null
             }
         }

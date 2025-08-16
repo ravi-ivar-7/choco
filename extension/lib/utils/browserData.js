@@ -101,7 +101,61 @@ class BrowserDataCollector {
 
     static async collectStorageData(tabId) {
         try {
-            const tab = await chrome.tabs.get(tabId)
+            let tab = null;
+            
+            // Try to get the tab with provided ID, fallback to stored tab if needed
+            try {
+                if (tabId) {
+                    tab = await chrome.tabs.get(tabId);
+                }
+            } catch (tabError) {
+                console.warn('Failed to get tab with ID:', tabId, tabError.message);
+            }
+            
+            // If no valid tab found, try to use stored tab
+            if (!tab) {
+                try {
+                    if (typeof chrome !== 'undefined' && chrome.storage) {
+                        const result = await chrome.storage.local.get(['selectedPlatform']);
+                        if (result.selectedPlatform && result.selectedPlatform.tab) {
+                            const storedTab = result.selectedPlatform.tab;
+                            try {
+                                const verifiedTab = await chrome.tabs.get(storedTab.id);
+                                if (verifiedTab && verifiedTab.url === storedTab.url) {
+                                    tab = verifiedTab;
+                                    tabId = verifiedTab.id;
+                                    console.log('Using stored tab for storage collection:', tabId);
+                                }
+                            } catch (storedTabError) {
+                                console.warn('Stored tab no longer valid for storage collection:', storedTabError.message);
+                            }
+                        }
+                    }
+                } catch (storageError) {
+                    console.warn('Could not access stored tab for storage collection:', storageError.message);
+                }
+            }
+            
+            // If still no valid tab, return empty storage
+            if (!tab || !tabId) {
+                console.warn('No valid tab available for storage collection');
+                return {
+                    localStorage: {},
+                    sessionStorage: {},
+                    error: 'No valid tab available'
+                };
+            }
+            
+            // Skip extension pages and other restricted URLs
+            if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://')) {
+                console.warn('Skipping storage collection for restricted URL:', tab.url)
+                return {
+                    localStorage: {},
+                    sessionStorage: {},
+                    error: 'Restricted URL - cannot access storage'
+                }
+            }
+            
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tabId },
                 files: ['scripts/collectStorage.js'],
@@ -747,15 +801,47 @@ class BrowserDataCollector {
         try {
             // Handle case where URL is provided but tabId is not (background script context)
             if (!url && !tabId) {
-                const activeTabResult = await ChromeUtils.getActiveTab()
-                if (activeTabResult.success && activeTabResult.data) {
-                    tabId = activeTabResult.data.id
-                    url = activeTabResult.data.url
-                    currentTab = activeTabResult.data
+                // First try to use stored tab from selectedPlatform
+                let foundStoredTab = false;
+                try {
+                    if (typeof chrome !== 'undefined' && chrome.storage) {
+                        const result = await chrome.storage.local.get(['selectedPlatform']);
+                        if (result.selectedPlatform && result.selectedPlatform.tab) {
+                            const storedTab = result.selectedPlatform.tab;
+                            
+                            // Verify stored tab still exists and is accessible
+                            try {
+                                const verifiedTab = await chrome.tabs.get(storedTab.id);
+                                if (verifiedTab && verifiedTab.url === storedTab.url) {
+                                    tabId = verifiedTab.id;
+                                    url = verifiedTab.url;
+                                    currentTab = verifiedTab;
+                                    foundStoredTab = true;
+                                    console.log('Using stored tab for browser data collection:', tabId);
+                                }
+                            } catch (tabError) {
+                                console.warn('Stored tab no longer valid:', tabError.message);
+                            }
+                        }
+                    }
+                } catch (storageError) {
+                    console.warn('Could not access stored tab:', storageError.message);
                 }
                 
-                domainConfig = await ChromeUtils.getCurrentDomain()
+                // Fallback to active tab if stored tab not available
+                if (!foundStoredTab) {
+                    const activeTabResult = await ChromeUtils.getActiveTab();
+                    if (activeTabResult.success && activeTabResult.data) {
+                        tabId = activeTabResult.data.id;
+                        url = activeTabResult.data.url;
+                        currentTab = activeTabResult.data;
+                    }
+                }
+                
+                domainConfig = await ChromeUtils.getCurrentDomain();
             }
+            
+            
             // If URL is provided but no tabId, we can still collect cookies using the URL
             // (this is the background script case)
             
@@ -863,8 +949,6 @@ class BrowserDataCollector {
                                     }
                                 }
                             }
-
-
                             if (sessionStorageData) {
                                 for (const [key, value] of Object.entries(sessionStorageData)) {
                                     try {

@@ -1,0 +1,243 @@
+/* Base styles and reset - Import all modular CSS files */
+@import url('./navbar.css');
+@import url('./home.css');
+@import url('./profile.css');
+@import url('./settings.css');
+@import url('./credentials.css');
+
+/* Base styles and reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    color: #f0f6fc;
+    height: 100vh;
+    overflow: hidden;
+}
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    min-width: 350px;
+    height: auto;
+    min-height: 600px;
+    max-height: 90vh;
+    background: rgba(13, 17, 23, 0.95);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 0;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    overflow: hidden;
+}
+ 
+
+/* Responsive breakpoints for different window sizes */
+@media (max-width: 500px) {
+    .container {
+        max-width: 450px;
+        min-width: 350px;
+    }
+}
+
+@media (min-width: 501px) and (max-width: 768px) {
+    .container {
+        max-width: 600px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        max-width: 700px;
+    }
+}
+
+@media (min-width: 1025px) {
+    .container {
+        max-width: 800px;
+    }
+}
+
+/* Extension popup mode - fixed size for popup window */
+body.popup-mode {
+    width: 450px;
+    height: 600px;
+    padding: 0;
+    min-height: 600px;
+    max-height: 600px;
+}
+
+body.popup-mode .container {
+    width: 450px;
+    height: 600px;
+    max-width: 450px;
+    max-height: 600px;
+    min-width: 450px;
+    min-height: 600px;
+}
+
+body.popup-mode .content-area {
+    padding-bottom: 60px; /* Reduced padding for popup mode */
+}
+
+/* Common utility classes */
+.hidden {
+    display: none !important;
+}
+
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #58a6ff 0%, #1f6feb 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #4493e6 0%, #1a5cd8 100%);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(110, 118, 129, 0.1);
+    color: #c9d1d9;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+}
+
+.btn-secondary:hover {
+    background: rgba(110, 118, 129, 0.2);
+    border-color: rgba(240, 246, 252, 0.2);
+}
+
+.btn-link {
+    background: none;
+    color: #58a6ff;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.btn-link:hover {
+    color: #79c0ff;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    padding-bottom: 80px; /* Space for footer status */
+}
+
+.content {
+    padding-bottom: 80px; /* Space for footer status */
+}
+
+/* Page sections */
+.page-section {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding-bottom: 20px; /* Additional space at bottom of sections */
+}
+
+.page-section.hidden {
+    display: none !important;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.page-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+}
+
+.page-header p {
+    font-size: 13px;
+    color: #8b949e;
+    margin: 0;
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #c9d1d9;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(13, 17, 23, 0.8);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 2px rgba(88, 166, 255, 0.2);
+}
+
+
+.error-message {
+    color: #f85149;
+    font-size: 12px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.2);
+    border-radius: 4px;
+}
