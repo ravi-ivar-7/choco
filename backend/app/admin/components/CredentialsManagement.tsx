@@ -36,6 +36,94 @@ export default function CredentialsManagement() {
   const [selectedCredentials, setSelectedCredentials] = useState<string[]>([])
   const [viewingCredential, setViewingCredential] = useState<Credential | null>(null)
 
+  // Helper function to check if credential is expired based on all available expiry data
+  const isCredentialExpired = (credential: Credential) => {
+    const now = Date.now() / 1000; // Current time in seconds
+
+    // Check cookies for expiry
+    if (credential.cookies) {
+      for (const [name, cookieData] of Object.entries(credential.cookies)) {
+        if (cookieData && typeof cookieData === 'object') {
+          // Check if cookie has expirationDate (Chrome cookie format)
+          if (cookieData.expirationDate && cookieData.expirationDate < now) {
+            console.log(`Cookie ${name} expired:`, new Date(cookieData.expirationDate * 1000));
+            return true;
+          }
+          // Check if cookie has expires field (standard cookie format)
+          if (cookieData.expires) {
+            const expiryTime = new Date(cookieData.expires).getTime() / 1000;
+            if (expiryTime < now) {
+              console.log(`Cookie ${name} expired:`, new Date(expiryTime * 1000));
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    // Check localStorage for JWT tokens or expiry data
+    if (credential.localStorage) {
+      for (const [key, value] of Object.entries(credential.localStorage)) {
+        if (isTokenExpired(value, now)) {
+          console.log(`LocalStorage ${key} token expired`);
+          return true;
+        }
+      }
+    }
+
+    // Check sessionStorage for JWT tokens or expiry data
+    if (credential.sessionStorage) {
+      for (const [key, value] of Object.entries(credential.sessionStorage)) {
+        if (isTokenExpired(value, now)) {
+          console.log(`SessionStorage ${key} token expired`);
+          return true;
+        }
+      }
+    }
+
+    // If no expiry data found or nothing is expired, consider it active
+    return false;
+  };
+
+  // Helper function to check if a token (JWT or other) is expired
+  const isTokenExpired = (tokenValue: any, currentTime: number) => {
+    if (!tokenValue || typeof tokenValue !== 'string') {
+      return false;
+    }
+
+    // Try to parse as JWT token
+    try {
+      const parts = tokenValue.split('.');
+      if (parts.length === 3) {
+        // Looks like a JWT token
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp && payload.exp < currentTime) {
+          return true;
+        }
+      }
+    } catch (e) {
+      // Not a valid JWT, ignore
+    }
+
+    // Check if the value itself contains expiry information
+    try {
+      const parsed = JSON.parse(tokenValue);
+      if (parsed.exp && parsed.exp < currentTime) {
+        return true;
+      }
+      if (parsed.expires_at && parsed.expires_at < currentTime) {
+        return true;
+      }
+      if (parsed.expiry && new Date(parsed.expiry).getTime() / 1000 < currentTime) {
+        return true;
+      }
+    } catch (e) {
+      // Not JSON, ignore
+    }
+
+    return false;
+  };
+
   const loadCredentials = async () => {
     try {
       setIsLoading(true)
@@ -57,9 +145,9 @@ export default function CredentialsManagement() {
 
       const data = await response.json()
       if (data.success) {
-        setCredentials(data.data?.credentials || [])
+        setCredentials(data.data.credentials || [])
       } else {
-        setError(data.error || 'Failed to load credentials')
+        setError(data.message || data.error || 'Failed to load credentials')
       }
     } catch (error) {
       console.error('Failed to load credentials:', error)
@@ -245,9 +333,6 @@ export default function CredentialsManagement() {
                   Created
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Last Used
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -271,12 +356,12 @@ export default function CredentialsManagement() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge 
-                          className={credential.isActive 
+                          className={(!isCredentialExpired(credential) && credential.isActive !== false)
                             ? "bg-green-100 text-green-700" 
-                            : "bg-gray-100 text-gray-700"
+                            : "bg-red-100 text-red-700"
                           }
                         >
-                          {credential.isActive ? 'Active' : 'Inactive'}
+                          {(!isCredentialExpired(credential) && credential.isActive !== false) ? 'Active' : 'Expired'}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
                           {credential.credentialSource}
@@ -333,15 +418,6 @@ export default function CredentialsManagement() {
                   </td>
 
                   <td className="px-4 py-4">
-                    <div className="text-sm text-slate-900">
-                      {credential.lastUsedAt 
-                        ? formatDate(credential.lastUsedAt)
-                        : 'Never'
-                      }
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4">
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
@@ -390,7 +466,7 @@ export default function CredentialsManagement() {
         <div className="bg-slate-50 rounded-lg p-4">
           <div className="flex items-center justify-between text-sm text-slate-600">
             <span>Total: {credentials.length} credentials</span>
-            <span>Active: {credentials.filter(c => c.isActive).length}</span>
+            <span>Active: {credentials.filter(c => !isCredentialExpired(c) && c.isActive !== false).length}</span>
             <span>Selected: {selectedCredentials.length}</span>
           </div>
         </div>
@@ -428,8 +504,8 @@ export default function CredentialsManagement() {
                       <div>
                         <span className="font-medium text-slate-600">Status:</span>
                         <div>
-                          <Badge className={viewingCredential.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-                            {viewingCredential.isActive ? 'Active' : 'Inactive'}
+                          <Badge className={(!isCredentialExpired(viewingCredential) && viewingCredential.isActive !== false) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                            {(!isCredentialExpired(viewingCredential) && viewingCredential.isActive !== false) ? 'Active' : 'Expired'}
                           </Badge>
                         </div>
                       </div>
@@ -452,10 +528,6 @@ export default function CredentialsManagement() {
                       <div>
                         <span className="font-medium text-slate-600">Created:</span>
                         <div className="text-slate-900">{formatDate(viewingCredential.createdAt)}</div>
-                      </div>
-                      <div>
-                        <span className="font-medium text-slate-600">Last Used:</span>
-                        <div className="text-slate-900">{viewingCredential.lastUsedAt ? formatDate(viewingCredential.lastUsedAt) : 'Never'}</div>
                       </div>
                     </div>
                   </div>

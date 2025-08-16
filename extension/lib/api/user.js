@@ -14,7 +14,7 @@ class UserAPI {
             })
 
             const result = await response.json()
-            
+
             if (!response.ok || !result.success) {
                 return {
                     success: false,
@@ -26,19 +26,14 @@ class UserAPI {
 
             // Store user data locally after successful login
             if (result.success && result.data && result.data.user && result.data.token) {
-                console.log('Storing user data locally:', result.data)
                 await this.storeLocalUser({
                     user: result.data.user,
                     token: result.data.token
                 })
             }
 
-            return {
-                success: result.success,
-                error: result.error,
-                message: result.message,
-                data: result.data
-            }
+            return result;
+
         } catch (error) {
             return {
                 success: false,
@@ -61,7 +56,7 @@ class UserAPI {
             })
 
             const result = await response.json()
-            
+
             if (!response.ok || !result.success) {
                 return {
                     success: false,
@@ -71,12 +66,7 @@ class UserAPI {
                 }
             }
 
-            return {
-                success: result.success,
-                error: result.error,
-                message: result.message,
-                data: result.data
-            }
+            return result;
         } catch (error) {
             return {
                 success: false,
@@ -90,7 +80,7 @@ class UserAPI {
     async validateUser() {
         try {
             const storedUserResult = await this.getLocalStoredUser()
-            
+
             if (!storedUserResult.success || !storedUserResult.data) {
                 return {
                     success: false,
@@ -103,7 +93,7 @@ class UserAPI {
             const storedData = storedUserResult.data
             const token = storedData.token
             const user = storedData.user
-            
+
             if (!token) {
                 return {
                     success: false,
@@ -124,7 +114,7 @@ class UserAPI {
 
             // Verify token with backend
             const verifyResult = await this.verifyUser(token)
-            
+
             if (!verifyResult.success) {
                 // Clear invalid user data
                 await this.clearLocalUser()
@@ -219,7 +209,7 @@ class UserAPI {
     async getUserDetails() {
         try {
             const storedUserResult = await this.getLocalStoredUser()
-            
+
             if (!storedUserResult.success || !storedUserResult.data) {
                 return {
                     success: false,
@@ -230,7 +220,7 @@ class UserAPI {
             }
 
             const storedData = storedUserResult.data
-            
+
             if (!storedData.user || !storedData.token) {
                 return {
                     success: false,
