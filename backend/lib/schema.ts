@@ -1,26 +1,35 @@
 import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 
-export const teams = pgTable('teams', {
-  id: text('id').primaryKey().$defaultFn(() => createId()),
-  name: text('name').notNull(),
-  description: text('description'),
-  platformAccountId: text('platform_account_id').notNull().unique(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
 export const users = pgTable('users', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   password: text('password').notNull(), // Hashed password, initially email without @domain.tld
-  role: text('role', { enum: ['admin', 'member'] }).notNull().default('member'),
-  teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   isActive: boolean('is_active').notNull().default(true),
   lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const teams = pgTable('teams', {
+  id: text('id').primaryKey().$defaultFn(() => createId()),
+  name: text('name').notNull(),
+  description: text('description'),
+  platformAccountId: text('platform_account_id').notNull().unique(),
+  ownerId: text('owner_id').notNull().references(() => users.id), // Team creator/owner
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const teamMembers = pgTable('team_members', {
+  id: text('id').primaryKey().$defaultFn(() => createId()),
+  teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role', { enum: ['admin', 'member'] }).notNull().default('member'),
+  invitedBy: text('invited_by').references(() => users.id), // Who added this member
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const credentials = pgTable('credentials', {

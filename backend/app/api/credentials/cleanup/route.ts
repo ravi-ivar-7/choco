@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/auth'
+import { requireAuth, getUserTeamIds } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { credentials } from '@/lib/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getAuthUser(request)
-    if (!user) {
+    const user = await requireAuth(request)
+    const userTeamIds = getUserTeamIds(user)
+    
+    if (userTeamIds.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'Authentication required',
-        message: 'Authentication required',
+        error: 'No team access',
+        message: 'User must belong to at least one team',
         data: null
-      }, { status: 401 })
+      }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -28,7 +30,7 @@ export async function DELETE(request: NextRequest) {
         .delete(credentials)
         .where(and(
           eq(credentials.id, credentialId),
-          eq(credentials.teamId, user.teamId)
+          inArray(credentials.teamId, userTeamIds)
         ))
         .returning()
       
@@ -46,7 +48,7 @@ export async function DELETE(request: NextRequest) {
       // Delete all credentials for the team
       deletedCredentials = await db
         .delete(credentials)
-        .where(eq(credentials.teamId, user.teamId))
+        .where(inArray(credentials.teamId, userTeamIds))
         .returning()
       
       message = `Successfully cleaned up ${deletedCredentials.length} credentials`
@@ -58,7 +60,7 @@ export async function DELETE(request: NextRequest) {
       message,
       data: {
         deletedCount: deletedCredentials.length,
-        teamId: user.teamId,
+        teamIds: userTeamIds,
         credentialId: credentialId || null
       }
     })

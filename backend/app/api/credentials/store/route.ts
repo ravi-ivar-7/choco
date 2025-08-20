@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { credentials } from '@/lib/schema';
-import { getAuthUser } from '@/lib/auth';
+import { requireAuth, getUserTeamIds } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const user = await requireAuth(request);
+    const userTeamIds = getUserTeamIds(user);
+    
+    if (userTeamIds.length === 0) {
       return NextResponse.json({ 
         success: false,
-        error: 'Authentication required',
-        message: 'Authentication required',
+        error: 'No team access',
+        message: 'User must belong to at least one team',
         data: null
-      }, { status: 401 });
+      }, { status: 403 });
     }
 
     const body = await request.json();
@@ -45,12 +47,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
+    // Use the first team the user belongs to (or could be made configurable)
+    const teamId = userTeamIds[0];
+    
     // Delete existing credentials for the team
-    // await db.delete(credentials).where(eq(credentials.teamId, user.teamId));
+    // await db.delete(credentials).where(eq(credentials.teamId, teamId));
     
     // Prepare credential data
     const credentialData: any = {
-      teamId: user.teamId,
+      teamId: teamId,
       isActive: true,
       createdBy: user.id,
       credentialSource,

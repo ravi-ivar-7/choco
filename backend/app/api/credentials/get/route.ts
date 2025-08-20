@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { credentials } from '@/lib/schema';
-import { getAuthUser } from '@/lib/auth';
-import { eq, and, desc } from 'drizzle-orm';
+import { requireAuth, getUserTeamIds } from '@/lib/auth';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const user = await requireAuth(request);
+    const userTeamIds = getUserTeamIds(user);
+    
+    if (userTeamIds.length === 0) {
       return NextResponse.json({ 
         success: false,
-        error: 'Authentication required',
-        message: 'Authentication required',
+        error: 'No team access',
+        message: 'User must belong to at least one team',
         data: null
-      }, { status: 401 });
+      }, { status: 403 });
     }
 
     const teamCredentials = await db.select()
       .from(credentials)
       .where(and(
-        eq(credentials.teamId, user.teamId),
+        inArray(credentials.teamId, userTeamIds),
         eq(credentials.isActive, true)
       ))
       .orderBy(desc(credentials.createdAt));

@@ -4,25 +4,30 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 // Import modular components
-import AdminHeader from './components/AdminHeader'
+import DashboardHeader from './components/DashboardHeader'
 import NavigationTabs from './components/NavigationTabs'
 import OverviewTab from './components/OverviewTab'
 import TeamsManagement from './components/TeamsManagement'
 import MembersManagement from './components/MembersManagement'
 import CredentialsManagement from './components/CredentialsManagement'
+import ProfileManagement from './components/ProfileManagement'
 
 interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'member'
-  teamId: string
+  teams: Array<{
+    teamId: string
+    teamName: string
+    role: 'admin' | 'member'
+    isOwner: boolean
+  }>
 }
 
 export default function AdminDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials' | 'profile'>('overview')
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     totalTeams: 0,
@@ -47,7 +52,6 @@ export default function AdminDashboard() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ requiredRole: 'admin' })
         })
         
         if (!authResponse.ok) {
@@ -63,7 +67,9 @@ export default function AdminDashboard() {
           return
         }
         
-        setUser(authData.data.user)
+        const userData = authData.data.user
+        
+        setUser(userData)
         // Load stats after successful authentication
         await loadStats()
       } catch (error) {
@@ -122,14 +128,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Admin Header */}
-      <AdminHeader user={user} onLogout={handleLogout} />
+      {/* Dashboard Header */}
+      <DashboardHeader user={user} onLogout={handleLogout} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
           <p className="mt-2 text-slate-600">Manage your teams, members, and credentials</p>
         </div>
 
@@ -143,9 +149,10 @@ export default function AdminDashboard() {
         {/* Tab Content - Each tab loads its own data */}
         <div className="mt-6">
           {activeTab === 'overview' && <OverviewTab />}
-          {activeTab === 'teams' && <TeamsManagement />}
-          {activeTab === 'members' && <MembersManagement />}
+          {activeTab === 'teams' && <TeamsManagement user={user} />}
+          {activeTab === 'members' && <MembersManagement user={user} />}
           {activeTab === 'credentials' && <CredentialsManagement />}
+          {activeTab === 'profile' && <ProfileManagement />}
         </div>
       </div>
     </div>

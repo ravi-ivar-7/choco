@@ -85,7 +85,7 @@ export default function HomePage() {
             <Badge variant="secondary">Team Access Manager</Badge>
           </div>
           <Button onClick={handleGetStarted} disabled={isLoading}>
-            {isLoading ? 'Loading...' : 'Admin Login'}
+            {isLoading ? 'Loading...' : 'Login'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -115,7 +115,11 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button size="lg" onClick={handleGetStarted} disabled={isLoading}>
                 <Shield className="mr-2 h-5 w-5" />
-                Access Admin Dashboard
+                Access Dashboard
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => router.push('/register')}>
+                <Users className="mr-2 h-5 w-5" />
+                Create Account
               </Button>
               <Button variant="outline" size="lg">
                 <Chrome className="mr-2 h-5 w-5" />

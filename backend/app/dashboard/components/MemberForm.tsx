@@ -9,6 +9,7 @@ interface Team {
   name: string
   description?: string
   platformAccountId: string
+  ownerId: string
   createdAt: string
   updatedAt: string
 }
@@ -22,6 +23,7 @@ interface Member {
   teamName: string
   isActive: boolean
   lastLoginAt?: string
+  joinedAt: string
   createdAt: string
   updatedAt: string
 }
@@ -29,7 +31,7 @@ interface Member {
 interface MemberFormProps {
   member?: Member | null
   teams: Team[]
-  onSubmit: (memberData: { name: string; email: string; role: 'admin' | 'member'; teamId: string; isActive?: boolean }) => Promise<void>
+  onSubmit: (memberData: { email: string; role: 'admin' | 'member'; teamId: string; isActive?: boolean }) => Promise<void>
   onCancel: () => void
 }
 
@@ -42,7 +44,6 @@ export default function MemberForm({ member, teams, onSubmit, onCancel }: Member
     try {
       const formData = new FormData(e.target as HTMLFormElement)
       await onSubmit({
-        name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as 'admin' | 'member',
         teamId: formData.get('teamId') as string,
@@ -61,17 +62,13 @@ export default function MemberForm({ member, teams, onSubmit, onCancel }: Member
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">Name</label>
-              <input 
-                name="name" 
-                type="text" 
-                required 
-                defaultValue={member?.name || ''}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                placeholder="Enter full name" 
-              />
-            </div>
+            {!member && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> You can only add users who are already registered in the system.
+                </p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700">Email</label>
               <input 
@@ -79,8 +76,9 @@ export default function MemberForm({ member, teams, onSubmit, onCancel }: Member
                 type="email" 
                 required 
                 defaultValue={member?.email || ''}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                placeholder="Enter email address" 
+                disabled={!!member}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100" 
+                placeholder="Enter registered user's email address" 
               />
             </div>
             <div>

@@ -8,16 +8,20 @@ interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'member'
-  teamId: string
+  teams: Array<{
+    teamId: string
+    teamName: string
+    role: 'admin' | 'member'
+    isOwner: boolean
+  }>
 }
 
-interface AdminHeaderProps {
+interface DashboardHeaderProps {
   user: User
   onLogout: () => void
 }
 
-export default function AdminHeader({ user, onLogout }: AdminHeaderProps) {
+export default function DashboardHeader({ user, onLogout }: DashboardHeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,10 +32,10 @@ export default function AdminHeader({ user, onLogout }: AdminHeaderProps) {
                 <span className="text-white font-bold text-sm">🍫</span>
               </div>
               <span className="text-xl font-bold text-slate-900">Choco</span>
-              <Badge variant="secondary">Admin</Badge>
+              <Badge variant="secondary">Dashboard</Badge>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center">
@@ -43,12 +47,8 @@ export default function AdminHeader({ user, onLogout }: AdminHeaderProps) {
                 <p className="text-sm font-medium text-slate-900">{user.name}</p>
                 <p className="text-xs text-slate-600">{user.email}</p>
               </div>
-              <Badge variant="outline" className="hidden sm:flex">
-                <Shield className="w-3 h-3 mr-1" />
-                {user.role}
-              </Badge>
             </div>
-            
+
             <Button
               variant="ghost"
               size="sm"

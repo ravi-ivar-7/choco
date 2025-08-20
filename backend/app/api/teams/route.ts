@@ -1,29 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { teams, users } from '@/lib/schema';
-import { requireAdmin } from '@/lib/auth';
-import { eq } from 'drizzle-orm';
+import { teams, users, teamMembers } from '@/lib/schema';
+import { requireAuth, requireTeamAdmin, getUserTeamIds } from '@/lib/auth';
+import { eq, inArray } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAdmin(request);
+    const user = await requireAuth(request);
     
-    const allTeams = await db.select({
+    // Only return teams the user belongs to
+    const userTeamIds = getUserTeamIds(user);
+    
+    if (userTeamIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        error: null,
+        message: 'No teams found',
+        data: {
+          teams: []
+        }
+      });
+    }
+    
+    const userTeams = await db.select({
       id: teams.id,
       name: teams.name,
       description: teams.description,
       platformAccountId: teams.platformAccountId,
+      ownerId: teams.ownerId,
       createdAt: teams.createdAt,
       updatedAt: teams.updatedAt,
-    }).from(teams);
+    }).from(teams)
+    .where(inArray(teams.id, userTeamIds));
 
     return NextResponse.json({
       success: true,
       error: null,
       message: 'Teams retrieved successfully',
       data: {
-        teams: allTeams
+        teams: userTeams
       }
     });
   } catch (error) {
@@ -38,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAdmin(request);
+    const user = await requireAuth(request);
     const body = await request.json();
     
     const { name, description, platformAccountId } = body;
@@ -72,7 +88,16 @@ export async function POST(request: NextRequest) {
       name,
       description: description || null,
       platformAccountId,
+      ownerId: user.id,
     }).returning();
+
+    // Add creator as team admin
+    await db.insert(teamMembers).values({
+      teamId,
+      userId: user.id,
+      role: 'admin',
+      invitedBy: user.id,
+    });
 
     return NextResponse.json({
       success: true,
@@ -94,9 +119,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const user = await requireAdmin(request);
     const body = await request.json();
-    
     const { id, name, description, platformAccountId } = body;
     
     if (!id || !name || !platformAccountId) {
@@ -107,6 +130,9 @@ export async function PUT(request: NextRequest) {
         data: null
       }, { status: 400 });
     }
+
+    // Verify user is admin of this team BEFORE any operations
+    const user = await requireTeamAdmin(request, id);
 
     const existingTeam = await db.select()
       .from(teams)
@@ -166,7 +192,6 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const teamId = searchParams.get('id');
     
@@ -178,6 +203,9 @@ export async function DELETE(request: NextRequest) {
         data: null
       }, { status: 400 });
     }
+
+    // Verify user is admin of this team BEFORE any operations
+    const user = await requireTeamAdmin(request, teamId);
 
     const existingTeam = await db.select()
       .from(teams)
@@ -193,12 +221,12 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 });
     }
 
-    const teamMembers = await db.select()
-      .from(users)
-      .where(eq(users.teamId, teamId))
+    const teamMemberCount = await db.select()
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, teamId))
       .limit(1);
 
-    if (teamMembers.length > 0) {
+    if (teamMemberCount.length > 0) {
       return NextResponse.json({
         success: false,
         error: 'Team has members',

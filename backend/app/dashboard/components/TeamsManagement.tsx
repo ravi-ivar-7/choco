@@ -11,17 +11,43 @@ interface Team {
   name: string
   description?: string
   platformAccountId: string
+  ownerId: string
   createdAt: string
   updatedAt: string
 }
 
-export default function TeamsManagement() {
+interface User {
+  id: string
+  email: string
+  name: string
+  teams: Array<{
+    teamId: string
+    teamName: string
+    role: 'admin' | 'member'
+    isOwner: boolean
+  }>
+}
+
+interface TeamsManagementProps {
+  user: User
+}
+
+export default function TeamsManagement({ user }: TeamsManagementProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
+
+  // Check if user can manage a specific team
+  const canManageTeam = (teamId: string) => {
+    const userTeam = user.teams.find(t => t.teamId === teamId)
+    return userTeam ? (userTeam.role === 'admin' || userTeam.isOwner) : false
+  }
+
+  // Check if user can create teams (must be admin of at least one team or have no teams)
+  const canCreateTeams = user.teams.length === 0 || user.teams.some(t => t.role === 'admin' || t.isOwner)
 
   const loadTeams = async () => {
     try {
@@ -204,13 +230,15 @@ export default function TeamsManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-slate-900">Teams Management</h2>
-        <Button 
-          onClick={() => setShowTeamForm(true)}
-          disabled={actionLoading === 'create'}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {actionLoading === 'create' ? 'Creating...' : 'Add Team'}
-        </Button>
+        {canCreateTeams && (
+          <Button 
+            onClick={() => setShowTeamForm(true)}
+            disabled={actionLoading === 'create'}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {actionLoading === 'create' ? 'Creating...' : 'Add Team'}
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -235,27 +263,31 @@ export default function TeamsManagement() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingTeam(team)}
-                    disabled={actionLoading !== null}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteTeam(team.id)}
-                    disabled={actionLoading === team.id}
-                    className="text-red-600 hover:text-red-700 disabled:opacity-50"
-                  >
-                    {actionLoading === team.id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
+                  {canManageTeam(team.id) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingTeam(team)}
+                        disabled={actionLoading !== null}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteTeam(team.id)}
+                        disabled={actionLoading === team.id}
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {actionLoading === team.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
