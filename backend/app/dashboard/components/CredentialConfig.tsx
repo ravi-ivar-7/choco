@@ -23,6 +23,9 @@ interface CredentialConfigData {
   createdBy?: string
   name?: string
   description?: string
+  domain?: string
+  domainDisplayName?: string
+  domainIcon?: string
   ipAddress?: string
   userAgent?: string
   platform?: string
@@ -107,6 +110,9 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
         }, {} as any)
         defaultConfig.name = `${teamName} Config`
         defaultConfig.description = `Credential collection configuration for ${teamName}`
+        defaultConfig.domain = ''
+        defaultConfig.domainDisplayName = 'Platform'
+        defaultConfig.domainIcon = '🌐'
         setConfig(defaultConfig)
         setHasConfig(false)
       }
@@ -122,11 +128,35 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
     loadConfig()
   }, [teamId])
 
+  const validateDomain = (domain: string): string | null => {
+    if (!domain || !domain.trim()) {
+      return 'Domain is required'
+    }
+    
+    // Basic domain format validation
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+    if (!domainRegex.test(domain.trim())) {
+      return 'Please enter a valid domain (e.g., example.com)'
+    }
+    
+    // Check for common invalid patterns
+    if (domain.includes('..') || domain.startsWith('.') || domain.endsWith('.')) {
+      return 'Domain format is invalid'
+    }
+    
+    return null
+  }
+
   const handleFieldChange = (field: string, value: string) => {
     setConfig(prev => ({
       ...prev,
       [field]: value
     }))
+    
+    // Clear error when user starts typing in domain field
+    if (field === 'domain' && error && error.includes('Domain')) {
+      setError(null)
+    }
   }
 
   const handleCustomKeysChange = (field: string, tags: string[]) => {
@@ -163,6 +193,13 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
     try {
       setIsSaving(true)
       setError(null)
+      
+      // Validate domain
+      const domainError = validateDomain(config?.domain || '')
+      if (domainError) {
+        setError(domainError)
+        return
+      }
       
       const token = localStorage.getItem('choco_token')
       if (!token) {
@@ -347,6 +384,55 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter description"
                 />
+              </div>
+            </div>
+
+            {/* Domain Configuration Section */}
+            <div>
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Domain Configuration</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Domain <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={config?.domain || ''}
+                    onChange={(e) => handleFieldChange('domain', e.target.value)}
+                    className={`w-full border rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      validateDomain(config?.domain || '') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="e.g., maang.in, 100xdevs.com"
+                    required
+                  />
+                  {validateDomain(config?.domain || '') && (
+                    <p className="text-xs text-red-600 mt-1">{validateDomain(config?.domain || '')}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={config?.domainDisplayName || ''}
+                    onChange={(e) => handleFieldChange('domainDisplayName', e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., AlgoZenith (Maang.in)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Icon
+                  </label>
+                  <input
+                    type="text"
+                    value={config?.domainIcon || ''}
+                    onChange={(e) => handleFieldChange('domainIcon', e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 🚀, 💻, 🌐"
+                  />
+                </div>
               </div>
             </div>
 

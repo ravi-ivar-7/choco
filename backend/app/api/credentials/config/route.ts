@@ -44,10 +44,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamId, name, description, ...configFields } = body
+    const { teamId, ...configData } = body
 
-    if (!teamId || !name) {
+    if (!teamId || !configData.name) {
       return NextResponse.json({ success: false, error: 'Team ID and name are required' }, { status: 400 })
+    }
+
+    if (!configData.domain || !configData.domain.trim()) {
+      return NextResponse.json({ success: false, error: 'Domain is required' }, { status: 400 })
     }
 
     // Verify user has admin access to this team
@@ -63,12 +67,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new config
+    const { updatedAt, createdAt, id, ...insertData } = configData
     const newConfig = await db.insert(credentialConfigs).values({
       teamId,
       createdBy: user.id,
-      name,
-      description,
-      ...configFields
+      ...insertData
     }).returning()
 
     return NextResponse.json({
@@ -92,21 +95,24 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamId, name, description, ...configFields } = body
+    const { teamId, ...configData } = body
 
-    if (!teamId || !name) {
+    if (!teamId || !configData.name) {
       return NextResponse.json({ success: false, error: 'Team ID and name are required' }, { status: 400 })
+    }
+
+    if (!configData.domain || !configData.domain.trim()) {
+      return NextResponse.json({ success: false, error: 'Domain is required' }, { status: 400 })
     }
 
     // Verify user has admin access to this team
     await requireTeamAdmin(request, teamId)
 
     // Update config
+    const { updatedAt, createdAt, id, ...updateData } = configData
     const updatedConfig = await db.update(credentialConfigs)
       .set({
-        name,
-        description,
-        ...configFields,
+        ...updateData,
         updatedAt: new Date()
       })
       .where(eq(credentialConfigs.teamId, teamId))

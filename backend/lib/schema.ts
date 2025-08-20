@@ -40,6 +40,11 @@ export const credentialConfigs = pgTable('credential_configs', {
   name: text('name').notNull(), // Config name (e.g., "LeetCode Config", "HackerRank Config")
   description: text('description'),
   
+  // Domain configuration
+  domain: text('domain').notNull(), // 'google.com
+  domainDisplayName: text('domain_display_name').default('Platform'),  
+  domainIcon: text('domain_icon').default('🌐'), // '🚀', '💻'
+  
   // Field-level configuration for each data type ('none', 'full', or JSON array of specific keys)
   // Browser environment data
   ipAddress: text('ip_address').default('none'), 
