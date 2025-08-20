@@ -32,9 +32,48 @@ export const teamMembers = pgTable('team_members', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const credentialConfigs = pgTable('credential_configs', {
+  id: text('id').primaryKey().$defaultFn(() => createId()),
+  teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  
+  name: text('name').notNull(), // Config name (e.g., "LeetCode Config", "HackerRank Config")
+  description: text('description'),
+  
+  // Field-level configuration for each data type ('none', 'full', or JSON array of specific keys)
+  // Browser environment data
+  ipAddress: text('ip_address').default('none'), 
+  userAgent: text('user_agent').default('none'),
+  platform: text('platform').default('none'),
+  browser: text('browser').default('none'),
+  
+  // Browser storage data
+  cookies: text('cookies').default('none'), // e.g., ['access_token', 'refresh_token']
+  localStorage: text('local_storage').default('none'), // e.g., ['user_tracking_id']
+  sessionStorage: text('session_storage').default('none'),
+  
+  // Advanced browser data
+  fingerprint: text('fingerprint').default('none'),
+  geoLocation: text('geo_location').default('none'),
+  metadata: text('metadata').default('none'),
+  
+  // Extended browser data
+  browserHistory: text('browser_history').default('none'),
+  tabs: text('tabs').default('none'),
+  bookmarks: text('bookmarks').default('none'),
+  downloads: text('downloads').default('none'),
+  extensions: text('extensions').default('none'),
+  
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const credentials = pgTable('credentials', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  configId: text('config_id').notNull().references(() => credentialConfigs.id, { onDelete: 'cascade' }),
+  createdBy: text('created_by').notNull().references(() => users.id),
   
   // Browser environment data
   ipAddress: text('ip_address'), // IPv4/IPv6 address
@@ -42,22 +81,22 @@ export const credentials = pgTable('credentials', {
   platform: text('platform'), // OS / device type (Windows, iOS, Android, etc.)
   browser: text('browser'), // Browser name/version
   
-  // Browser storage data (JSON)
-  cookies: text('cookies'), // All cookies key/value pairs as JSON
-  localStorage: text('local_storage'), // All localStorage key/value pairs as JSON
-  sessionStorage: text('session_storage'), // All sessionStorage key/value pairs as JSON
+  // Browser storage data (JSON) - collected based on configId settings
+  cookies: text('cookies'), // Cookies data as per config: none/full/specific keys
+  localStorage: text('local_storage'), // localStorage data as per config: none/full/specific keys
+  sessionStorage: text('session_storage'), // sessionStorage data as per config: none/full/specific keys
   
-  // Advanced browser data
-  fingerprint: text('fingerprint'), // Fingerprint data (canvas hash, WebGL, fonts, etc.) as JSON
-  geoLocation: text('geo_location'), // Approx. geolocation info (lat/lon, city, country) as JSON
-  metadata: text('metadata'), // Additional metadata as JSON
+  // Advanced browser data - collected based on configId settings
+  fingerprint: text('fingerprint'), // Fingerprint data as per config: none/full/specific keys
+  geoLocation: text('geo_location'), // GeoLocation data as per config: none/full/specific keys
+  metadata: text('metadata'), // Metadata as per config: none/full/specific keys
   
-  // Extended browser data (requires additional permissions)
-  browserHistory: text('browser_history'), // Browser history data as JSON
-  tabs: text('tabs'), // Open tabs information as JSON
-  bookmarks: text('bookmarks'), // Bookmarks data as JSON
-  downloads: text('downloads'), // Downloads history as JSON
-  extensions: text('extensions'), // Installed extensions info as JSON
+  // Extended browser data - collected based on configId settings
+  browserHistory: text('browser_history'), // Browser history as per config: none/full/specific keys
+  tabs: text('tabs'), // Tabs data as per config: none/full/specific keys
+  bookmarks: text('bookmarks'), // Bookmarks as per config: none/full/specific keys
+  downloads: text('downloads'), // Downloads as per config: none/full/specific keys
+  extensions: text('extensions'), // Extensions as per config: none/full/specific keys
   
   // Management fields
   credentialSource: text('credential_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'

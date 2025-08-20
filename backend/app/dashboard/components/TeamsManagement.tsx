@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw, Settings } from 'lucide-react'
 import TeamForm from './TeamForm'
+import CredentialConfig from './CredentialConfig'
 
 interface Team {
   id: string
@@ -39,6 +40,7 @@ export default function TeamsManagement({ user }: TeamsManagementProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
+  const [configTeam, setConfigTeam] = useState<Team | null>(null)
 
   // Check if user can manage a specific team
   const canManageTeam = (teamId: string) => {
@@ -268,6 +270,15 @@ export default function TeamsManagement({ user }: TeamsManagementProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => setConfigTeam(team)}
+                        disabled={actionLoading !== null}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setEditingTeam(team)}
                         disabled={actionLoading !== null}
                       >
@@ -304,6 +315,15 @@ export default function TeamsManagement({ user }: TeamsManagementProps) {
             setShowTeamForm(false)
             setEditingTeam(null)
           }}
+        />
+      )}
+
+      {/* Credential Config Modal */}
+      {configTeam && (
+        <CredentialConfig
+          teamId={configTeam.id}
+          teamName={configTeam.name}
+          onClose={() => setConfigTeam(null)}
         />
       )}
     </div>

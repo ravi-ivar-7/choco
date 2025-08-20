@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // Import modular components
 import DashboardHeader from './components/DashboardHeader'
@@ -26,8 +26,17 @@ interface User {
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials' | 'profile'>('overview')
+  
+  // Get tab from URL parameter or default to 'overview'
+  const getInitialTab = (): 'overview' | 'teams' | 'members' | 'credentials' | 'profile' => {
+    const tabParam = searchParams.get('tab')
+    const validTabs = ['overview', 'teams', 'members', 'credentials', 'profile']
+    return validTabs.includes(tabParam || '') ? tabParam as any : 'overview'
+  }
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials' | 'profile'>(getInitialTab())
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     totalTeams: 0,

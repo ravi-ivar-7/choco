@@ -127,7 +127,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
               <div>
                 <div className="text-2xl font-bold text-slate-900">AES-256</div>
                 <div className="text-sm text-slate-600">Encryption</div>
@@ -139,10 +139,6 @@ export default function HomePage() {
               <div>
                 <div className="text-2xl font-bold text-slate-900">Real-time</div>
                 <div className="text-sm text-slate-600">Sync</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-slate-900">Security</div>
-                <div className="text-sm text-slate-600">Logs</div>
               </div>
             </div>
           </div>
