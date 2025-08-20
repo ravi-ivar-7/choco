@@ -26,6 +26,7 @@ interface CredentialConfigData {
   domain?: string
   domainDisplayName?: string
   domainIcon?: string
+  validator?: string
   ipAddress?: string
   userAgent?: string
   platform?: string
@@ -113,6 +114,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
         defaultConfig.domain = ''
         defaultConfig.domainDisplayName = 'Platform'
         defaultConfig.domainIcon = '🌐'
+        defaultConfig.validator = 'base'
         setConfig(defaultConfig)
         setHasConfig(false)
       }
@@ -432,6 +434,58 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., 🚀, 💻, 🌐"
                   />
+                </div>
+              </div>
+              
+              {/* Validator Configuration */}
+              <div className="mt-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Validator Type
+                </label>
+                <select
+                  value={config?.validator === 'base' ? 'base' : 'custom'}
+                  onChange={(e) => {
+                    if (e.target.value === 'base') {
+                      handleFieldChange('validator', 'base')
+                    } else {
+                      handleFieldChange('validator', 'custom')
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="base">Base Validator (Default)</option>
+                  <option value="custom">Custom Validator</option>
+                </select>
+                
+                {config?.validator !== 'base' && (
+                  <div className="mt-3">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Custom Validator Name
+                    </label>
+                    <input
+                      type="text"
+                      value={config?.validator || ''}
+                      onChange={(e) => handleFieldChange('validator', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., myCustomValidator, leetcodeValidator"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the name of your custom validator file (without .js extension)
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
+                  <div className="flex items-start">
+                    <div className="text-yellow-600 mr-2">⚠️</div>
+                    <div>
+                      <p className="text-xs text-yellow-800 font-medium">Warning</p>
+                      <p className="text-xs text-yellow-700 mt-1">
+                        Don't change the validator unless you know what you're doing. The base validator works for most use cases. 
+                        Custom validators require additional configuration in the extension.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

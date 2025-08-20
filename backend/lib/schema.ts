@@ -44,6 +44,7 @@ export const credentialConfigs = pgTable('credential_configs', {
   domain: text('domain').notNull(), // 'google.com
   domainDisplayName: text('domain_display_name').default('Platform'),  
   domainIcon: text('domain_icon').default('🌐'), // '🚀', '💻'
+  validator: text('validator').default('base'), // 'base', 'custom', or custom validator name
   
   // Field-level configuration for each data type ('none', 'full', or JSON array of specific keys)
   // Browser environment data
