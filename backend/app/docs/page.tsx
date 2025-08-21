@@ -50,10 +50,30 @@ export default function DocsPage() {
     setLoading(true);
     try {
       const response = await fetch(`/api/docs/${filename}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       const text = await response.text();
       setContent(text);
     } catch (error) {
-      setContent('Error loading documentation');
+      setContent(`# Documentation Error
+
+We're having trouble loading this documentation file. 
+
+## 📚 View on GitHub Instead
+
+You can access all documentation directly on our GitHub repository:
+
+**[📖 View Documentation on GitHub →](https://github.com/ravi-ivar-7/choco/blob/master/README.md)**
+
+### Available Documentation:
+- [🚀 Installation & Setup](https://github.com/ravi-ivar-7/choco/blob/master/assets/docs/installation-setup.md)
+- [📖 Usage Guide](https://github.com/ravi-ivar-7/choco/blob/master/assets/docs/usage-guide.md)
+- [🔧 Extensibility Guide](https://github.com/ravi-ivar-7/choco/blob/master/assets/docs/extensibility.md)
+- [📋 Project Overview](https://github.com/ravi-ivar-7/choco/blob/master/assets/docs/project.md)
+
+### Need Help?
+If you continue experiencing issues, please [open an issue on GitHub](https://github.com/ravi-ivar-7/choco/issues).`);
     }
     setLoading(false);
   };
@@ -306,6 +326,20 @@ export default function DocsPage() {
                           </td>
                         ),
                         a: ({children, href}) => {
+                          // Handle GitHub links - always open externally
+                          if (href?.includes('github.com')) {
+                            return (
+                              <a 
+                                href={href}
+                                className="text-blue-600 hover:text-blue-800 font-medium underline decoration-blue-200 hover:decoration-blue-400 transition-colors"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {children}
+                              </a>
+                            );
+                          }
+                          
                           // Handle internal .md file links (with or without anchors)
                           if (href?.includes('.md')) {
                             const [filePart] = href.split('#');

@@ -54,7 +54,7 @@ class Constants {
     static BACKEND_URL = 'http://localhost:3000/';
 
 // For production (update after deployment)
-    // static BACKEND_URL = 'https://your-app.vercel.app/';
+    // static BACKEND_URL = 'https://usechoco.vercel.app/';
 }
 ```
 ### Step 3: Load Extension in Chrome
