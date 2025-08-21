@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // Import modular components
-import DashboardHeader from './components/DashboardHeader'
 import NavigationTabs from './components/NavigationTabs'
 import OverviewTab from './components/OverviewTab'
 import TeamsManagement from './components/TeamsManagement'
@@ -26,7 +25,7 @@ interface User {
 
 // Component that uses useSearchParams - must be wrapped in Suspense
 function DashboardContent() {
-  const router = useRouter()
+    const router = useRouter()
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   
@@ -38,6 +37,13 @@ function DashboardContent() {
   }
   
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials' | 'profile'>(getInitialTab())
+
+  // Update activeTab when URL parameter changes
+  useEffect(() => {
+    const newTab = getInitialTab()
+    setActiveTab(newTab)
+  }, [searchParams])
+  
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     totalTeams: 0,
@@ -45,53 +51,41 @@ function DashboardContent() {
     activeCredentials: 0
   })
 
-  // Authentication check - minimal, no data loading
+  // Load user data and stats
   useEffect(() => {
-    const verifyAuth = async () => {
+    const loadUserData = async () => {
       const token = localStorage.getItem('choco_token')
-      
       if (!token) {
-        router.push('/login')
+        router.push('/')
         return
       }
 
       try {
         const authResponse = await fetch('/api/auth/verify', {
-          method: 'POST',
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
         })
         
-        if (!authResponse.ok) {
+        if (authResponse.ok) {
+          const authData = await authResponse.json()
+          setUser(authData.data?.user || authData.user)
+          await loadStats()
+        } else {
           localStorage.removeItem('choco_token')
-          router.push('/login')
-          return
+          router.push('/')
         }
-        
-        const authData = await authResponse.json()
-        if (!authData.success) {
-          localStorage.removeItem('choco_token')
-          router.push('/login')
-          return
-        }
-        
-        const userData = authData.data.user
-        
-        setUser(userData)
-        // Load stats after successful authentication
-        await loadStats()
       } catch (error) {
-        console.error('Auth verification failed:', error)
+        console.error('Failed to load user data:', error)
         localStorage.removeItem('choco_token')
-        router.push('/login')
+        router.push('/')
       } finally {
         setIsLoading(false)
       }
     }
 
-    verifyAuth()
+    loadUserData()
   }, [])
 
   // Load dashboard stats
@@ -118,12 +112,7 @@ function DashboardContent() {
     } catch (error) {
       console.error('Failed to load stats:', error)
     }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('choco_token')
-    router.push('/login')
-  }
+  } 
 
   if (isLoading || !user) {
     return (
@@ -138,9 +127,6 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Dashboard Header */}
-      <DashboardHeader user={user} onLogout={handleLogout} />
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}

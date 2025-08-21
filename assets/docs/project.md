@@ -1,45 +1,25 @@
 # 🍫 Choco — Team Access Manager for Web Platforms
 
-**Short description:**  
-Choco is a browser extension + backend service that helps a small, approved team securely manage and sync official authentication tokens for web platform accounts.  
+**Description:**  
+Choco is a browser extension + backend service that helps teams securely manage and sync authentication credentials for web platforms based on configurable team settings.
 
-Choco does **not** steal or inject cookies without consent — it uses only approved APIs or flows, and encrypts tokens in a secure backend so authorized members can refresh their access when needed.  
+Choco collects only the credentials defined in your team configuration — it respects user-defined boundaries and encrypts all data in a secure backend for authorized team members.
+
+## ⚠️ Important Disclaimer
+
+This extension is intended solely for **educational and personal use**. It should only be used to manage credentials for websites you own or have **explicit permission** to access. Any use of this extension to obtain or use credentials without authorization is strictly prohibited and may violate applicable laws, terms of service, or privacy rights. The creator assumes no liability for any misuse, including but not limited to account bans, data loss, unauthorized access, or related consequences.
 
 ---
 
 ## 📌 Overview
 
-Choco makes it easy for your group to stay logged in to a shared web platform account with permission, without everyone having to log in manually all the time.
+Choco helps teams maintain consistent access to configured web platforms by automating credential management based on your team's specific requirements.
 
-**It:**
-1. Checks if your current token is still valid.  
-2. If not, fetches the latest approved token from the Choco backend.  
-3. If no valid token exists, lets you log in directly to the web platform.  
-4. Stores the updated token in the backend (encrypted) for teammates to use.  
-
----
-
-## 🛠 Architecture
-
-### **Browser Extension (Choco Client)**
-- UI for checking login state and initiating token refresh/login.  
-- Talks securely to Choco backend.  
-- Injects approved tokens into maang.in session when needed.  
-
-### **Backend (Choco Server)**
-- Holds the encrypted refresh token.  
-- Syncs token updates between members.  
-- Handles permission checks and audit logs.  
-
-### **Database**
-- Stores team info, user profiles, encrypted token data, etc.  
-
----
-
-## 🛡 Security Practices
-
-- Tokens stored **encrypted** in backend (e.g., AES-256).  
-- HTTPS-only communication.  
-- Backend verifies that each request comes from an **authenticated, authorized** team member.  
+**How it works:**
+1. Monitors credentials as defined in your team configuration (cookies, localStorage, sessionStorage)
+2. Automatically syncs valid credentials with team members through encrypted backend storage
+3. Applies stored credentials when team members visit configured domains
+4. Falls back to manual login when credentials are invalid or expired
+5. Updates team credential store when new valid credentials are detected  
 
 ---

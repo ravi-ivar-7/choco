@@ -41,15 +41,13 @@ class UserAPI {
         }
     }
 
-    async verifyUser(userToken, requiredRole = null) {
+    async verifyUser(userToken) {
         try {
             const response = await fetch(`${this.backendUrl}/api/auth/verify`, {
-                method: 'POST',
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${userToken}`
-                },
-                body: JSON.stringify({ requiredRole })
+                }
             })
 
             const result = await response.json()
