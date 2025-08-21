@@ -75,8 +75,8 @@
     justify-content: flex-end;
 }
 
-/* Platform Dropdown */
-.platform-dropdown {
+/* Team Dropdown */
+.team-dropdown {
     position: relative;
 }
 
@@ -105,7 +105,7 @@
     cursor: not-allowed;
 }
 
-.platform-icon {
+.team-icon {
     font-size: 14px;
     flex-shrink: 0;
 }
@@ -169,6 +169,7 @@
 .dropdown-item:last-child {
     margin-bottom: 4px;
 }
+
 
 /* User Profile */
 .user-profile {
@@ -279,6 +280,7 @@
         gap: 4px;
     }
     
+    
     .dropdown-menu {
         left: 50%;
         transform: translateX(-50%);
@@ -338,8 +340,8 @@
     }
 }
 
-/* Platform instruction styles */
-.platform-instruction {
+/* Team instruction styles */
+.team-instruction {
     background: rgba(56, 139, 253, 0.1);
     border: 1px solid rgba(56, 139, 253, 0.3);
     border-radius: 6px;
@@ -371,9 +373,184 @@
     box-shadow: none;
 }
 
-.platform-status {
+.team-status {
     margin-left: auto;
     font-size: 12px;
     color: #8b949e;
     font-weight: 400;
+}
+
+/* Team Warning Styles */
+.team-warning {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 0 16px 8px 16px;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+}
+
+.team-warning.error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #dc3545;
+}
+
+.warning-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.warning-text {
+    flex: 1;
+    min-width: 0;
+    color: #856404;
+}
+
+.warning-text strong {
+    color: #856404;
+    font-weight: 600;
+}
+
+.warning-text p {
+    color: #856404;
+    margin: 4px 0 0 0;
+    font-size: 13px;
+}
+
+.warning-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #856404;
+    margin-bottom: 2px;
+}
+
+.team-warning.error .warning-title {
+    color: #721c24;
+}
+
+.warning-message {
+    font-size: 13px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.warning-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.warning-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.warning-btn.primary {
+    background: #ffc107;
+    color: #212529;
+}
+
+.warning-btn.primary:hover {
+    background: #e0a800;
+    transform: translateY(-1px);
+}
+
+.warning-btn.secondary {
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.warning-btn.secondary:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+/* Loading Styles */
+.navbar-loading {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e9ecef;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    font-size: 12px;
+    color: #495057;
+    font-weight: 500;
+}
+
+/* Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Warning Responsive Design */
+@media (max-width: 450px) {
+    .team-warning {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 0 8px 8px 8px;
+        padding: 12px;
+    }
+    
+    .warning-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .warning-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .navbar-loading {
+        left: 8px;
+        padding: 4px 8px;
+    }
+    
+    .loading-text {
+        display: none;
+    }
 }

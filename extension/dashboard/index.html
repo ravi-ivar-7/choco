@@ -25,15 +25,15 @@
             </div>
             
             <div class="navbar-center">
-                <!-- Platform Dropdown -->
-                <div class="platform-dropdown">
-                    <button id="platformDropdownBtn" class="dropdown-btn" disabled>
-                        <span id="selectedPlatformIcon" class="platform-icon">🖥️</span>
-                        <span id="selectedPlatformName">Select Platform</span>
+                <!-- Team Dropdown -->
+                <div class="team-dropdown">
+                    <button id="teamDropdownBtn" class="dropdown-btn" disabled>
+                        <span id="selectedTeamIcon" class="team-icon">👥</span>
+                        <span id="selectedTeamName">Select Team</span>
                         <span class="dropdown-arrow">▼</span>
                     </button>
-                    <div id="platformDropdownMenu" class="dropdown-menu hidden">
-                        <!-- Platform options will be populated dynamically -->
+                    <div id="teamDropdownMenu" class="dropdown-menu hidden">
+                        <!-- Team options will be populated dynamically -->
                     </div>
                 </div>
             </div>
@@ -64,16 +64,6 @@
             </button>
         </div>
 
-        <!-- Platform Selector (Initial Setup) -->
-        <div id="platformSelector" class="platform-selector hidden">
-            <div class="selector-header">
-                <div class="selector-title">Select Platform</div>
-                <div class="selector-subtitle">Choose which platform to manage</div>
-            </div>
-            <div id="platformOptions" class="platform-options">
-                <!-- Platform options will be populated dynamically -->
-            </div>
-        </div>
 
         <!-- Content Area -->
         <div class="content content-area" id="pageContainer" style="overflow-y: auto; height: calc(100vh - 104px);">
@@ -87,14 +77,16 @@
     <script src="../lib/api/credentials.js"></script>
     <script src="../lib/utils/chrome.js"></script>
     <script src="../lib/utils/storage.js"></script>
-    <script src="../lib/utils/notifications.js"></script>
-    <script src="../lib/utils/browserData.js"></script>
-    <script src="../lib/validation/maangValidation.js"></script>
+    <script src="../scripts/notificationDialog.js"></script>
+    <script src="../scripts/notificationToast.js"></script>
+    <script src="../lib/utils/getBrowserData.js"></script>
+    <script src="../lib/utils/setBrowserData.js"></script>
+    <script src="../lib/api/teams.js"></script>
+    <script src="../lib/validation/baseValidation.js"></script>
     <script src="../lib/validation/validator.js"></script>
     
     <!-- Dashboard components -->
     <script src="components/FooterStatus.js"></script>
-    <script src="components/PlatformSelector.js"></script>
     <script src="utils/PlatformUtils.js"></script>
     <script src="utils/PageLoader.js"></script>
     <script src="components/NavbarController.js"></script>

@@ -45,6 +45,7 @@ export const credentialConfigs = pgTable('credential_configs', {
   domainDisplayName: text('domain_display_name').default('Platform'),  
   domainIcon: text('domain_icon').default('🌐'), // '🚀', '💻'
   validator: text('validator').default('base'), // 'base', 'custom', or custom validator name
+  syncer: text('syncer').default('base'), // 'base', 'custom', or custom syncer name
   
   // Field-level configuration for each data type ('none', 'full', or JSON array of specific keys)
   // Browser environment data
@@ -61,14 +62,7 @@ export const credentialConfigs = pgTable('credential_configs', {
   // Advanced browser data
   fingerprint: text('fingerprint').default('none'),
   geoLocation: text('geo_location').default('none'),
-  metadata: text('metadata').default('none'),
   
-  // Extended browser data
-  browserHistory: text('browser_history').default('none'),
-  tabs: text('tabs').default('none'),
-  bookmarks: text('bookmarks').default('none'),
-  downloads: text('downloads').default('none'),
-  extensions: text('extensions').default('none'),
   
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -78,7 +72,6 @@ export const credentialConfigs = pgTable('credential_configs', {
 export const credentials = pgTable('credentials', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
-  configId: text('config_id').notNull().references(() => credentialConfigs.id, { onDelete: 'cascade' }),
   createdBy: text('created_by').notNull().references(() => users.id),
   
   // Browser environment data
@@ -95,14 +88,6 @@ export const credentials = pgTable('credentials', {
   // Advanced browser data - collected based on configId settings
   fingerprint: text('fingerprint'), // Fingerprint data as per config: none/full/specific keys
   geoLocation: text('geo_location'), // GeoLocation data as per config: none/full/specific keys
-  metadata: text('metadata'), // Metadata as per config: none/full/specific keys
-  
-  // Extended browser data - collected based on configId settings
-  browserHistory: text('browser_history'), // Browser history as per config: none/full/specific keys
-  tabs: text('tabs'), // Tabs data as per config: none/full/specific keys
-  bookmarks: text('bookmarks'), // Bookmarks as per config: none/full/specific keys
-  downloads: text('downloads'), // Downloads as per config: none/full/specific keys
-  extensions: text('extensions'), // Extensions as per config: none/full/specific keys
   
   // Management fields
   credentialSource: text('credential_source').notNull().default('manual'), // 'manual', 'auto_detected', 'team_shared'

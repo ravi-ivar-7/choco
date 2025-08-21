@@ -32,11 +32,14 @@
       "js": [
         "lib/config/constants.js",
         "lib/utils/chrome.js",
-        "lib/utils/notifications.js",
-        "lib/utils/browserData.js",
+        "lib/utils/getBrowserData.js",
+        "lib/utils/setBrowserData.js",
+        "lib/validation/baseValidation.js",
+        "lib/validation/validator.js",
         "scripts/monitorStorage.js",
         "scripts/notificationQueue.js",
-        "scripts/notificationHandler.js",
+        "scripts/notificationDialog.js",
+        "scripts/notificationToast.js",
         "content.js"
       ],
       "run_at": "document_idle"

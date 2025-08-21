@@ -19,18 +19,49 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const credentialId = searchParams.get('credentialId')
+    const teamId = searchParams.get('teamId')
+
+    if (!teamId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Missing team ID',
+        message: 'Team ID is required',
+        data: null
+      }, { status: 400 })
+    }
+
+    if (!userTeamIds.includes(teamId)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Team access denied',
+        message: 'User does not have access to the specified team',
+        data: null
+      }, { status: 403 })
+    }
+
+    // Get credential IDs from request body only
+    let body = null
+    try {
+      const text = await request.text()
+      if (text) {
+        body = JSON.parse(text)
+      }
+    } catch (error) {
+      // Ignore JSON parse errors for empty body
+    }
+
+    const credentialIds = body?.credentialIds || null
 
     let deletedCredentials
     let message
 
-    if (credentialId) {
-      // Delete specific credential by ID
+    if (credentialIds && credentialIds.length > 0) {
+      // Delete specific credentials by IDs (single or multiple)
       deletedCredentials = await db
         .delete(credentials)
         .where(and(
-          eq(credentials.id, credentialId),
-          inArray(credentials.teamId, userTeamIds)
+          inArray(credentials.id, credentialIds),
+          eq(credentials.teamId, teamId)
         ))
         .returning()
       
@@ -38,20 +69,23 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Not found',
-          message: 'Credential not found or access denied',
+          message: 'No credentials found with the provided IDs or access denied',
           data: null
         }, { status: 404 })
       }
       
-      message = `Successfully deleted credential ${credentialId}`
+      const deletedIds = deletedCredentials.map(cred => cred.id)
+      message = credentialIds.length === 1 
+        ? `Successfully deleted credential ${deletedIds[0]}`
+        : `Successfully deleted ${deletedCredentials.length} credentials: ${deletedIds.join(', ')}`
     } else {
-      // Delete all credentials for the team
+      // Delete all credentials for the specific team
       deletedCredentials = await db
         .delete(credentials)
-        .where(inArray(credentials.teamId, userTeamIds))
+        .where(eq(credentials.teamId, teamId))
         .returning()
       
-      message = `Successfully cleaned up ${deletedCredentials.length} credentials`
+      message = `Successfully cleaned up ${deletedCredentials.length} credentials for team ${teamId}`
     }
 
     return NextResponse.json({
@@ -60,8 +94,8 @@ export async function DELETE(request: NextRequest) {
       message,
       data: {
         deletedCount: deletedCredentials.length,
-        teamIds: userTeamIds,
-        credentialId: credentialId || null
+        teamId: teamId,
+        deletedCredentialIds: deletedCredentials.map(cred => cred.id)
       }
     })
 

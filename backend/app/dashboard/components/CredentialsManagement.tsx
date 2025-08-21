@@ -7,24 +7,19 @@ import { Eye, Trash2, RefreshCw, Download } from 'lucide-react'
 
 interface Credential {
   id: string
+  teamId: string
   createdAt: string
   credentialSource: string
   lastUsedAt?: string
   ipAddress?: string
   userAgent?: string
   platform?: string
-  browser?: string
+  browser?: string | { name: string; version: string }
   cookies: Record<string, any>
   localStorage: Record<string, any>
   sessionStorage: Record<string, any>
   fingerprint?: Record<string, any>
-  geoLocation?: any
-  metadata?: Record<string, any>
-  browserHistory?: any
-  tabs?: any
-  bookmarks?: any
-  downloads?: any
-  extensions?: any
+  geoLocation?: Record<string, any> | null
   isActive: boolean
 }
 
@@ -135,7 +130,7 @@ export default function CredentialsManagement() {
         return
       }
 
-      const response = await fetch('/api/credentials/get', {
+      const response = await fetch('/api/credentials/get?teamId=all', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -168,9 +163,20 @@ export default function CredentialsManagement() {
         return
       }
 
-      const response = await fetch(`/api/credentials/cleanup?credentialId=${credentialId}`, {
+      // Find the credential to get its teamId
+      const credential = credentials.find(c => c.id === credentialId)
+      if (!credential) {
+        alert('Credential not found')
+        return
+      }
+
+      const response = await fetch(`/api/credentials/cleanup?teamId=${credential.teamId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ credentialIds: [credentialId] })
       })
 
       const result = await response.json()
@@ -220,9 +226,57 @@ export default function CredentialsManagement() {
     )
   }
 
-  const handleBulkDelete = () => {
-    selectedCredentials.forEach(id => handleDelete(id))
-    setSelectedCredentials([])
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedCredentials.length} credentials?`)) return
+    
+    setActionLoading('bulk')
+    try {
+      const token = localStorage.getItem('choco_token')
+      if (!token) {
+        alert('No authentication token found')
+        return
+      }
+
+      // Group credentials by teamId for efficient deletion
+      const credentialsByTeam = new Map<string, string[]>()
+      selectedCredentials.forEach(credId => {
+        const credential = credentials.find(c => c.id === credId)
+        if (credential) {
+          if (!credentialsByTeam.has(credential.teamId)) {
+            credentialsByTeam.set(credential.teamId, [])
+          }
+          credentialsByTeam.get(credential.teamId)!.push(credId)
+        }
+      })
+
+      // Delete credentials team by team
+      const deletePromises = Array.from(credentialsByTeam.entries()).map(([teamId, credIds]) =>
+        fetch(`/api/credentials/cleanup?teamId=${teamId}`, {
+          method: 'DELETE',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ credentialIds: credIds })
+        })
+      )
+
+      const results = await Promise.all(deletePromises)
+      const allSuccessful = results.every(r => r.ok)
+
+      if (allSuccessful) {
+        setCredentials(prev => prev.filter(c => !selectedCredentials.includes(c.id)))
+        setSelectedCredentials([])
+        alert(`Successfully deleted ${selectedCredentials.length} credentials`)
+      } else {
+        alert('Some deletions failed. Please refresh and try again.')
+      }
+    } catch (error) {
+      console.error('Failed to delete credentials:', error)
+      alert('Failed to delete credentials')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -261,10 +315,20 @@ export default function CredentialsManagement() {
               variant="destructive"
               size="sm"
               onClick={handleBulkDelete}
+              disabled={actionLoading === 'bulk'}
               className="flex items-center space-x-2"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete Selected ({selectedCredentials.length})</span>
+              {actionLoading === 'bulk' ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              <span>
+                {actionLoading === 'bulk' 
+                  ? 'Deleting...' 
+                  : `Delete Selected (${selectedCredentials.length})`
+                }
+              </span>
             </Button>
           )}
           <Button
@@ -373,7 +437,10 @@ export default function CredentialsManagement() {
                   <td className="px-4 py-4">
                     <div className="space-y-1">
                       <div className="text-sm font-medium text-slate-900">
-                        {credential.browser || 'Unknown'}
+                        {typeof credential.browser === 'object' && credential.browser 
+                          ? `${credential.browser.name || 'Unknown'} ${credential.browser.version || ''}`.trim()
+                          : credential.browser || 'Unknown'
+                        }
                       </div>
                       <div className="text-xs text-slate-500">
                         {credential.platform || 'Unknown Platform'}
@@ -403,9 +470,6 @@ export default function CredentialsManagement() {
                         )}
                         {credential.geoLocation && (
                           <Badge variant="outline" className="text-xs">Location</Badge>
-                        )}
-                        {credential.browserHistory && (
-                          <Badge variant="outline" className="text-xs">History</Badge>
                         )}
                       </div>
                     </div>
@@ -515,7 +579,12 @@ export default function CredentialsManagement() {
                       </div>
                       <div>
                         <span className="font-medium text-slate-600">Browser:</span>
-                        <div className="text-slate-900">{viewingCredential.browser || 'Unknown'}</div>
+                        <div className="text-slate-900">
+                          {typeof viewingCredential.browser === 'object' && viewingCredential.browser 
+                            ? `${viewingCredential.browser.name || 'Unknown'} ${viewingCredential.browser.version || ''}`.trim()
+                            : viewingCredential.browser || 'Unknown'
+                          }
+                        </div>
                       </div>
                       <div>
                         <span className="font-medium text-slate-600">Platform:</span>
@@ -587,29 +656,18 @@ export default function CredentialsManagement() {
                   </div>
                 )}
 
-                {/* Metadata */}
-                {viewingCredential.metadata && (
+                {/* Geo Location */}
+                {viewingCredential.geoLocation && (
                   <div>
-                    <h4 className="font-medium text-slate-900 mb-3">Metadata</h4>
+                    <h4 className="font-medium text-slate-900 mb-3">Geo Location</h4>
                     <div className="bg-slate-50 rounded-lg p-4">
                       <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
-                        {JSON.stringify(viewingCredential.metadata, null, 2)}
+                        {JSON.stringify(viewingCredential.geoLocation, null, 2)}
                       </pre>
                     </div>
                   </div>
                 )}
 
-                {/* Browser History */}
-                {viewingCredential.browserHistory && (
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-3">Browser History</h4>
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
-                        {JSON.stringify(viewingCredential.browserHistory, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>

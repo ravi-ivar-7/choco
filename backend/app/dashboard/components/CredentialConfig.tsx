@@ -15,6 +15,7 @@ interface ConfigField {
   field: string
   label: string
   description: string
+  type: 'simple' | 'keyvalue' // simple = just collect/don't collect, keyvalue = can specify specific keys
 }
 
 interface CredentialConfigData {
@@ -27,6 +28,7 @@ interface CredentialConfigData {
   domainDisplayName?: string
   domainIcon?: string
   validator?: string
+  syncer?: string
   ipAddress?: string
   userAgent?: string
   platform?: string
@@ -36,12 +38,6 @@ interface CredentialConfigData {
   sessionStorage?: string
   fingerprint?: string
   geoLocation?: string
-  metadata?: string
-  browserHistory?: string
-  tabs?: string
-  bookmarks?: string
-  downloads?: string
-  extensions?: string
   isActive?: boolean
   createdAt?: string
   updatedAt?: string
@@ -49,28 +45,20 @@ interface CredentialConfigData {
 }
 
 const CONFIG_FIELDS: ConfigField[] = [
-  // Browser environment data
-  { field: 'ipAddress', label: 'IP Address', description: 'IPv4/IPv6 address' },
-  { field: 'userAgent', label: 'User Agent', description: 'Raw browser user agent string' },
-  { field: 'platform', label: 'Platform', description: 'OS / device type' },
-  { field: 'browser', label: 'Browser', description: 'Browser name/version' },
+  // Browser environment data (simple - just collect or don't)
+  { field: 'ipAddress', label: 'IP Address', description: 'IPv4/IPv6 address', type: 'simple' },
+  { field: 'userAgent', label: 'User Agent', description: 'Raw browser user agent string', type: 'simple' },
+  { field: 'platform', label: 'Platform', description: 'OS / device type', type: 'simple' },
+  { field: 'browser', label: 'Browser', description: 'Browser name/version', type: 'simple' },
   
-  // Browser storage data
-  { field: 'cookies', label: 'Cookies', description: 'Browser cookies data' },
-  { field: 'localStorage', label: 'Local Storage', description: 'Browser localStorage data' },
-  { field: 'sessionStorage', label: 'Session Storage', description: 'Browser sessionStorage data' },
+  // Browser storage data (keyvalue - can specify specific keys)
+  { field: 'cookies', label: 'Cookies', description: 'Browser cookies data', type: 'keyvalue' },
+  { field: 'localStorage', label: 'Local Storage', description: 'Browser localStorage data', type: 'keyvalue' },
+  { field: 'sessionStorage', label: 'Session Storage', description: 'Browser sessionStorage data', type: 'keyvalue' },
   
-  // Advanced browser data
-  { field: 'fingerprint', label: 'Fingerprint', description: 'Browser fingerprint data' },
-  { field: 'geoLocation', label: 'Geo Location', description: 'Location data' },
-  { field: 'metadata', label: 'Metadata', description: 'Additional metadata' },
-  
-  // Extended browser data
-  { field: 'browserHistory', label: 'Browser History', description: 'Browsing history' },
-  { field: 'tabs', label: 'Tabs', description: 'Open tabs information' },
-  { field: 'bookmarks', label: 'Bookmarks', description: 'Browser bookmarks' },
-  { field: 'downloads', label: 'Downloads', description: 'Download history' },
-  { field: 'extensions', label: 'Extensions', description: 'Installed extensions' },
+  // Advanced browser data (keyvalue - can specify specific keys)
+  { field: 'fingerprint', label: 'Fingerprint', description: 'Browser fingerprint data', type: 'keyvalue' },
+  { field: 'geoLocation', label: 'Geo Location', description: 'Location data', type: 'keyvalue' },
 ]
 
 export default function CredentialConfig({ teamId, teamName, onClose }: CredentialConfigProps) {
@@ -115,6 +103,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
         defaultConfig.domainDisplayName = 'Platform'
         defaultConfig.domainIcon = '🌐'
         defaultConfig.validator = 'base'
+        defaultConfig.syncer = 'base'
         setConfig(defaultConfig)
         setHasConfig(false)
       }
@@ -404,7 +393,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                     className={`w-full border rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       validateDomain(config?.domain || '') ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="e.g., maang.in, 100xdevs.com"
+                    placeholder="e.g., example.com"
                     required
                   />
                   {validateDomain(config?.domain || '') && (
@@ -420,7 +409,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                     value={config?.domainDisplayName || ''}
                     onChange={(e) => handleFieldChange('domainDisplayName', e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., AlgoZenith (Maang.in)"
+                    placeholder="e.g., Platform Name"
                   />
                 </div>
                 <div>
@@ -488,6 +477,58 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                   </div>
                 </div>
               </div>
+              
+              {/* Syncer Configuration */}
+              <div className="mt-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Syncer Type
+                </label>
+                <select
+                  value={config?.syncer === 'base' ? 'base' : 'custom'}
+                  onChange={(e) => {
+                    if (e.target.value === 'base') {
+                      handleFieldChange('syncer', 'base')
+                    } else {
+                      handleFieldChange('syncer', 'custom')
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="base">Base Syncer (Default)</option>
+                  <option value="custom">Custom Syncer</option>
+                </select>
+                
+                {config?.syncer !== 'base' && (
+                  <div className="mt-3">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Custom Syncer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={config?.syncer || ''}
+                      onChange={(e) => handleFieldChange('syncer', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., myCustomSyncer, leetcodeSyncer"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the name of your custom syncer file (without .js extension)
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-2">
+                  <div className="flex items-start">
+                    <div className="text-blue-600 mr-2">ℹ️</div>
+                    <div>
+                      <p className="text-xs text-blue-800 font-medium">Info</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Syncer controls how credentials are synchronized between local browser and database. 
+                        Base syncer handles standard sync operations for most platforms.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -529,20 +570,22 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
                           />
                           <span className="text-xs sm:text-sm">Full</span>
                         </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={fieldConfig.field}
-                            value="custom"
-                            checked={getFieldType(fieldConfig.field) === 'custom'}
-                            onChange={() => handleFieldChange(fieldConfig.field, '[]')}
-                            className="mr-2"
-                          />
-                          <span className="text-xs sm:text-sm">Specific Keys</span>
-                        </label>
+                        {fieldConfig.type === 'keyvalue' && (
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={fieldConfig.field}
+                              value="custom"
+                              checked={getFieldType(fieldConfig.field) === 'custom'}
+                              onChange={() => handleFieldChange(fieldConfig.field, '[]')}
+                              className="mr-2"
+                            />
+                            <span className="text-xs sm:text-sm">Specific Keys</span>
+                          </label>
+                        )}
                       </div>
                       
-                      {getFieldType(fieldConfig.field) === 'custom' && (
+                      {fieldConfig.type === 'keyvalue' && getFieldType(fieldConfig.field) === 'custom' && (
                         <TagInput field={fieldConfig.field} />
                       )}
                     </div>

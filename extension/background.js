@@ -4,16 +4,12 @@ importScripts(
     'lib/api/credentials.js',
     'lib/utils/chrome.js',
     'lib/utils/storage.js',
-    'lib/utils/notifications.js',
-    'lib/utils/browserData.js',
+    'lib/utils/getBrowserData.js',
+    'lib/utils/setBrowserData.js',
+    'lib/validation/baseValidation.js',
     'lib/validation/validator.js',
-    'lib/validation/maangValidation.js',
-    'lib/validation/devsValidation.js',
+    'lib/sync/baseSyncer.js',
     'lib/sync/syncer.js',
-    'lib/sync/maangDBSync.js',
-    'lib/sync/devsDBSync.js',
-    'lib/sync/maangLocalSync.js',
-    'lib/sync/devsLocalSync.js'
 );
 
 class ChocoBackground {
@@ -21,17 +17,11 @@ class ChocoBackground {
         this.backendUrl = Constants.BACKEND_URL;
         this.userAPI = new UserAPI(this.backendUrl);
         this.credentialsAPI = new CredentialsAPI(this.backendUrl);
-
-        this.currentTab = null;
-        this.tabId = null;
-        this.currentUrl = null;
-        this.domainConfig = null;
-        this.isValidDomain = false;
-
-
-        this.existingCredentials = new Map();
-        this.requiredFieldsByDomain = new Map();
-        this.cookieUpdateDebounce = new Map(); // Debounce cookie updates
+        
+        this.targetTab = null;
+        this.notificationQueue = [];
+        this.globalCookieDebounce = null; // Single global debounce timer
+        this.pendingCookieChanges = []; // Queue of pending cookie changes
 
         this.init();
     }
@@ -41,25 +31,17 @@ class ChocoBackground {
         await this.initializeTabAndDomainInfo();
         this.setupComprehensiveListeners();
         this.setupTabLifecycleListeners();
-        
-        if (this.isValidDomain && this.domainConfig) {
-            try {
-                await this.loadCredentialsForDomain(this.domainConfig.domain.PRIMARY);
-            } catch (error) {
-                console.error('Failed to load credentials for current domain:', error);
-            }
-        }
     }
 
     async validateStoredTabs() {
         try {
-            const result = await StorageUtils.get(['selectedPlatform']);
-            if (result.success && result.data.selectedPlatform?.tab) {
-                const storedTab = result.data.selectedPlatform.tab;
+            const result = await StorageUtils.get(['choco_target_tab']);
+            if (result.success && result.data.choco_target_tab?.id) {
+                const storedTab = result.data.choco_target_tab;
                 try {
                     await chrome.tabs.get(storedTab.id);
                 } catch (tabError) {
-                    await StorageUtils.remove(['selectedPlatform']);
+                    await StorageUtils.remove(['choco_target_tab']);
                 }
             }
         } catch (error) {
@@ -71,9 +53,9 @@ class ChocoBackground {
         // Clean up storage when tabs are closed
         chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
             try {
-                const result = await StorageUtils.get(['selectedPlatform']);
-                if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
-                    await StorageUtils.remove(['selectedPlatform']);
+                const result = await StorageUtils.get(['choco_target_tab']);
+                if (result.success && result.data.choco_target_tab?.id === tabId) {
+                    await StorageUtils.remove(['choco_target_tab']);
                 }
             } catch (error) {
                 console.warn('Error cleaning up closed tab:', error.message);
@@ -84,11 +66,16 @@ class ChocoBackground {
         chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             if (changeInfo.url) {
                 try {
-                    const result = await StorageUtils.get(['selectedPlatform']);
-                    if (result.success && result.data.selectedPlatform?.tab?.id === tabId) {
-                        const updatedPlatform = { ...result.data.selectedPlatform };
-                        updatedPlatform.tab.url = tab.url;
-                        await StorageUtils.set({ selectedPlatform: updatedPlatform });
+                    const result = await StorageUtils.get(['choco_target_tab']);
+                    if (result.success && result.data.choco_target_tab?.id === tabId) {
+                        const updatedTab = { ...result.data.choco_target_tab };
+                        updatedTab.url = tab.url;
+                        await StorageUtils.set({ choco_target_tab: updatedTab }); 
+                        
+                        // Update local reference too
+                        if (this.targetTab && this.targetTab.id === tabId) {
+                            this.targetTab.url = tab.url;
+                        }
                     }
                 } catch (error) {
                     console.warn('Error updating stored tab URL:', error.message);
@@ -99,43 +86,63 @@ class ChocoBackground {
 
     async initializeTabAndDomainInfo() {
         try {
-            const activeTabResult = await ChromeUtils.getActiveTab();
-            if (activeTabResult.success && activeTabResult.data) {
-                this.currentTab = activeTabResult.data;
-                this.tabId = activeTabResult.data.id;
-                this.currentUrl = activeTabResult.data.url;
+            const teamConfigData = await chrome.storage.local.get('choco_team_config');
+            const config = teamConfigData.choco_team_config;
+            
+            if (!config?.domain) {
+                this.targetTab = null;
+                return;
             }
-            this.domainConfig = await ChromeUtils.getCurrentDomain(this.currentUrl);
-            if (this.domainConfig) {
-                this.isValidDomain = true;
-            } else {
-                this.isValidDomain = false;
+            
+            const primaryDomain = config.domain;
+            
+            // Find tabs matching the team config domain
+            const allTabs = await chrome.tabs.query({});
+            const validTabs = allTabs.filter(tab => 
+                tab.url && 
+                tab.url.includes(primaryDomain) &&
+                !tab.url.startsWith('chrome://') &&
+                !tab.url.startsWith('chrome-extension://')
+            );
+            
+            if (validTabs.length > 0) {
+                // Prefer active tab, otherwise use first valid tab
+                const targetTab = validTabs.find(tab => tab.active) || validTabs[0];
+                this.targetTab = { id: targetTab.id, url: targetTab.url, teamId: config.teamId };
+                
+                // Update local storage with the found target tab
+                await StorageUtils.set({ choco_target_tab: this.targetTab });
+             } else {
+                 const stored = await chrome.storage.local.get(['choco_target_tab']);
+                if (stored.choco_target_tab) {
+                    // Verify the stored tab still exists and is valid
+                    try {
+                        const storedTab = await chrome.tabs.get(stored.choco_target_tab.id);
+                        if (storedTab && !storedTab.url.startsWith('chrome://') && !storedTab.url.startsWith('chrome-extension://')) {
+                            this.targetTab = stored.choco_target_tab;
+                        } else {
+                            this.targetTab = null;
+                            await StorageUtils.remove(['choco_target_tab']);
+                        }
+                    } catch (tabError) {
+                        this.targetTab = null;
+                        await StorageUtils.remove(['choco_target_tab']);
+                    }
+                } else {
+                    this.targetTab = null;
+                }
             }
         } catch (error) {
             console.error('Failed to initialize tab and domain info:', error);
-            this.isValidDomain = false;
+            this.targetTab = null;
         }
     }
 
-    async loadCredentialsForDomain(domainPrimary) {
-        try {
-            // Get domainConfig from domainPrimary
-            const domainConfig = await ChromeUtils.getCurrentDomain(`https://${domainPrimary}`);
-            const requiredFieldsResult = await CredentialValidator.getRequiredFields(domainConfig);
-            if (!requiredFieldsResult.success || !requiredFieldsResult.data) {
-                return;
-            }
-            this.requiredFieldsByDomain.set(domainPrimary, requiredFieldsResult.data.requiredFields);
-        } catch (error) {
-            console.error(`Error loading credentials for domain ${domainPrimary}:`, error);
-        }
-    }
 
     setupComprehensiveListeners() {
         this.setupCookieListeners();
         this.setupStorageListeners();
         
-        // Handle extension icon click to open dashboard popup
         chrome.action.onClicked.addListener(async (tab) => {
             await this.openDashboardWindow();
         });
@@ -153,91 +160,177 @@ class ChocoBackground {
         try {
             const cookie = changeInfo.cookie;
             const isRemoved = changeInfo.removed;
-            const cookieDomain = cookie.domain;
 
-            const cookieUrl = `https://${cookieDomain.startsWith('.') ? cookieDomain.substring(1) : cookieDomain}`;
-            const cookieDomainConfig = await ChromeUtils.getCurrentDomain(cookieUrl);
-
-            if (!cookieDomainConfig) {
+            const teamConfigData = await chrome.storage.local.get('choco_team_config');
+            if (!teamConfigData.choco_team_config?.domain) {
                 return;
             }
 
-            const requiredFieldsResult = await CredentialValidator.getRequiredFields(cookieDomainConfig);
-            if (!requiredFieldsResult.success || !requiredFieldsResult.data?.requiredFields?.cookies) {
-                return;
-            }
-
-            const requiredCookies = requiredFieldsResult.data.requiredFields.cookies;
-
-            if (!requiredCookies.includes(cookie.name)) {
-                return;
-            }
-            const debounceKey = `${cookieDomainConfig.domain.PRIMARY}-${cookie.name}`;
-            
-            if (this.cookieUpdateDebounce.has(debounceKey)) {
-                clearTimeout(this.cookieUpdateDebounce.get(debounceKey));
-            }
-            
-            const timeoutId = setTimeout(async () => {
-                this.cookieUpdateDebounce.delete(debounceKey);
-                const changeType = isRemoved ? 'removed' : 'updated';
-                
-                this.showNotification(
-                    'Required Cookie Change',
-                    `${cookie.name} ${changeType} on ${cookieDomainConfig.domain.PRIMARY}`,
-                    'info'
-                );
-                
-                let syncResult;
-                if (isRemoved) {
-                    // Cookie was removed - fetch fresh credentials from database and restore locally
-                    syncResult = await CredentialSyncer.syncCredentialsToLocal(cookieDomainConfig, this.userAPI, this.credentialsAPI);
-                    
-                    if (syncResult.success) {
-                        this.showNotification(
-                            'Local Sync Success',
-                            `${cookieDomainConfig.domain.PRIMARY} credentials restored from database`,
-                            'success',
-                            cookieDomainConfig.domain.PRIMARY
-                        );
-                    } else {
-                        this.showNotification(
-                            'Local Sync Failed',
-                            syncResult.message || 'Failed to restore credentials from database',
-                            'error',
-                            cookieDomainConfig.domain.PRIMARY
-                        );
-                    }
-                } else {
-                    // Cookie was added/updated - save current credentials to database
-                    syncResult = await CredentialSyncer.syncCredentialsToDatabase(cookieDomainConfig, this.userAPI, this.credentialsAPI);
-                    
-                    if (syncResult.success) {
-                        this.showNotification(
-                            'Database Sync Success',
-                            `${cookieDomainConfig.domain.PRIMARY} credentials saved to database`,
-                            'success',
-                            cookieDomainConfig.domain.PRIMARY
-                        );
-                    } else {
-                        this.showNotification(
-                            'Database Sync Failed',
-                            syncResult.message || 'Failed to save credentials to database',
-                            'error',
-                            cookieDomainConfig.domain.PRIMARY
-                        );
-
-                    }
+            if (!this.targetTab) {
+                await this.initializeTabAndDomainInfo();
+                if (!this.targetTab) {
+                    return; 
                 }
-            }, 500);
+            }
+            const config = teamConfigData.choco_team_config;
             
-            this.cookieUpdateDebounce.set(debounceKey, timeoutId);
+            if (!config?.cookies) {
+                return;
+            }
+            if (config.cookies === 'none') {
+                return;
+            }
+
+            if (config.cookies === 'full') {
+                // Monitor all cookies - proceed with sync
+            } else {
+                let requiredCookies;
+                try {
+                    requiredCookies = JSON.parse(config.cookies);
+                } catch (error) {
+                    return;
+                }
+
+                if (!Array.isArray(requiredCookies) || !requiredCookies.includes(cookie.name)) {
+                    return;
+                }
+            }
+            this.pendingCookieChanges.push({
+                cookie: cookie,
+                isRemoved: isRemoved,
+                timestamp: Date.now()
+            });
+            if (this.globalCookieDebounce) {
+                clearTimeout(this.globalCookieDebounce);
+            }
+            
+            this.globalCookieDebounce = setTimeout(async () => {
+                await this.processPendingCookieChanges();
+            }, 2000); // 2 second global debounce
         } catch (error) {
             console.error('Error handling cookie change:', error);
         }
     }
 
+    async processPendingCookieChanges() {
+        try {
+            if (this.pendingCookieChanges.length === 0) {
+                return;
+            }
 
+            // Merge remove+add pairs into updates
+            const processedChanges = this.mergeUpdateEvents(this.pendingCookieChanges);
+
+            
+            const removals = processedChanges.filter(c => c.type === 'removed');
+            const additions = processedChanges.filter(c => c.type === 'added');
+            const updates = processedChanges.filter(c => c.type === 'updated');
+
+            if (removals.length > 0) {
+                this.addToQueue('Cookies Removed', `${removals.length} cookie(s) removed`, 'warning');
+            }
+            if (additions.length > 0) {
+                this.addToQueue('Cookies Added', `${additions.length} cookie(s) added`, 'success');
+            }
+            if (updates.length > 0) {
+                this.addToQueue('Cookies Updated', `${updates.length} cookie(s) updated`, 'info');
+            }
+
+            let syncResult;
+            if (removals.length > 0 && additions.length === 0 && updates.length === 0) {
+                syncResult = await CredentialSyncer.syncCredentialsToLocal();
+                
+                if (syncResult.success) {
+                    this.addToQueue(
+                        'Batch Local Sync Success',
+                        'Credentials restored from database',
+                        'success'
+                    );
+                } else {
+                    this.addToQueue(
+                        'Batch Local Sync Failed',
+                        syncResult.message || 'Failed to restore credentials from database',
+                        'error'
+                    );
+                }
+            } else {
+                // Additions, updates, or mixed changes - save to database
+                syncResult = await CredentialSyncer.syncCredentialsToDatabase();
+                
+                if (syncResult.success) {
+                    this.addToQueue(
+                        'Batch Database Sync Success',
+                        'Credentials saved to database',
+                        'success'
+                    );
+                } else {
+                    this.addToQueue(
+                        'Batch Database Sync Failed',
+                        syncResult.message || 'Failed to save credentials to database',
+                        'error'
+                    );
+                }
+            }
+            
+            this.pendingCookieChanges = [];
+            this.globalCookieDebounce = null;
+            
+        } catch (error) {
+            console.error('Error processing pending cookie changes:', error);
+            this.pendingCookieChanges = [];
+            this.globalCookieDebounce = null;
+        }
+    }
+
+    mergeUpdateEvents(changes) {
+        const cookieMap = new Map();
+        
+        for (const change of changes) {
+            const key = `${change.cookie.domain}-${change.cookie.name}`;
+            if (!cookieMap.has(key)) {
+                cookieMap.set(key, []);
+            }
+            cookieMap.get(key).push(change);
+        }
+        
+        const processedChanges = [];
+        
+        for (const [key, cookieChanges] of cookieMap) {
+            cookieChanges.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Look for remove+add patterns (updates)
+            const hasRemoval = cookieChanges.some(c => c.isRemoved);
+            const hasAddition = cookieChanges.some(c => !c.isRemoved);
+            
+            if (hasRemoval && hasAddition) {
+                // This is an update (remove+add pattern)
+                const latestAddition = cookieChanges.filter(c => !c.isRemoved).pop();
+                processedChanges.push({
+                    type: 'updated',
+                    cookie: latestAddition.cookie,
+                    timestamp: latestAddition.timestamp
+                });
+            } else if (hasRemoval) {
+                // Only removal
+                const removal = cookieChanges.find(c => c.isRemoved);
+                processedChanges.push({
+                    type: 'removed',
+                    cookie: removal.cookie,
+                    timestamp: removal.timestamp
+                });
+            } else {
+                // Only addition
+                const addition = cookieChanges.find(c => !c.isRemoved);
+                processedChanges.push({
+                    type: 'added',
+                    cookie: addition.cookie,
+                    timestamp: addition.timestamp
+                });
+            }
+        }
+        
+        return processedChanges;
+    }
 
     setupStorageListeners() {
         chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
@@ -250,7 +343,6 @@ class ChocoBackground {
 
     async openDashboardWindow() {
         try {
-            // Check if dashboard window is already open
             const existingWindows = await chrome.windows.getAll({
                 populate: true,
                 windowTypes: ['popup']
@@ -263,12 +355,10 @@ class ChocoBackground {
             );
 
             if (existingDashboard) {
-                // Focus existing dashboard window
                 await chrome.windows.update(existingDashboard.id, { focused: true });
                 return;
             }
 
-            // Create new dashboard window
             const dashboardWindow = await chrome.windows.create({
                 url: chrome.runtime.getURL('dashboard/index.html'),
                 type: 'popup',
@@ -286,75 +376,86 @@ class ChocoBackground {
             if (!tab || !tab.url) {
                 return;
             }
-            const tabDomainConfig = await ChromeUtils.getCurrentDomain(tab.url);
-            if (!tabDomainConfig) {
+
+            const teamConfigData = await chrome.storage.local.get('choco_team_config');
+            const config = teamConfigData.choco_team_config;
+            
+            if (!config) {
                 return;
             }
 
-            const requiredFieldsResult = await CredentialValidator.getRequiredFields(tabDomainConfig);
-            if (!requiredFieldsResult.success || !requiredFieldsResult.data?.requiredFields) {
-                return;
-            }
-
-            const requiredFields = requiredFieldsResult.data.requiredFields;
             const storageType = message?.storageType; // 'localStorage' or 'sessionStorage'
             const changedKey = message?.key;
             const newValue = message?.newValue;
             const oldValue = message?.oldValue;
-            const requiredKeysForType = requiredFields[storageType] || [];
 
-            if (!changedKey || !requiredKeysForType.includes(changedKey)) {
+            if (!storageType || !changedKey) {
                 return;
+            }
+
+            const storageConfig = config[storageType];
+            
+            if (!storageConfig || storageConfig === 'none') {
+                return; 
+            }
+
+            if (storageConfig === 'full') {
+                // Monitor all storage changes - proceed with sync
+            } else {
+                let requiredKeys;
+                try {
+                    requiredKeys = JSON.parse(storageConfig);
+                } catch (error) {
+                    return;
+                }
+
+                if (!Array.isArray(requiredKeys) || !requiredKeys.includes(changedKey)) {
+                    return;
+                }
             }
 
             const isRemoved = newValue === null && oldValue !== null;
             const actionType = isRemoved ? 'removed' : 'updated';
             
-            this.showNotification(
+            this.addToQueue(
                 'Required Storage Change',
-                `${storageType}.${changedKey} ${actionType} on ${tabDomainConfig.domain.PRIMARY}`,
+                `${storageType}.${changedKey} ${actionType}`,
                 'info'
             );
             
             let syncResult;
             if (isRemoved) {
                 // Storage item was removed - fetch fresh credentials from database and restore locally
-                syncResult = await CredentialSyncer.syncCredentialsToLocal(tabDomainConfig, this.userAPI, this.credentialsAPI, tab.id);
+                syncResult = await CredentialSyncer.syncCredentialsToLocal();
                 
                 if (syncResult.success) {
-                    this.showNotification(
+                    this.addToQueue(
                         'Local Sync Success',
-                        `${tabDomainConfig.domain.PRIMARY} credentials restored from database`,
-                        'success',
-                        tabDomainConfig.domain.PRIMARY
+                        'Credentials restored from database',
+                        'success'
                     );
                 } else {
-                    this.showNotification(
+                    this.addToQueue(
                         'Local Sync Failed',
                         syncResult.message || 'Failed to restore credentials from database',
-                        'error',    
-                        tabDomainConfig.domain.PRIMARY
+                        'error'
                     );
-
-
                 }
             } else {
                 // Storage item was added/updated - save current credentials to database
-                syncResult = await CredentialSyncer.syncCredentialsToDatabase(tabDomainConfig, this.userAPI, this.credentialsAPI);
+                syncResult = await CredentialSyncer.syncCredentialsToDatabase();
 
                 if (syncResult.success) {
-                    this.showNotification(
+                    this.addToQueue(
                         'Database Sync Success',
-                        `${tabDomainConfig.domain.PRIMARY} credentials saved to database`,
-                        'success',
-                        tabDomainConfig.domain.PRIMARY
+                        'Credentials saved to database',
+                        'success'
                     );
                 } else {
-                    this.showNotification(
+                    this.addToQueue(
                         'Database Sync Failed',
                         syncResult.message || 'Failed to save credentials to database',
-                        'error',
-                        tabDomainConfig.domain.PRIMARY
+                        'error'
                     );
                 }
             }
@@ -365,100 +466,39 @@ class ChocoBackground {
 
 
 
-    async showNotification(title, message, type, targetDomain = null) {
+    async addToQueue(title, message, type) {
         try {
-            let tabs = [];
-            
-            // First try to use stored tab from selectedPlatform
-            try {
-                const result = await chrome.storage.local.get(['selectedPlatform']);
-                if (result.selectedPlatform && result.selectedPlatform.tab) {
-                    const storedTab = result.selectedPlatform.tab;
-                    
-                    // Validate stored tab matches target domain or no domain specified
-                    if (!targetDomain || storedTab.url.includes(targetDomain)) {
-                        // Verify tab still exists and is accessible
-                        try {
-                            const currentTab = await chrome.tabs.get(storedTab.id);
-                            if (currentTab && currentTab.url === storedTab.url) {
-                                tabs = [currentTab];
-                            }
-                        } catch (tabError) {
-                            console.warn('Stored tab no longer valid:', tabError.message);
-                            // Tab cleanup is handled centrally by tab lifecycle listeners
-                        }
-                    }
-                }
-            } catch (storageError) {
-                console.warn('Could not access stored tab:', storageError.message);
-            }
-            
-            // Fallback to querying tabs if stored tab not available
-            if (tabs.length === 0) {
-                tabs = targetDomain ? 
-                    await chrome.tabs.query({ url: `*://*.${targetDomain}/*` }) :
-                    [await chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => tabs[0])];
+            const result = await chrome.storage.local.get(['choco_target_tab']);
+            if (!result.choco_target_tab?.id) {
+                return;
             }
 
-            if (!tabs || tabs.length === 0) return;
-
-            // Filter out extension tabs and invalid tabs
-            const validTabs = tabs.filter(tab => {
-                return tab && tab.id && tab.url && 
-                       !tab.url.startsWith('chrome://') && 
-                       !tab.url.startsWith('chrome-extension://') && 
-                       !tab.url.startsWith('moz-extension://');
-            });
-
-            for (const tab of validTabs) {
-                await this.executeNotificationQueue(tab.id, title, message, type);
-            }
-        } catch (error) {
-            console.error('Failed to show notification:', error.message);
-        }
-    }
-
-    async executeNotificationQueue(tabId, title, message, type) {
-        try {
-            // Get tab info to check if it's accessible
+            const tabId = result.choco_target_tab.id;
             const tab = await chrome.tabs.get(tabId);
-            
-            // Skip extension pages and other restricted URLs
-            if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://')) {
-                console.warn(`Skipping notification for restricted URL: ${tab.url}`);
+            if (!tab || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
                 return;
             }
             
             await chrome.scripting.executeScript({
                 target: { tabId },
                 func: (title, message, type) => {
-                    // Add to notification queue
-                    if (typeof window.ChocoNotificationQueue !== 'undefined') {
-                        window.ChocoNotificationQueue.add({
+                    if (typeof ChocoNotificationQueue !== 'undefined') {
+                        ChocoNotificationQueue.add({
                             title: title,
                             message: message,
                             type: type,
-                            timestamp: new Date()
+                            timestamp: Date.now()
                         });
                     }
-                    
-                    // Show traditional toast notification
-                    // if (typeof window.NotificationHandler !== 'undefined') {
-                    //     const handler = new window.NotificationHandler();
-                    //     handler.handleMessage({
-                    //         type: 'SHOW_TOAST_NOTIFICATION',
-                    //         title, message, notificationType: type, duration: 5000
-                    //     });
-                    // }
                 },
                 args: [title, message, type]
             });
         } catch (error) {
-            console.error(`Notification failed for tab ${tabId}:`, error.message);
+            console.error('Failed to add notification to queue:', error.message);
         }
     }
 
 }
 
-// Initialize the background script
+// Initialize the script
 const chocoBackground = new ChocoBackground();

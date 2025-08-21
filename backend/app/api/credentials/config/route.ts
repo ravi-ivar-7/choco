@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
     const newConfig = await db.insert(credentialConfigs).values({
       teamId,
       createdBy: user.id,
-      ...insertData
+      ...insertData,
+      updatedAt: new Date(),
+      createdAt: new Date()
     }).returning()
 
     return NextResponse.json({

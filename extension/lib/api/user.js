@@ -26,10 +26,7 @@ class UserAPI {
 
             // Store user data locally after successful login
             if (result.success && result.data && result.data.user && result.data.token) {
-                await this.storeLocalUser({
-                    user: result.data.user,
-                    token: result.data.token
-                })
+                await this.storeLocalUser(result.data.user, result.data.token)
             }
 
             return result;
@@ -77,83 +74,21 @@ class UserAPI {
         }
     }
 
-    async validateUser() {
-        try {
-            const storedUserResult = await this.getLocalStoredUser()
-
-            if (!storedUserResult.success || !storedUserResult.data) {
-                return {
-                    success: false,
-                    error: 'No stored user',
-                    message: 'User not logged in',
-                    data: null
-                }
-            }
-
-            const storedData = storedUserResult.data
-            const token = storedData.token
-            const user = storedData.user
-
-            if (!token) {
-                return {
-                    success: false,
-                    error: 'No token',
-                    message: 'User token not found',
-                    data: null
-                }
-            }
-
-            if (!user) {
-                return {
-                    success: false,
-                    error: 'No user',
-                    message: 'User data not found',
-                    data: null
-                }
-            }
-
-            // Verify token with backend
-            const verifyResult = await this.verifyUser(token)
-
-            if (!verifyResult.success) {
-                // Clear invalid user data
-                await this.clearLocalUser()
-                return {
-                    success: false,
-                    error: 'Invalid token',
-                    message: 'User session expired',
-                    data: null
-                }
-            }
-
-            return {
-                success: true,
-                error: null,
-                message: 'User validated successfully',
-                data: {
-                    user: verifyResult.data?.user || user,
-                    token: token
-                }
-            }
-        } catch (error) {
-            return {
-                success: false,
-                error: 'Validation error',
-                message: `User validation failed: ${error.message}`,
-                data: null
-            }
-        }
-    }
 
     async getLocalStoredUser() {
         try {
-            const result = await StorageUtils.get(['chocoUser'])
-            if (result.success && result.data && result.data.chocoUser) {
+            const userResult = await StorageUtils.get(['choco_user'])
+            const tokenResult = await StorageUtils.get(['choco_token'])
+            
+            if (userResult.success && tokenResult.success && userResult.data?.choco_user && tokenResult.data?.choco_token) {
                 return {
                     success: true,
                     error: null,
                     message: 'User data retrieved',
-                    data: result.data.chocoUser
+                    data: {
+                        user: userResult.data.choco_user,
+                        token: tokenResult.data.choco_token
+                    }
                 }
             }
             return {
@@ -172,9 +107,9 @@ class UserAPI {
         }
     }
 
-    async storeLocalUser(userDetails) {
+    async storeLocalUser(user, token) {
         try {
-            if (!userDetails || !userDetails.user || !userDetails.token) {
+            if (!user || !token) {
                 return {
                     success: false,
                     error: 'Invalid data',
@@ -182,7 +117,25 @@ class UserAPI {
                     data: null
                 }
             }
-            return await StorageUtils.set({ chocoUser: userDetails })
+            
+            const userResult = await StorageUtils.set({ choco_user: user })
+            const tokenResult = await StorageUtils.set({ choco_token: token })
+            
+            if (userResult.success && tokenResult.success) {
+                return {
+                    success: true,
+                    error: null,
+                    message: 'User data stored successfully',
+                    data: null
+                }
+            } else {
+                return {
+                    success: false,
+                    error: 'Storage failed',
+                    message: 'Failed to store user data',
+                    data: null
+                }
+            }
         } catch (error) {
             return {
                 success: false,
@@ -195,7 +148,24 @@ class UserAPI {
 
     async clearLocalUser() {
         try {
-            return await StorageUtils.remove(['chocoUser'])
+            const userResult = await StorageUtils.remove(['choco_user'])
+            const tokenResult = await StorageUtils.remove(['choco_token'])
+            
+            if (userResult.success && tokenResult.success) {
+                return {
+                    success: true,
+                    error: null,
+                    message: 'User data cleared successfully',
+                    data: null
+                }
+            } else {
+                return {
+                    success: false,
+                    error: 'Clear failed',
+                    message: 'Failed to clear user data',
+                    data: null
+                }
+            }
         } catch (error) {
             return {
                 success: false,

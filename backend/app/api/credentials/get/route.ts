@@ -18,13 +18,49 @@ export async function GET(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const teamCredentials = await db.select()
-      .from(credentials)
-      .where(and(
-        inArray(credentials.teamId, userTeamIds),
-        eq(credentials.isActive, true)
-      ))
-      .orderBy(desc(credentials.createdAt));
+    // Get teamId from query parameters
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+
+    let teamCredentials;
+
+    if (teamId === 'all') {
+      // Return credentials from all user teams (for dashboard)
+      teamCredentials = await db.select()
+        .from(credentials)
+        .where(and(
+          inArray(credentials.teamId, userTeamIds),
+          eq(credentials.isActive, true)
+        ))
+        .orderBy(desc(credentials.createdAt));
+    } else {
+      // Return credentials for specific team (for extension)
+      if (!teamId) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Missing team ID',
+          message: 'Team ID is required',
+          data: null
+        }, { status: 400 });
+      }
+
+      if (!userTeamIds.includes(teamId)) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Team access denied',
+          message: 'User does not have access to the specified team',
+          data: null
+        }, { status: 403 });
+      }
+
+      teamCredentials = await db.select()
+        .from(credentials)
+        .where(and(
+          eq(credentials.teamId, teamId),
+          eq(credentials.isActive, true)
+        ))
+        .orderBy(desc(credentials.createdAt));
+    }
 
     // Parse JSON fields for each credential
     const processedCredentials = teamCredentials.map(credential => ({
@@ -34,12 +70,7 @@ export async function GET(request: NextRequest) {
       sessionStorage: credential.sessionStorage ? JSON.parse(credential.sessionStorage) : {},
       fingerprint: credential.fingerprint ? JSON.parse(credential.fingerprint) : {},
       geoLocation: credential.geoLocation ? JSON.parse(credential.geoLocation) : null,
-      metadata: credential.metadata ? JSON.parse(credential.metadata) : {},
-      browserHistory: credential.browserHistory ? JSON.parse(credential.browserHistory) : null,
-      tabs: credential.tabs ? JSON.parse(credential.tabs) : null,
-      bookmarks: credential.bookmarks ? JSON.parse(credential.bookmarks) : null,
-      downloads: credential.downloads ? JSON.parse(credential.downloads) : null,
-      extensions: credential.extensions ? JSON.parse(credential.extensions) : null
+      browser: credential.browser ? JSON.parse(credential.browser) : null,
     }));
 
     return NextResponse.json({

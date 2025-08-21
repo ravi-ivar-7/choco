@@ -9,15 +9,16 @@
  * 
  * MESSAGE FLOW:
  * - Storage changes: monitorStorage.js → chrome.runtime.sendMessage() → background.js
- * - Notifications: background.js → chrome.scripting.executeScript() → notificationHandler.js (DIRECT)
- * - Browser data: background.js → BrowserDataCollector (direct, no content script needed)
+ * - Notifications: background.js → chrome.scripting.executeScript() → notificationDialog.js/notificationToast.js (DIRECT)
+ * - Browser data: background.js → GetBrowserData (direct, no content script needed)
  * 
  * INJECTED SCRIPTS:
  * - lib/config/constants.js - Extension constants
  * - lib/utils/chrome.js - Chrome API utilities  
- * - lib/utils/notifications.js - Notification utilities
  * - scripts/monitorStorage.js - Storage change monitoring
- * - scripts/notificationHandler.js - Notification display
+ * - scripts/notificationQueue.js - Notification history queue
+ * - scripts/notificationDialog.js - Modal dialog notifications
+ * - scripts/notificationToast.js - Toast popup notifications
  * - content.js - This main coordinator
  * 
  * IMPORTANT NOTES:

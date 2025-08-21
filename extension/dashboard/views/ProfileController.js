@@ -31,26 +31,11 @@ class ProfileController {
                 return;
             }
 
-            // Check if user is already stored locally first
+            // Check if user is stored locally only
             const storedUser = await this.userAPI.getLocalStoredUser();
             if (storedUser.success && storedUser.data.user) {
                 this.isLoggedIn = true;
                 this.userProfile = storedUser.data.user;
-                
-                if (window.navbarController) {
-                    window.navbarController.updateUserProfile(this.userProfile);
-                }
-                
-                this.showProfileView();
-                this.loadUserProfileData();
-                return;
-            }
-            
-            // If no stored user, validate with server
-            const authStatus = await this.userAPI.validateUser();
-            if (authStatus.success && authStatus.data.user) {
-                this.isLoggedIn = true;
-                this.userProfile = authStatus.data.user;
                 
                 if (window.navbarController) {
                     window.navbarController.updateUserProfile(this.userProfile);
@@ -100,28 +85,34 @@ class ProfileController {
     }
 
     showLoginForm() {
-        const loginForm = document.getElementById('loginForm');
-        const profileSection = document.querySelector('.user-profile-section');
+        this.hideAllViews();
         
+        const loginForm = document.getElementById('loginForm');
         if (loginForm) {
             loginForm.style.display = 'block';
-            loginForm.classList.remove('hidden');
         }
-        if (profileSection) {
-            profileSection.style.display = 'none';
+    }
+
+    hideLoginForm() {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.style.display = 'none';
         }
     }
 
     showProfileView() {
-        const loginForm = document.getElementById('loginForm');
-        const profileSection = document.querySelector('.user-profile-section');
+        this.hideAllViews();
         
-        if (loginForm) {
-            loginForm.style.display = 'none';
-            loginForm.classList.add('hidden');
-        }
+        const profileSection = document.querySelector('.user-profile-section');
         if (profileSection) {
             profileSection.style.display = 'block';
+        }
+    }
+
+    hideProfileView() {
+        const profileSection = document.querySelector('.user-profile-section');
+        if (profileSection) {
+            profileSection.style.display = 'none';
         }
     }
 
@@ -238,16 +229,80 @@ class ProfileController {
                 return;
             }
 
-            const profileData = await this.userAPI.getUserDetails();
+            this.showStatusCard('loading', 'Loading Profile Data', 'Please wait while we fetch your profile information...');
+            
+            const profileData = await this.userAPI.getUserDetails(); 
             if (profileData.success && profileData.data) {
                 this.profileData = profileData.data;
                 this.userProfile = profileData.data.user;
+                this.showProfileView();
                 this.updateProfileDisplay();
             } else {
                 console.error('Profile data fetch failed:', profileData);
+                this.showStatusCard('error', 'Failed to Load Profile', 'Unable to retrieve profile data from server');
             }
         } catch (error) {
             console.error('Failed to load profile data:', error);
+            this.showStatusCard('error', 'Error Loading Profile', 'Network error occurred while loading profile');
+        }
+    }
+
+    showStatusCard(type, message, details = '') {
+        this.hideAllViews();
+        
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('profileStatusText');
+        const statusDetails = document.getElementById('profileStatusDetails');
+        
+        if (!statusContainer || !statusText) {
+            console.error('Profile status card elements not found');
+            return;
+        }
+
+        statusText.textContent = message;
+        statusText.className = `status-text status-${type}`;
+
+        if (details && statusDetails) {
+            statusDetails.textContent = details;
+            statusDetails.style.display = 'block';
+        } else if (statusDetails) {
+            statusDetails.style.display = 'none';
+        }
+        
+        statusContainer.style.display = 'block';
+    }
+
+    hideStatusCard() {
+        const statusContainer = document.getElementById('statusContainer');
+        if (statusContainer) {
+            statusContainer.style.display = 'none';
+        }
+    }
+
+    hideAllViews() {
+        this.hideLoginForm();
+        this.hideProfileView();
+        this.hideStatusCard();
+    }
+
+    getSelectedTeamFromStorage(teams) {
+        try {
+            // Check if there's a selected team in local storage
+            const selectedTeamId = localStorage.getItem('selectedTeamId');
+            if (selectedTeamId) {
+                const selectedTeam = teams.find(team => team.id === selectedTeamId);
+                if (selectedTeam) {
+                    return selectedTeam;
+                }
+            }
+            
+            // Fallback: return primary team (owner first, then admin, then first available)
+            return teams.find(team => team.isOwner) || 
+                   teams.find(team => team.role === 'admin') || 
+                   teams[0] || null;
+        } catch (error) {
+            console.error('Error getting selected team from storage:', error);
+            return teams[0] || null;
         }
     }
 
@@ -255,7 +310,6 @@ class ProfileController {
         if (!this.userProfile || !this.profileData) {
             return;
         }
-        
 
         // Update profile header
         const profileUserName = document.getElementById('profileUserName');
@@ -268,24 +322,10 @@ class ProfileController {
             profileUserEmail.textContent = this.userProfile.email || '';
         }
 
-        // Update account information
-        const profileUserId = document.getElementById('profileUserId');
-        const profileEmailDetail = document.getElementById('profileEmailDetail');
-        const profileRole = document.getElementById('profileRole');
+        // Update essential account information only
         const profileStatus = document.getElementById('profileStatus');
         const profileMemberSince = document.getElementById('profileMemberSince');
-        const profileLastLogin = document.getElementById('profileLastLogin');
 
-        if (profileUserId) {
-            profileUserId.textContent = this.userProfile.id || '-';
-        }
-        if (profileEmailDetail) {
-            profileEmailDetail.textContent = this.userProfile.email || '-';
-        }
-        if (profileRole) {
-            profileRole.textContent = this.userProfile.role ? 
-                this.userProfile.role.charAt(0).toUpperCase() + this.userProfile.role.slice(1) : '-';
-        }
         if (profileStatus) {
             profileStatus.textContent = this.userProfile.isActive ? 'Active' : 'Inactive';
         }
@@ -293,33 +333,48 @@ class ProfileController {
             profileMemberSince.textContent = this.userProfile.createdAt ? 
                 new Date(this.userProfile.createdAt).toLocaleDateString() : '-';
         }
-        if (profileLastLogin) {
-            profileLastLogin.textContent = this.userProfile.lastLoginAt ? 
-                new Date(this.userProfile.lastLoginAt).toLocaleString() : '-';
-        }
 
-        // Update team information
-        const team = this.profileData.team;
+        // Get selected team from local storage or use first available team
+        const teams = this.profileData.teams || [];
+        const statistics = this.profileData.statistics || {};
+        
+        // Get selected team from local storage
+        const selectedTeam = this.getSelectedTeamFromStorage(teams);
+        
         const profileTeamName = document.getElementById('profileTeamName');
         const profileTeamId = document.getElementById('profileTeamId');
         const profilePlatformAccount = document.getElementById('profilePlatformAccount');
         const profileTeamMembers = document.getElementById('profileTeamMembers');
         const profileActiveMembers = document.getElementById('profileActiveMembers');
+        const profileTotalTeams = document.getElementById('profileTotalTeams');
+        const profileAdminTeams = document.getElementById('profileAdminTeams');
 
+        // Display selected team information
         if (profileTeamName) {
-            profileTeamName.textContent = team?.name || '-';
+            if (selectedTeam) {
+                const roleText = selectedTeam.isOwner ? ' (Owner)' : ` (${selectedTeam.role})`;
+                profileTeamName.textContent = selectedTeam.name + roleText;
+            } else {
+                profileTeamName.textContent = teams.length > 0 ? `${teams.length} teams available` : 'No teams';
+            }
         }
         if (profileTeamId) {
-            profileTeamId.textContent = team?.id || '-';
+            profileTeamId.textContent = selectedTeam?.id || '-';
         }
         if (profilePlatformAccount) {
-            profilePlatformAccount.textContent = team?.platformAccountId || '-';
+            profilePlatformAccount.textContent = selectedTeam?.platformAccountId || '-';
         }
         if (profileTeamMembers) {
-            profileTeamMembers.textContent = this.profileData.statistics?.totalTeamMembers || '-';
+            profileTeamMembers.textContent = statistics.totalTeamMembers || '-';
         }
         if (profileActiveMembers) {
-            profileActiveMembers.textContent = this.profileData.statistics?.activeTeamMembers || '-';
+            profileActiveMembers.textContent = statistics.activeTeamMembers || '-';
+        }
+        if (profileTotalTeams) {
+            profileTotalTeams.textContent = statistics.totalTeams || teams.length;
+        }
+        if (profileAdminTeams) {
+            profileAdminTeams.textContent = statistics.adminTeams || '-';
         }
 
     }
