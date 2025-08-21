@@ -87,7 +87,7 @@ class HomeController {
             // Show status card if critical data is missing
             if (missingItems.length > 0) {
                 const missingText = missingItems.join(', ');
-                this.updateHomeStatusCard('info', 'Setup Required', `Missing: ${missingText}. Please visit the Profile page to complete setup.`);
+                this.updateHomeStatusCard('info', 'Setup Required', `Missing: ${missingText}. Complete the setup from navbar.`);
                 return false;
             }
 
@@ -116,11 +116,14 @@ class HomeController {
         this.statusIndicator.className = `status-indicator status-${type}`;
         this.statusText.textContent = message;
 
-        if (details) {
-            const detailsElement = document.getElementById('statusDetails');
-            if (detailsElement) {
+        const detailsElement = document.getElementById('statusDetails');
+        if (detailsElement) {
+            if (details) {
                 detailsElement.textContent = details;
                 detailsElement.style.display = 'block';
+            } else {
+                detailsElement.textContent = '';
+                detailsElement.style.display = 'none';
             }
         }
     }
@@ -141,21 +144,21 @@ class HomeController {
     async checkUserStatus() {
         try {
             if (!this.userAPI) {
-                this.updateHomeStatusCard('inactive', '🔧 Extension not properly initialized');
+                this.updateHomeStatusCard('inactive', '🔧 Extension not properly initialized', '');
                 return false;
             }
 
             const storedUser = await this.userAPI.getLocalStoredUser();
             if (storedUser.success) {
-                this.updateHomeStatusCard('active', '🟢 Extension is active and ready');
+                this.updateHomeStatusCard('active', '🟢 Extension is active and ready', '');
                 return true;
             } else {
-                this.updateHomeStatusCard('inactive', '🔑 Please log in from profile page at top-right corner');
+                this.updateHomeStatusCard('inactive', '🔑 Please log in from profile page at top-right corner', '');
                 return false;
             }
         } catch (error) {
             console.error('Error checking user status:', error);
-            this.updateHomeStatusCard('error', '❌ Unable to check authentication status');
+            this.updateHomeStatusCard('error', '❌ Unable to check authentication status', '');
             return false;
         }
     }
@@ -187,25 +190,25 @@ class HomeController {
     async handleSync() {
         try {
             if (!this.credentialsAPI) {
-                this.updateHomeStatusCard('inactive', '🔧 Extension not properly initialized');
+                this.updateHomeStatusCard('inactive', '🔧 Extension not properly initialized', '');
                 return;
             }
 
-            this.updateHomeStatusCard('loading', '🔍 Looking in your browser...')
+            this.updateHomeStatusCard('loading', '🔍 Looking in your browser...', '')
 
             await new Promise(resolve => setTimeout(resolve, 500))
 
             const browserDataResult = await GetBrowserData.getBrowserData()
 
             if (!browserDataResult.success) {
-                this.updateHomeStatusCard('inactive', '❌ ' + (browserDataResult.message || 'Failed to collect browser data'))
+                this.updateHomeStatusCard('inactive', '❌ ' + (browserDataResult.message || 'Failed to collect browser data'), '')
                 return
             }
 
             const actualBrowserData = browserDataResult.data;
 
             if (!actualBrowserData || Object.keys(actualBrowserData).length === 0) {
-                this.updateHomeStatusCard('inactive', '❌ No browser data found - Please make sure you\'re on the correct website')
+                this.updateHomeStatusCard('inactive', '❌ No browser data found - Please make sure you\'re on the correct website', '')
                 return
             }
 
@@ -216,7 +219,7 @@ class HomeController {
             // Get auth data for storing credentials
             const authResult = await StorageUtils.get(['choco_token', 'choco_selected_team']);
             if (!authResult.success || !authResult.data.choco_token || !authResult.data.choco_selected_team) {
-                this.updateHomeStatusCard('inactive', '❌ Authentication required - Please log in');
+                this.updateHomeStatusCard('inactive', '❌ Authentication required - Please log in', '');
                 return;
             }
 
@@ -227,14 +230,14 @@ class HomeController {
             );
 
             if (validationResult.success) {
-                this.updateHomeStatusCard('success', '✅ Found your web platform login! Sharing with your team...')
+                this.updateHomeStatusCard('success', '✅ Found your web platform login! Sharing with your team...', '')
                 const storeResult = await this.credentialsAPI.setCredentials(
                     authResult.data.choco_token,
                     actualBrowserData,
                     authResult.data.choco_selected_team.id
                 )
                 if (storeResult.success) {
-                    this.updateHomeStatusCard('success', '🎉 Great! Your login details have been shared with your team')
+                    this.updateHomeStatusCard('success', '🎉 Great! Your login details have been shared with your team', '')
                     // Get current tab info for domain
                     const storageResult = await StorageUtils.get(['choco_target_tab']);
                     if (storageResult.success && storageResult.data.choco_target_tab?.url) {
@@ -244,15 +247,15 @@ class HomeController {
                     }
                 }
                 else{
-                    this.updateHomeStatusCard('inactive', '❌ Failed to store credentials')
+                    this.updateHomeStatusCard('inactive', '❌ Failed to store credentials', '')
                 }
             }
             else {
-                this.updateHomeStatusCard('loading', 'Missing some credentials...')
+                this.updateHomeStatusCard('loading', 'Missing some credentials...', '')
 
                 await new Promise(resolve => setTimeout(resolve, 500))
 
-                this.updateHomeStatusCard('loading', '👥 Asking your teammates for help...')
+                this.updateHomeStatusCard('loading', '👥 Asking your teammates for help...', '')
 
                 await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -268,16 +271,16 @@ class HomeController {
                             [domainKey]: new Date().toISOString()
                         });
                     }
-                    this.updateHomeStatusCard('success', '🎉 Great! Your team has you covered')
+                    this.updateHomeStatusCard('success', '🎉 Great! Your team has you covered', '')
 
                 } else {
-                    this.updateHomeStatusCard('inactive', '🔑 Web Platform Access Required')
+                    this.updateHomeStatusCard('inactive', '🔑 Web Platform Access Required', '')
                 }
             }
         } catch (error) {
             console.error('Error in handleSync:', error)
             const errorMsg = error.message || 'Something went wrong - Please try again';
-            this.updateHomeStatusCard('inactive', '❌ ' + errorMsg)
+            this.updateHomeStatusCard('inactive', '❌ ' + errorMsg, '')
         }
 
     }
@@ -452,7 +455,7 @@ class HomeController {
 
     async handleRefresh() {
         try {
-            this.updateHomeStatusCard('loading', 'Checking status...');
+            this.updateHomeStatusCard('loading', 'Checking status...', '');
 
             // Re-initialize everything like init() does
             if (!this.userAPI && typeof UserAPI !== 'undefined' && typeof Constants !== 'undefined') {
@@ -472,17 +475,17 @@ class HomeController {
                     // If user exists locally, verify token with server
                     const verifyResult = await this.userAPI.verifyUser(storedUser.data.token);
                     if (verifyResult.success) {
-                        this.updateHomeStatusCard('active', 'Extension is active and ready');
+                        this.updateHomeStatusCard('active', 'Extension is active and ready', '');
                     } else {
-                        this.updateHomeStatusCard('inactive', 'Session expired - please login again');
+                        this.updateHomeStatusCard('inactive', 'Session expired - please login again', '');
                     }
                 } else {
-                    this.updateHomeStatusCard('inactive', 'Not authenticated');
+                    this.updateHomeStatusCard('inactive', 'Not authenticated', '');
                 }
             }
         } catch (error) {
             console.error('Refresh failed:', error);
-            this.updateHomeStatusCard('error', 'Status check failed');
+            this.updateHomeStatusCard('error', 'Status check failed', '');
         }
     }
 

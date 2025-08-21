@@ -35,6 +35,7 @@ class BaseValidation {
 
     static matchConfig(credentials, config) {
         try {
+
             if (!config) {
                 return {
                     success: false,
@@ -106,51 +107,6 @@ class BaseValidation {
                         filtered.sessionStorage[key] = sessionData[key];
                     }
                 });
-            }
-
-            // Handle fingerprint - COMPLEX FIELD (full/none/keyvalues)
-            const fingerprintConfig = parseConfigValue(config.fingerprint);
-            if (fingerprintConfig === 'full') {
-                filtered.fingerprint = credentials.fingerprint || null;
-            } else if (Array.isArray(fingerprintConfig)) {
-                const fingerprintData = credentials.fingerprint || {};
-                const filteredFingerprint = {};
-                fingerprintConfig.forEach(key => {
-                    if (fingerprintData[key] !== undefined) {
-                        filteredFingerprint[key] = fingerprintData[key];
-                    }
-                });
-                filtered.fingerprint = Object.keys(filteredFingerprint).length > 0 ? filteredFingerprint : null;
-            }
-
-
-            // Handle geoLocation - COMPLEX FIELD (full/none/keyvalues)
-            const geoLocationConfig = parseConfigValue(config.geoLocation);
-            if (geoLocationConfig === 'full') {
-                filtered.geoLocation = credentials.geoLocation || null;
-            } else if (Array.isArray(geoLocationConfig)) {
-                const geoLocationData = credentials.geoLocation || {};
-                const filteredGeoLocation = {};
-                geoLocationConfig.forEach(key => {
-                    if (geoLocationData[key] !== undefined) {
-                        filteredGeoLocation[key] = geoLocationData[key];
-                    }
-                });
-                filtered.geoLocation = Object.keys(filteredGeoLocation).length > 0 ? filteredGeoLocation : null;
-            }
-
-            // Handle simple fields - SIMPLE FIELDS (full/none only)
-            if (config.ipAddress === 'full') {
-                filtered.ipAddress = credentials.ipAddress || null;
-            }
-            if (config.userAgent === 'full') {
-                filtered.userAgent = credentials.userAgent || null;
-            }
-            if (config.platform === 'full') {
-                filtered.platform = credentials.platform || null;
-            }
-            if (config.browser === 'full') {
-                filtered.browser = credentials.browser || null;
             }
 
             // Validate that ALL configured fields are present and have valid data
@@ -275,122 +231,29 @@ class BaseValidation {
                     }
                 }
             }
-            if (config.fingerprint && config.fingerprint !== 'none') {
-                configuredFields.push('fingerprint');
-                const fingerprintConfig = parseConfigValue(config.fingerprint);
-                if (fingerprintConfig === 'full') {
-                    if (!credentials.fingerprint) {
-                        missingFields.push('fingerprint');
-                        fieldValidationDetails.fingerprint = { status: 'missing', reason: 'No fingerprint data found', expected: 'full' };
-                    } else {
-                        fieldValidationDetails.fingerprint = { status: 'present', keys: Object.keys(credentials.fingerprint), expected: 'full' };
-                    }
-                } else if (Array.isArray(fingerprintConfig)) {
-                    const missingKeys = [];
-                    const presentKeys = [];
-                    fingerprintConfig.forEach(key => {
-                        if (credentials.fingerprint && credentials.fingerprint[key] !== undefined) {
-                            presentKeys.push(key);
-                        } else {
-                            missingKeys.push(key);
-                        }
-                    });
-                    if (missingKeys.length > 0) {
-                        missingFields.push('fingerprint');
-                        fieldValidationDetails.fingerprint = {
-                            status: 'partial',
-                            expected: fingerprintConfig,
-                            missing: missingKeys,
-                            present: presentKeys,
-                            reason: `Missing fingerprint keys: ${missingKeys.join(', ')}`
-                        };
-                    } else {
-                        fieldValidationDetails.fingerprint = {
-                            status: 'present',
-                            expected: fingerprintConfig,
-                            present: presentKeys
-                        };
-                    }
-                }
-            }
-            if (config.geoLocation && config.geoLocation !== 'none') {
-                configuredFields.push('geoLocation');
-                const geoLocationConfig = parseConfigValue(config.geoLocation);
-                if (geoLocationConfig === 'full') {
-                    if (!credentials.geoLocation) {
-                        missingFields.push('geoLocation');
-                        fieldValidationDetails.geoLocation = { status: 'missing', reason: 'No geoLocation data found', expected: 'full' };
-                    } else {
-                        fieldValidationDetails.geoLocation = { status: 'present', keys: Object.keys(credentials.geoLocation), expected: 'full' };
-                    }
-                } else if (Array.isArray(geoLocationConfig)) {
-                    const missingKeys = [];
-                    const presentKeys = [];
-                    geoLocationConfig.forEach(key => {
-                        if (credentials.geoLocation && credentials.geoLocation[key] !== undefined) {
-                            presentKeys.push(key);
-                        } else {
-                            missingKeys.push(key);
-                        }
-                    });
-                    if (missingKeys.length > 0) {
-                        missingFields.push('geoLocation');
-                        fieldValidationDetails.geoLocation = {
-                            status: 'partial',
-                            expected: geoLocationConfig,
-                            missing: missingKeys,
-                            present: presentKeys,
-                            reason: `Missing geoLocation keys: ${missingKeys.join(', ')}`
-                        };
-                    } else {
-                        fieldValidationDetails.geoLocation = {
-                            status: 'present',
-                            expected: geoLocationConfig,
-                            present: presentKeys
-                        };
-                    }
-                }
-            }
 
-            // Check simple fields (full/none only)
-            if (config.ipAddress === 'full') {
-                configuredFields.push('ipAddress');
-                // Always pass validation - backend will handle IP collection if null
-                fieldValidationDetails.ipAddress = {
-                    status: credentials.ipAddress ? 'present' : 'unavailable_fallback_backend',
-                    value: credentials.ipAddress,
-                    expected: 'full',
-                    reason: credentials.ipAddress ? null : 'Extension IP unavailable - backend will collect from request'
-                };
+            // Extended field validation - disabled, will work only in home controller not in background
 
-            }
-            if (config.userAgent === 'full') {
-                configuredFields.push('userAgent');
-                if (!filtered.userAgent) {
-                    missingFields.push('userAgent');
-                    fieldValidationDetails.userAgent = { status: 'missing', reason: 'No user agent found', expected: 'full' };
-                } else {
-                    fieldValidationDetails.userAgent = { status: 'present', value: filtered.userAgent, expected: 'full' };
-                }
-            }
-            if (config.platform === 'full') {
-                configuredFields.push('platform');
-                if (!filtered.platform) {
-                    missingFields.push('platform');
-                    fieldValidationDetails.platform = { status: 'missing', reason: 'No platform found', expected: 'full' };
-                } else {
-                    fieldValidationDetails.platform = { status: 'present', value: filtered.platform, expected: 'full' };
-                }
-            }
-            if (config.browser === 'full') {
-                configuredFields.push('browser');
-                if (!filtered.browser) {
-                    missingFields.push('browser');
-                    fieldValidationDetails.browser = { status: 'missing', reason: 'No browser found', expected: 'full' };
-                } else {
-                    fieldValidationDetails.browser = { status: 'present', value: filtered.browser, expected: 'full' };
-                }
-            }
+            // const extendedValidationResult = ExtendedValidation.validateExtendedFields(
+            //     credentials, config, filtered, [], [], {}
+            // );
+
+            // if (extendedValidationResult.success) {
+            //     // Update filtered data with extended fields
+            //     Object.assign(filtered, extendedValidationResult.filtered);
+            //     // Merge validation results
+            //     extendedValidationResult.missingFields.forEach(field => {
+            //         if (!missingFields.includes(field)) {
+            //             missingFields.push(field);
+            //         }
+            //     });
+            //     extendedValidationResult.configuredFields.forEach(field => {
+            //         if (!configuredFields.includes(field)) {
+            //             configuredFields.push(field);
+            //         }
+            //     });
+            //     Object.assign(fieldValidationDetails, extendedValidationResult.fieldValidationDetails);
+            // }
 
             const hasAllRequiredFields = missingFields.length === 0;
             const presentFields = configuredFields.filter(field => !missingFields.includes(field));
@@ -407,6 +270,8 @@ class BaseValidation {
                 validationStatus = 'none';
             }
 
+
+            console.log('final validate detials', fieldValidationDetails)
             return {
                 success: hasAllRequiredFields,
                 error: hasAllRequiredFields ? null : 'Missing required fields',
@@ -425,11 +290,21 @@ class BaseValidation {
                 }
             }
         } catch (error) {
+
             return {
                 success: false,
                 error: 'Config validation error',
                 message: error.message,
-                data: null
+                data: {
+                    credentials: null,
+                    config: config,
+                    validation: {
+                        status: 'error',
+                        missing: [],
+                        present: [],
+                        detailedResults: {}
+                    }
+                }
             }
         }
     }

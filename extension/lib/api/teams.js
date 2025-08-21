@@ -20,7 +20,17 @@ class TeamManager {
         try {
             const token = await this.getAuthToken();
             if (!token) {
-                throw new Error('No authentication token found');
+                return {
+                    success: false,
+                    error: 'No authentication token found',
+                    message: 'Please login through the extension popup first',
+                    data: {
+                        teams: [],
+                        selectedTeam: this.cache.selectedTeam,
+                        teamConfig: this.cache.teamConfig,
+                        requiresAuth: true
+                    }
+                };
             }
 
             // Fetch user teams
@@ -41,7 +51,8 @@ class TeamManager {
                 data: {
                     teams: this.cache.teams,
                     selectedTeam: this.cache.selectedTeam,
-                    teamConfig: this.cache.teamConfig
+                    teamConfig: this.cache.teamConfig,
+                    requiresAuth: false
                 }
             };
         } catch (error) {
@@ -50,7 +61,12 @@ class TeamManager {
                 success: false,
                 error: error.message,
                 message: 'Failed to load team data',
-                data: null
+                data: {
+                    teams: [],
+                    selectedTeam: this.cache.selectedTeam,
+                    teamConfig: this.cache.teamConfig,
+                    requiresAuth: error.message.includes('Authentication required')
+                }
             };
         }
     }
@@ -59,28 +75,39 @@ class TeamManager {
      * Fetch user teams from backend
      */
     async fetchTeams(token) {
-        const response = await fetch(`${Constants.BACKEND_URL}/api/teams`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+        try {
+            const response = await fetch(`${Constants.BACKEND_URL}/api/teams`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication required. Please login through the extension popup.');
+                }
+                throw new Error(`Failed to fetch teams: ${response.status}`);
             }
-        });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch teams: ${response.status}`);
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to fetch teams');
+            }
+
+            return result.data.teams || [];
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                throw new Error('Cannot connect to backend server. Please ensure the backend is running on localhost:3000');
+            }
+            throw error;
         }
-
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.message || 'Failed to fetch teams');
-        }
-
-        return result.data.teams || [];
     }
 
     /**
      * Fetch team configuration
      */
+    
     async fetchConfig(teamId, token = null) {
         try {
             // Check if we already have config for this team

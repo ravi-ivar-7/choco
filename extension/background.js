@@ -7,6 +7,7 @@ importScripts(
     'lib/utils/getBrowserData.js',
     'lib/utils/setBrowserData.js',
     'lib/validation/baseValidation.js',
+    'lib/validation/extendedValidation.js',
     'lib/validation/validator.js',
     'lib/sync/baseSyncer.js',
     'lib/sync/syncer.js',
@@ -45,7 +46,11 @@ class ChocoBackground {
                 }
             }
         } catch (error) {
-            console.warn('Error validating stored tabs:', error.message);
+            this.addToQueue(
+                'Tab Validation Error',
+                `Error validating stored tabs: ${error.message}`,
+                'error'
+            );
         }
     }
 
@@ -58,7 +63,11 @@ class ChocoBackground {
                     await StorageUtils.remove(['choco_target_tab']);
                 }
             } catch (error) {
-                console.warn('Error cleaning up closed tab:', error.message);
+                this.addToQueue(
+                    'Tab Cleanup Error',
+                    `Error cleaning up closed tab: ${error.message}`,
+                    'error'
+                );
             }
         });
 
@@ -78,7 +87,11 @@ class ChocoBackground {
                         }
                     }
                 } catch (error) {
-                    console.warn('Error updating stored tab URL:', error.message);
+                    this.addToQueue(
+                        'Tab Update Error',
+                        `Error updating stored tab URL: ${error.message}`,
+                        'error'
+                    );
                 }
             }
         });
@@ -91,6 +104,11 @@ class ChocoBackground {
             
             if (!config?.domain) {
                 this.targetTab = null;
+                this.addToQueue(
+                    'Setup Required',
+                    'Team configuration missing. Please complete setup from dashboard.',
+                    'info'
+                );
                 return;
             }
             
@@ -133,7 +151,11 @@ class ChocoBackground {
                 }
             }
         } catch (error) {
-            console.error('Failed to initialize tab and domain info:', error);
+            this.addToQueue(
+                'Tab Initialization Error',
+                `Failed to initialize tab and domain info: ${error.message}`,
+                'error'
+            );
             this.targetTab = null;
         }
     }
@@ -145,6 +167,13 @@ class ChocoBackground {
         
         chrome.action.onClicked.addListener(async (tab) => {
             await this.openDashboardWindow();
+        });
+
+        // Handle messages from content scripts
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.action === 'openDashboard') {
+                this.openDashboardWindow();
+            }
         });
     }
 
@@ -163,12 +192,22 @@ class ChocoBackground {
 
             const teamConfigData = await chrome.storage.local.get('choco_team_config');
             if (!teamConfigData.choco_team_config?.domain) {
+                this.addToQueue(
+                    'Setup Required',
+                    'Team configuration missing. Please complete setup from dashboard.',
+                    'info'
+                );
                 return;
             }
 
             if (!this.targetTab) {
                 await this.initializeTabAndDomainInfo();
                 if (!this.targetTab) {
+                    this.addToQueue(
+                        'Target Tab Missing',
+                        'No valid tab found for the configured domain. Please open the target website.',
+                        'info'
+                    );
                     return; 
                 }
             }
@@ -381,6 +420,11 @@ class ChocoBackground {
             const config = teamConfigData.choco_team_config;
             
             if (!config) {
+                this.addToQueue(
+                    'Setup Required',
+                    'Team configuration missing. Please complete setup from dashboard.',
+                    'info'
+                );
                 return;
             }
 
@@ -468,8 +512,16 @@ class ChocoBackground {
 
     async addToQueue(title, message, type) {
         try {
+            // Check authentication first
+            const authResult = await chrome.storage.local.get(['choco_token', 'choco_user']);
+            if (!authResult.choco_token || !authResult.choco_user) {
+                await this.showDialog('Authentication Required', 'Please log in to use Choco extension', 'error');
+                return;
+            }
+
             const result = await chrome.storage.local.get(['choco_target_tab']);
             if (!result.choco_target_tab?.id) {
+                await this.showDialog('Target Tab Missing', 'No target tab configured. Please open the target website.', 'warning');
                 return;
             }
 
@@ -495,6 +547,85 @@ class ChocoBackground {
             });
         } catch (error) {
             console.error('Failed to add notification to queue:', error.message);
+        }
+    }
+
+    async showDialog(title, message, type) {
+        try {
+            // Check if user has disabled this notification type
+            const notificationKey = `choco_disable_${type}_${title.replace(/\s+/g, '_').toLowerCase()}`;
+            const disabledResult = await chrome.storage.local.get([notificationKey]);
+            
+            if (disabledResult[notificationKey]) {
+                console.log('Notification disabled by user:', title);
+                return;
+            } 
+            
+            // Find any valid tab to show dialog (exclude extension and chrome pages)
+            const allTabs = await chrome.tabs.query({});
+            const validTabs = allTabs.filter(tab => 
+                !tab.url.startsWith('chrome://') && 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('moz-extension://') &&
+                !tab.url.startsWith('edge-extension://')
+            );
+
+            if (validTabs.length === 0) {
+                console.log('No valid tabs found to show dialog');
+                return;
+            }
+
+            // Prefer active tab if it's valid, otherwise use first valid tab
+            const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            let targetTab = validTabs.find(tab => tab.id === activeTabs[0]?.id) || validTabs[0];
+
+            if (targetTab) {
+                await chrome.scripting.executeScript({
+                    target: { tabId: targetTab.id },
+                    func: (title, message, type, notificationKey) => {
+                        if (typeof NotificationDialog !== 'undefined') {
+                            NotificationDialog.show(title, message, {
+                                type: type,
+                                buttons: [
+                                    {
+                                        text: 'Open Dashboard',
+                                        onClick: () => {
+                                            chrome.runtime.sendMessage({ action: 'openDashboard' });
+                                        },
+                                        primary: true
+                                    },
+                                    {
+                                        text: "Don't show again",
+                                        onClick: () => {
+                                            chrome.storage.local.set({ [notificationKey]: true });
+                                        },
+                                        primary: false
+                                    }, 
+                                ]
+                            });
+                        }
+                    },
+                    args: [title, message, type, notificationKey]
+                });
+            }
+
+            // Update extension badge to indicate status
+            this.updateExtensionBadge(type);
+            
+        } catch (error) {
+            console.error('Failed to show dialog:', error.message);
+        }
+    }
+
+    updateExtensionBadge(type) {
+        if (type === 'error') {
+            chrome.action.setBadgeText({ text: '!' });
+            chrome.action.setBadgeBackgroundColor({ color: '#ff4444' });
+            chrome.action.setTitle({ title: 'Choco Extension - Action Required' });
+        } else if (type === 'warning') {
+            chrome.action.setBadgeText({ text: '?' });
+            chrome.action.setBadgeBackgroundColor({ color: '#ff9800' });
+            chrome.action.setTitle({ title: 'Choco Extension - Setup Required' });
         }
     }
 

@@ -150,24 +150,25 @@ class NotificationQueue {
             }
 
             .queue-close {
-                background: #6c757d;
+                background: #58a6ff;
                 color: white;
                 border: none;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 16px;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+                font-weight: bold;
                 cursor: pointer;
-                transition: background 0.2s;
-                line-height: 1;
-                width: 28px;
-                height: 28px;
+                transition: all 0.2s ease;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
 
             .queue-close:hover {
-                background: #5a6268;
+                background: #4493e6;
+                transform: scale(1.05);
+                box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
             }
 
             .queue-list {
