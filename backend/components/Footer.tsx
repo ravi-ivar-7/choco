@@ -14,7 +14,7 @@ export default function Footer() {
 
   const navigationLinks = [
     { href: '/', label: 'Home' },
-    { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Documentation', external: true },
+    { href: '/docs', label: 'Documentation' },
     { href: 'https://github.com/ravi-ivar-7/choco/', label: 'Extension', external: true },
     { href: '/dashboard', label: 'Dashboard' }
   ]
@@ -22,7 +22,7 @@ export default function Footer() {
   const supportLinks = [
     { href: 'https://github.com/ravi-ivar-7/choco/issues', label: 'Report Issues', external: true },
     { href: 'https://github.com/ravi-ivar-7/choco/', label: 'GitHub', external: true },
-    { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Help Center', external: true },
+    { href: '/docs', label: 'Help Center' },
     { href: '/register', label: 'Get Started' }
   ]
 

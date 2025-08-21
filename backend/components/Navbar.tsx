@@ -174,9 +174,9 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-2">
             {[
-              { href: '/', label: 'Home', icon: Home },
-              { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Docs', icon: BookOpen, external: true },
-              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }
+              { href: '/', label: 'Home', icon: Home, external: false },
+              { href: '/docs', label: 'Docs', icon: BookOpen, external: false },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false }
             ].map((item) => (
               item.external ? (
                 <a
@@ -281,9 +281,9 @@ export default function Navbar() {
         }`}>
           <div className="py-4 space-y-1 border-t border-slate-100">
             {[
-              { href: '/', label: 'Home', icon: Home },
-              { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Docs', icon: BookOpen, external: true },
-              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }
+              { href: '/', label: 'Home', icon: Home, external: false },
+              { href: '/docs', label: 'Docs', icon: BookOpen, external: false },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false }
             ].map((item) => (
               item.external ? (
                 <a
