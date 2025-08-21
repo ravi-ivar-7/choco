@@ -36,8 +36,10 @@ export default function LoginPage() {
 
       if (data.success) {
         // Store token in localStorage from data.data
-        localStorage.setItem('choco_token', data.data.token)
-        localStorage.setItem('choco_user', JSON.stringify(data.data.user))
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('choco_token', data.data.token)
+          localStorage.setItem('choco_user', JSON.stringify(data.data.user))
+        }
         
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('loginSuccess'))

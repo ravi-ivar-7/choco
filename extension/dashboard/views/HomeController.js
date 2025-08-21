@@ -182,7 +182,15 @@ class HomeController {
         if (helpLink) {
             helpLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.showHelp();
+                window.open('https://github.com/ravi-ivar-7/choco/blob/master/README.md', '_blank');
+            });
+        }
+
+        const dashboardLink = document.getElementById('dashboardLink');
+        if (dashboardLink) {
+            dashboardLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.open(`${Constants.BACKEND_URL}/dashboard`, '_blank');
             });
         }
     }
@@ -490,10 +498,6 @@ class HomeController {
     }
 
     destroy() {
-    }
-
-    showHelp() {
-        console.log('Help requested');
     }
 }
 

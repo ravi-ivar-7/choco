@@ -37,6 +37,7 @@ export default function Navbar() {
 
   // Check authentication function
   const checkAuth = async () => {
+    if (typeof window === 'undefined') return
     const token = localStorage.getItem('choco_token')
     
     if (!token) {
@@ -51,32 +52,30 @@ export default function Navbar() {
           'Authorization': `Bearer ${token}`
         }
       })
-
-      console.log('Response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Response data:', data)
         
         if (data.success && data.data?.user) {
-          console.log('Setting user from data.data.user:', data.data.user)
           setUser(data.data.user)
         } else if (data.user) {
-          console.log('Setting user from data.user:', data.user)
           setUser(data.user)
         } else {
-          console.log('No user found in response, removing token')
-          localStorage.removeItem('choco_token')
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('choco_token')
+          }
           setUser(null)
         }
       } else {
-        console.log('Response not ok, removing token')
-        localStorage.removeItem('choco_token')
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('choco_token')
+        }
         setUser(null)
       }
     } catch (error) {
-      console.error('Auth verification failed:', error)
-      localStorage.removeItem('choco_token')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('choco_token')
+      }
       setUser(null)
     } finally {
       setAuthLoading(false)
@@ -118,13 +117,15 @@ export default function Navbar() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('choco_token')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('choco_token')
+    }
     setUser(null)
     router.push('/login')
   }
 
   // Show loading state only on initial page load
-  if (authLoading && user === null && !localStorage.getItem('choco_token')) {
+  if (authLoading && user === null && (typeof window === 'undefined' || !localStorage.getItem('choco_token'))) {
     return (
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/60">
         <div className="container mx-auto px-4 lg:px-6 h-16 lg:h-18 flex items-center justify-center">

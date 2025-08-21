@@ -54,6 +54,7 @@ function DashboardContent() {
   // Load user data and stats
   useEffect(() => {
     const loadUserData = async () => {
+      if (typeof window === 'undefined') return
       const token = localStorage.getItem('choco_token')
       if (!token) {
         router.push('/')
@@ -73,12 +74,16 @@ function DashboardContent() {
           setUser(authData.data?.user || authData.user)
           await loadStats()
         } else {
-          localStorage.removeItem('choco_token')
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('choco_token')
+          }
           router.push('/')
         }
       } catch (error) {
         console.error('Failed to load user data:', error)
-        localStorage.removeItem('choco_token')
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('choco_token')
+        }
         router.push('/')
       } finally {
         setIsLoading(false)
@@ -91,6 +96,7 @@ function DashboardContent() {
   // Load dashboard stats
   const loadStats = async () => {
     try {
+      if (typeof window === 'undefined') return
       const token = localStorage.getItem('choco_token')
       const response = await fetch('/api/stats', {
         method: 'GET',
