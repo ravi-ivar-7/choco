@@ -14,7 +14,7 @@ export default function Footer() {
 
   const navigationLinks = [
     { href: '/', label: 'Home' },
-    { href: '/docs', label: 'Documentation' },
+    { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Documentation', external: true },
     { href: 'https://github.com/ravi-ivar-7/choco/', label: 'Extension', external: true },
     { href: '/dashboard', label: 'Dashboard' }
   ]
@@ -22,7 +22,7 @@ export default function Footer() {
   const supportLinks = [
     { href: 'https://github.com/ravi-ivar-7/choco/issues', label: 'Report Issues', external: true },
     { href: 'https://github.com/ravi-ivar-7/choco/', label: 'GitHub', external: true },
-    { href: '/docs', label: 'Help Center' },
+    { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Help Center', external: true },
     { href: '/register', label: 'Get Started' }
   ]
 
@@ -125,25 +125,14 @@ export default function Footer() {
         
         {/* Bottom Section */}
         <div className="border-t border-slate-200/60 mt-16 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col items-center justify-center gap-4">
             <div className="flex items-center gap-6 text-sm text-slate-500">
               <p>© {new Date().getFullYear()} Choco. All rights reserved.</p>
-              <div className="hidden md:flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <span>Made with</span>
                 <Heart className="w-4 h-4 text-red-500 fill-current" />
                 <span>for teams</span>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <a 
-                href="https://github.com/ravi-ivar-7/choco/" 
-                target="_blank"
-                className="group flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors"
-              >
-                <Github className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">Open Source</span>
-              </a>
             </div>
           </div>
         </div>

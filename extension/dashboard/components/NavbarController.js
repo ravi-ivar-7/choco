@@ -10,6 +10,9 @@ class NavbarController {
         this.isDropdownOpen = false;
         this.availableTeams = [];
         this.selectedTeam = null;
+        this.helpDropdownBtn = null;
+        this.helpDropdownMenu = null;
+        this.isHelpDropdownOpen = false;
     }
 
     async init() {
@@ -22,6 +25,8 @@ class NavbarController {
         this.selectedTeamName = document.getElementById('selectedTeamName');
         this.userName = document.getElementById('userName');
         this.navTabs = document.querySelectorAll('.nav-tab');
+        this.helpDropdownBtn = document.getElementById('helpDropdownBtn');
+        this.helpDropdownMenu = document.getElementById('helpDropdownMenu');
 
         if (!this.teamDropdownBtn || !this.teamDropdownMenu) {
             console.error('Team dropdown elements not found!');
@@ -46,6 +51,7 @@ class NavbarController {
         
         this.bindUserProfileEvents();
         this.bindDropdownEvents();
+        this.bindHelpDropdownEvents();
         
         this.hideLoading();
     }
@@ -270,7 +276,66 @@ class NavbarController {
             if (this.isDropdownOpen) {
                 this.closeDropdown();
             }
+            if (this.isHelpDropdownOpen) {
+                this.closeHelpDropdown();
+            }
         });
+    }
+
+    bindHelpDropdownEvents() {
+        if (!this.helpDropdownBtn || !this.helpDropdownMenu) return;
+
+        this.helpDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleHelpDropdown();
+        });
+
+        // Handle help menu item clicks
+        this.helpDropdownMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.help-dropdown-item');
+            if (!item) return;
+
+            const action = item.dataset.action;
+            this.handleHelpAction(action);
+            this.closeHelpDropdown();
+        });
+    }
+
+    toggleHelpDropdown() {
+        if (this.isHelpDropdownOpen) {
+            this.closeHelpDropdown();
+        } else {
+            this.openHelpDropdown();
+        }
+    }
+
+    openHelpDropdown() {
+        this.helpDropdownMenu.classList.remove('hidden');
+        this.isHelpDropdownOpen = true;
+    }
+
+    closeHelpDropdown() {
+        this.helpDropdownMenu.classList.add('hidden');
+        this.isHelpDropdownOpen = false;
+    }
+
+    handleHelpAction(action) {
+        switch (action) {
+            case 'dashboard':
+                window.open(`${Constants.BACKEND_URL}/dashboard`, '_blank');
+                break;
+            case 'docs':
+                window.open('https://github.com/ravi-ivar-7/choco/blob/master/README.md', '_blank');
+                break;
+            case 'issues':
+                window.open('https://github.com/ravi-ivar-7/choco/issues', '_blank');
+                break;
+            case 'github':
+                window.open('https://github.com/ravi-ivar-7/choco/', '_blank');
+                break;
+            default:
+                console.warn('Unknown help action:', action);
+        }
     }
 
 

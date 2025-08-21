@@ -515,13 +515,13 @@ class ChocoBackground {
             // Check authentication first
             const authResult = await chrome.storage.local.get(['choco_token', 'choco_user']);
             if (!authResult.choco_token || !authResult.choco_user) {
-                await this.showDialog('Authentication Required', 'Please log in to use Choco extension', 'error');
+                await this.showDialog('Login Required For Choco Extension', 'Open the extension and log in to your Choco account to continue', 'error');
                 return;
             }
 
             const result = await chrome.storage.local.get(['choco_target_tab']);
             if (!result.choco_target_tab?.id) {
-                await this.showDialog('Target Tab Missing', 'No target tab configured. Please open the target website.', 'warning');
+                await this.showDialog('Setup Required For Choco Extension', 'Select a team in the extension and open the target website to start collecting credentials', 'warning');
                 return;
             }
 
@@ -588,7 +588,7 @@ class ChocoBackground {
                                 type: type,
                                 buttons: [
                                     {
-                                        text: 'Open Dashboard',
+                                        text: 'Open Extension',
                                         onClick: () => {
                                             chrome.runtime.sendMessage({ action: 'openDashboard' });
                                         },
