@@ -113,7 +113,7 @@ class HomeController {
             return;
         }
 
-        this.statusIndicator.className = `status-indicator ${type}`;
+        this.statusIndicator.className = `status-indicator status-${type}`;
         this.statusText.textContent = message;
 
         if (details) {

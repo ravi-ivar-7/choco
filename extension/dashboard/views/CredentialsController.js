@@ -239,7 +239,7 @@ class CredentialsController {
         
         header.innerHTML = `
             <div class="credentials-title">
-                🔐 Team Credentials (${credentials.length})
+                 🔐 Team Credentials (${credentials.length})
             </div>
             <div class="credentials-subtitle">
                 ${credentials.length === 0 ? 
@@ -295,8 +295,7 @@ class CredentialsController {
         card.innerHTML = `
             ${showNotice ? '<div class="credential-notice" style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; font-size: 13px; font-weight: 500;">⚠️ This token may still work even if expired - worth trying!</div>' : ''}
             <div class="credential-header">
-                <div class="credential-platform">
-                    <div class="credential-icon">🔐</div>
+                <div class="credential-platform"> 
                     <div class="credential-name">${cred.id.substring(0, 8)}... (${cred.credentialSource || 'Unknown'})</div>
                 </div>
                 <div class="credential-status ${isActive ? 'status-active' : 'status-expired'}">
