@@ -158,8 +158,8 @@ export default function AdminDashboard() {
         {/* Tab Content - Each tab loads its own data */}
         <div className="mt-6">
           {activeTab === 'overview' && <OverviewTab />}
-          {activeTab === 'teams' && <TeamsManagement user={user} />}
-          {activeTab === 'members' && <MembersManagement user={user} />}
+          {activeTab === 'teams' && <TeamsManagement user={user} onUserUpdate={setUser} />}
+          {activeTab === 'members' && <MembersManagement user={user} onUserUpdate={setUser} />}
           {activeTab === 'credentials' && <CredentialsManagement />}
           {activeTab === 'profile' && <ProfileManagement />}
         </div>

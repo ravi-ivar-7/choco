@@ -31,9 +31,10 @@ interface User {
 
 interface TeamsManagementProps {
   user: User
+  onUserUpdate: (user: User) => void
 }
 
-export default function TeamsManagement({ user }: TeamsManagementProps) {
+export default function TeamsManagement({ user, onUserUpdate }: TeamsManagementProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +89,30 @@ export default function TeamsManagement({ user }: TeamsManagementProps) {
     loadTeams()
   }, [])
 
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem('choco_token')
+      if (!token) return
+
+      const authResponse = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      })
+      
+      if (authResponse.ok) {
+        const authData = await authResponse.json()
+        if (authData.success) {
+          onUserUpdate(authData.data.user)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error)
+    }
+  }
+
   const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
     try {
       setActionLoading('create')
@@ -109,7 +134,8 @@ export default function TeamsManagement({ user }: TeamsManagementProps) {
 
       const result = await response.json()
       if (result.success) {
-        await loadTeams() // Refresh the list
+        await loadTeams() // Refresh the teams list
+        await refreshUserData() // Refresh user data to include new team permissions
         setShowTeamForm(false)
         alert('Team created successfully')
       } else {

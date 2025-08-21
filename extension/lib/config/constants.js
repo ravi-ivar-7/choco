@@ -1,3 +1,3 @@
 class Constants {
-    static BACKEND_URL =  'http://localhost:3000/' // 'https://algochoco.vercel.app/' //
+    static BACKEND_URL =  'https://algochoco.vercel.app/' // 'http://localhost:3000/' // 
 }

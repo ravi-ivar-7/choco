@@ -44,9 +44,10 @@ interface User {
 
 interface MembersManagementProps {
   user: User
+  onUserUpdate: (user: User) => void
 }
 
-export default function MembersManagement({ user }: MembersManagementProps) {
+export default function MembersManagement({ user, onUserUpdate }: MembersManagementProps) {
   const [members, setMembers] = useState<Member[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -203,7 +204,33 @@ export default function MembersManagement({ user }: MembersManagementProps) {
   }
 
   const handleDeleteMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to delete this member?')) {
+    const member = members.find(m => m.id === memberId)
+    if (!member) {
+      alert('Member not found')
+      return
+    }
+
+    const isRemovingSelf = user.id === memberId
+    
+    // Check if this is the last member in the team
+    const teamMembers = members.filter(m => m.teamId === member.teamId)
+    const isLastMember = teamMembers.length === 1
+
+    let confirmMessage = ''
+    
+    if (isRemovingSelf && !isLastMember) {
+      confirmMessage = 'You cannot remove yourself from the team unless you are the last member. Other members must be removed first.'
+      alert(confirmMessage)
+      return
+    } else if (isRemovingSelf && isLastMember) {
+      confirmMessage = 'You are the last member of this team. Removing yourself will:\n\n• Remove you from the team\n• Automatically delete the entire team\n• Delete all team data and configurations\n\nThis action cannot be undone. Continue?'
+    } else if (isLastMember) {
+      confirmMessage = `Removing ${member.name} will delete the entire team since they are the last member. This will:\n\n• Delete the team permanently\n• Delete all team data and configurations\n\nThis action cannot be undone. Continue?`
+    } else {
+      confirmMessage = `Are you sure you want to remove ${member.name} from ${member.teamName}?`
+    }
+
+    if (!confirm(confirmMessage)) {
       return
     }
 

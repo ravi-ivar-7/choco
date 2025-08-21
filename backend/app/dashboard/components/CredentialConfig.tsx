@@ -235,13 +235,32 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
     const handleKeyPress = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault()
-        addTag(field, inputValue)
+        handleBulkAdd(inputValue)
         setInputValue('')
       }
     }
 
+    const handleBulkAdd = (input: string) => {
+      if (!input.trim()) return
+      
+      // Split by comma and process each item
+      const items = input.split(',').map(item => item.trim()).filter(item => item.length > 0)
+      const currentTags = getFieldTags(field)
+      const newTags = [...currentTags]
+      
+      items.forEach(item => {
+        if (!newTags.includes(item)) {
+          newTags.push(item)
+        }
+      })
+      
+      if (newTags.length > currentTags.length) {
+        handleCustomKeysChange(field, newTags)
+      }
+    }
+
     const handleAddClick = () => {
-      addTag(field, inputValue)
+      handleBulkAdd(inputValue)
       setInputValue('')
     }
 
@@ -269,7 +288,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type a key and press Enter or comma"
+            placeholder="Type keys separated by commas or press Enter (e.g., access_token, refresh_token, user_id)"
           />
           <Button
             type="button"
@@ -283,7 +302,7 @@ export default function CredentialConfig({ teamId, teamName, onClose }: Credenti
           </Button>
         </div>
         <p className="text-xs text-gray-500">
-          Add specific keys to extract (e.g., access_token, refresh_token)
+          Add specific keys to extract. You can enter multiple keys separated by commas (e.g., access_token, refresh_token, user_id) or press Enter after each key.
         </p>
       </div>
     )

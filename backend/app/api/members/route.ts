@@ -324,11 +324,20 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 });
     }
 
-    if (memberId === adminUser.id) {
+    // Check if this is the last member in the team
+    const allMembers = await db.select()
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, teamId));
+
+    const isLastMember = allMembers.length === 1;
+    const isSelfRemoval = memberId === adminUser.id;
+
+    // Prevent self-removal unless you're the last member
+    if (isSelfRemoval && !isLastMember) {
       return NextResponse.json({
         success: false,
         error: 'Cannot remove self',
-        message: 'You cannot remove yourself from the team',
+        message: 'You cannot remove yourself from the team unless you are the last member',
         data: null
       }, { status: 400 });
     }
@@ -339,6 +348,11 @@ export async function DELETE(request: NextRequest) {
         eq(teamMembers.userId, memberId),
         eq(teamMembers.teamId, teamId)
       ));
+
+    // If this was the last member, delete the team
+    if (isLastMember) {
+      await db.delete(teams).where(eq(teams.id, teamId));
+    }
 
     return NextResponse.json({
       success: true,
