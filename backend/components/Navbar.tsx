@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, Chrome, Menu, X, Sparkles, User, LogOut } from 'lucide-react'
+import { ArrowRight, Chrome, Menu, X, Sparkles, User, LogOut, Home, BookOpen, LayoutDashboard } from 'lucide-react'
 
 interface UserData {
   id: string
@@ -35,53 +35,81 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Check authentication function
+  const checkAuth = async () => {
+    const token = localStorage.getItem('choco_token')
+    
+    if (!token) {
+      setAuthLoading(false)
+      setUser(null)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/verify', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      console.log('Response status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Response data:', data)
+        
+        if (data.success && data.data?.user) {
+          console.log('Setting user from data.data.user:', data.data.user)
+          setUser(data.data.user)
+        } else if (data.user) {
+          console.log('Setting user from data.user:', data.user)
+          setUser(data.user)
+        } else {
+          console.log('No user found in response, removing token')
+          localStorage.removeItem('choco_token')
+          setUser(null)
+        }
+      } else {
+        console.log('Response not ok, removing token')
+        localStorage.removeItem('choco_token')
+        setUser(null)
+      }
+    } catch (error) {
+      console.error('Auth verification failed:', error)
+      localStorage.removeItem('choco_token')
+      setUser(null)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
   // Check authentication on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('choco_token')
-      console.log('Token exists:', !!token)
-      
-      if (!token) {
-        setAuthLoading(false)
-        return
-      }
+    checkAuth()
+  }, [])
 
-      try {
-        const response = await fetch('/api/auth/verify', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-
-        console.log('Response status:', response.status)
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log('Response data:', data)
-          
-          if (data.success && data.data?.user) {
-            console.log('Setting user from data.data.user:', data.data.user)
-            setUser(data.data.user)
-          } else if (data.user) {
-            console.log('Setting user from data.user:', data.user)
-            setUser(data.user)
-          } else {
-            console.log('No user found in response, removing token')
-            localStorage.removeItem('choco_token')
-          }
-        } else {
-          console.log('Response not ok, removing token')
-          localStorage.removeItem('choco_token')
-        }
-      } catch (error) {
-        console.error('Auth verification failed:', error)
-        localStorage.removeItem('choco_token')
-      } finally {
-        setAuthLoading(false)
+  // Listen for storage changes (when user logs in from another tab/component)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'choco_token') {
+        setAuthLoading(true)
+        checkAuth()
       }
     }
 
-    checkAuth()
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  // Listen for custom login event
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      setAuthLoading(true)
+      checkAuth()
+    }
+
+    window.addEventListener('loginSuccess', handleLoginSuccess)
+    return () => window.removeEventListener('loginSuccess', handleLoginSuccess)
   }, [])
 
   const handleGetStarted = () => {
@@ -95,8 +123,8 @@ export default function Navbar() {
     router.push('/login')
   }
 
-  // Show loading state for dashboard auth
-  if (authLoading) {
+  // Show loading state only on initial page load
+  if (authLoading && user === null && !localStorage.getItem('choco_token')) {
     return (
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/60">
         <div className="container mx-auto px-4 lg:px-6 h-16 lg:h-18 flex items-center justify-center">
@@ -107,11 +135,20 @@ export default function Navbar() {
   }
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled 
-        ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/60 shadow-lg shadow-slate-900/5' 
-        : 'bg-white/80 backdrop-blur-sm border-b border-transparent'
-    }`}>
+    <>
+      {/* Mobile Menu Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+      
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/60 shadow-lg shadow-slate-900/5' 
+          : 'bg-white/80 backdrop-blur-sm border-b border-transparent'
+      }`}>
       <div className="container mx-auto px-4 lg:px-6">
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo Section */}
@@ -136,10 +173,9 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-2">
             {[
-              { href: '/', label: 'Home' },
-              { href: '/docs', label: 'Docs' },
-              { href: '/dashboard', label: 'Dashboard' },
-              { href: 'https://github.com/ravi-ivar-7/choco/', label: 'Extension', external: true }
+              { href: '/', label: 'Home', icon: Home },
+              { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Docs', icon: BookOpen, external: true },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }
             ].map((item) => (
               item.external ? (
                 <a
@@ -147,18 +183,20 @@ export default function Navbar() {
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-5 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold relative group border border-transparent hover:border-slate-200 hover:shadow-sm"
+                  className="px-5 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold relative group border border-slate-100 hover:border-slate-200 hover:shadow-sm flex items-center space-x-2"
                 >
-                  {item.label}
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
                   <div className="absolute inset-x-0 bottom-1 h-0.5 bg-gradient-to-r from-purple-600 to-pink-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full"></div>
                 </a>
               ) : (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="px-5 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold relative group border border-transparent hover:border-slate-200 hover:shadow-sm"
+                  className="px-5 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold relative group border border-slate-100 hover:border-slate-200 hover:shadow-sm flex items-center space-x-2"
                 >
-                  {item.label}
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
                   <div className="absolute inset-x-0 bottom-1 h-0.5 bg-gradient-to-r from-purple-600 to-pink-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full"></div>
                 </Link>
               )
@@ -167,7 +205,23 @@ export default function Navbar() {
           
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3">
-            {user ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.open('https://github.com/ravi-ivar-7/choco/', '_blank')}
+              className="text-slate-700 hover:text-slate-900 hover:bg-slate-50 border-slate-200"
+            >
+              <Chrome className="w-4 h-4 mr-2" />
+              Extension
+            </Button>
+            {authLoading ? (
+              <div className="flex items-center space-x-3 px-3 py-1.5 bg-slate-50 rounded-lg">
+                <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center animate-pulse">
+                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div className="h-4 bg-slate-200 rounded w-24 animate-pulse"></div>
+              </div>
+            ) : user ? (
               <>
                 <div 
                   className="flex items-center space-x-3 px-3 py-1.5 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
@@ -178,26 +232,18 @@ export default function Navbar() {
                   </div>
                   <span className="text-sm font-medium text-slate-700">{user.email}</span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={handleLogout}
-                    className="text-slate-500 hover:text-red-600 p-1"
+                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 px-3 py-1"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4 h-4 mr-1" />
+                    <span className="text-xs">Logout</span>
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => window.open('https://github.com/ravi-ivar-7/choco/', '_blank')}
-                  className="text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                >
-                  <Chrome className="w-4 h-4 mr-2" />
-                  Extension
-                </Button>
                 <Button 
                   onClick={handleGetStarted} 
                   disabled={isLoading}
@@ -234,10 +280,9 @@ export default function Navbar() {
         }`}>
           <div className="py-4 space-y-1 border-t border-slate-100">
             {[
-              { href: '/', label: 'Home' },
-              { href: '/docs', label: 'Docs' },
-              { href: '/dashboard', label: 'Dashboard' },
-              { href: 'https://github.com/ravi-ivar-7/choco/', label: 'Extension', external: true }
+              { href: '/', label: 'Home', icon: Home },
+              { href: 'https://github.com/ravi-ivar-7/choco/blob/master/README.md', label: 'Docs', icon: BookOpen, external: true },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }
             ].map((item) => (
               item.external ? (
                 <a
@@ -245,25 +290,45 @@ export default function Navbar() {
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block px-5 py-3.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold border border-transparent hover:border-slate-200 hover:shadow-sm"
+                  className="flex items-center space-x-3 px-5 py-3.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold border border-slate-200 hover:border-slate-300 hover:shadow-sm"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {item.label}
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
                 </a>
               ) : (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="block px-5 py-3.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold border border-transparent hover:border-slate-200 hover:shadow-sm"
+                  className="flex items-center space-x-3 px-5 py-3.5 text-slate-700 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 font-semibold border border-slate-200 hover:border-slate-300 hover:shadow-sm"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {item.label}
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
                 </Link>
               )
             ))}
             
             <div className="pt-4 space-y-3">
-              {user ? (
+              <Button 
+                variant="outline" 
+                className="w-full justify-center"
+                onClick={() => {
+                  window.open('https://github.com/ravi-ivar-7/choco/', '_blank')
+                  setMobileMenuOpen(false)
+                }}
+              >
+                <Chrome className="w-4 h-4 mr-2" />
+                Install Extension
+              </Button>
+              {authLoading ? (
+                <div className="flex items-center space-x-3 px-4 py-3 bg-slate-50 rounded-lg">
+                  <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center animate-pulse">
+                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <div className="h-4 bg-slate-200 rounded w-32 animate-pulse flex-1"></div>
+                </div>
+              ) : user ? (
                 <>
                   <div 
                     className="flex items-center space-x-3 px-4 py-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
@@ -279,7 +344,7 @@ export default function Navbar() {
                   </div>
                   <Button 
                     variant="outline"
-                    className="w-full justify-center text-red-600 border-red-200 hover:bg-red-50"
+                    className="w-full justify-center text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 font-medium"
                     onClick={() => {
                       handleLogout()
                       setMobileMenuOpen(false)
@@ -291,17 +356,6 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-center"
-                    onClick={() => {
-                      window.open('https://github.com/ravi-ivar-7/choco/', '_blank')
-                      setMobileMenuOpen(false)
-                    }}
-                  >
-                    <Chrome className="w-4 h-4 mr-2" />
-                    Install Extension
-                  </Button>
                   <Button 
                     className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
                     onClick={() => {
@@ -324,5 +378,6 @@ export default function Navbar() {
         </div>
       </div>
     </header>
+    </>
   )
 }

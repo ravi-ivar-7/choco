@@ -55,6 +55,9 @@ export default function RegisterPage() {
         localStorage.setItem('choco_token', data.data.token)
         localStorage.setItem('choco_user', JSON.stringify(data.data.user))
         
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('loginSuccess'))
+        
         setSuccess('Account created successfully! Redirecting to dashboard...')
          
         setTimeout(() => {
