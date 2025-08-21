@@ -2,6 +2,7 @@ class CredentialsController {
     constructor() {
         this.credentialsAPI = null;
         this.credentials = [];
+        this.selectedCredentials = [];
         this.selectedTeam = null;
         this.teamConfig = null;
         this.targetTab = null;
@@ -230,7 +231,7 @@ class CredentialsController {
         // Clear existing content
         container.innerHTML = '';
 
-        // Create header
+        // Create header with bulk actions
         const header = document.createElement('div');
         header.className = 'credentials-header';
         // Calculate active/expired counts based on actual expiry data
@@ -238,8 +239,14 @@ class CredentialsController {
         const expiredCount = credentials.length - activeCount;
         
         header.innerHTML = `
-            <div class="credentials-title">
-                 🔐 Team Credentials (${credentials.length})
+            <div class="credentials-title-row">
+                <div class="credentials-title">
+                     🔐 Team Credentials (${credentials.length})
+                </div>
+                <div class="bulk-actions">
+                    <button id="selectAllBtn" class="bulk-btn select-all-btn">Select All</button>
+                    <button id="bulkDeleteBtn" class="bulk-btn delete-btn" disabled style="display: none;">Delete Selected (0)</button>
+                </div>
             </div>
             <div class="credentials-subtitle">
                 ${credentials.length === 0 ? 
@@ -278,6 +285,7 @@ class CredentialsController {
         
         // Bind events
         this.bindCredentialsEvents(container);
+        this.bindBulkActionEvents(container);
     }
 
     createCredentialCard(cred, hasActiveCredentials = true, index = 0) {
@@ -295,6 +303,9 @@ class CredentialsController {
         card.innerHTML = `
             ${showNotice ? '<div class="credential-notice" style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; font-size: 13px; font-weight: 500;">⚠️ This token may still work even if expired - worth trying!</div>' : ''}
             <div class="credential-header">
+                <div class="credential-select">
+                    <input type="checkbox" class="credential-checkbox" data-credential-id="${cred.id}">
+                </div>
                 <div class="credential-platform"> 
                     <div class="credential-name">${cred.id.substring(0, 8)}... (${cred.credentialSource || 'Unknown'})</div>
                 </div>
@@ -356,11 +367,19 @@ class CredentialsController {
         });
 
         // Delete buttons
-        const deleteBtns = container.querySelectorAll('.delete-btn');
+        const deleteBtns = container.querySelectorAll('.credential-actions .delete-btn');
         deleteBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const credentialId = e.target.dataset.credentialId;
                 this.handleDeleteCredential(credentialId, btn, container);
+            });
+        });
+
+        // Checkbox selection
+        const checkboxes = container.querySelectorAll('.credential-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                this.handleCredentialSelection(e.target.dataset.credentialId, e.target.checked);
             });
         });
     }
@@ -723,8 +742,9 @@ class CredentialsController {
                     duration: 3000
                 });
 
-                // Remove from local array
+                // Remove from local array and selected credentials
                 this.credentials = this.credentials.filter(cred => cred.id !== credentialId);
+                this.selectedCredentials = this.selectedCredentials.filter(id => id !== credentialId);
                 
                 // Re-display credentials
                 this.displayCredentials(this.credentials);
@@ -804,7 +824,130 @@ class CredentialsController {
         }
     }
 
+    bindBulkActionEvents(container) {
+        const selectAllBtn = container.querySelector('#selectAllBtn');
+        const bulkDeleteBtn = container.querySelector('#bulkDeleteBtn');
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', () => {
+                this.handleSelectAll();
+            });
+        }
+
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', () => {
+                this.handleBulkDelete();
+            });
+        }
+    }
+
+    handleCredentialSelection(credentialId, isSelected) {
+        if (isSelected) {
+            if (!this.selectedCredentials.includes(credentialId)) {
+                this.selectedCredentials.push(credentialId);
+            }
+        } else {
+            this.selectedCredentials = this.selectedCredentials.filter(id => id !== credentialId);
+        }
+        this.updateBulkActionButtons();
+    }
+
+    handleSelectAll() {
+        const checkboxes = document.querySelectorAll('.credential-checkbox');
+        const selectAllBtn = document.querySelector('#selectAllBtn');
+        
+        if (this.selectedCredentials.length === this.credentials.length) {
+            // Deselect all
+            this.selectedCredentials = [];
+            checkboxes.forEach(cb => cb.checked = false);
+            selectAllBtn.textContent = 'Select All';
+        } else {
+            // Select all
+            this.selectedCredentials = this.credentials.map(c => c.id);
+            checkboxes.forEach(cb => cb.checked = true);
+            selectAllBtn.textContent = 'Deselect All';
+        }
+        this.updateBulkActionButtons();
+    }
+
+    updateBulkActionButtons() {
+        const bulkDeleteBtn = document.querySelector('#bulkDeleteBtn');
+        const selectAllBtn = document.querySelector('#selectAllBtn');
+
+        if (bulkDeleteBtn) {
+            if (this.selectedCredentials.length > 0) {
+                bulkDeleteBtn.style.display = 'inline-block';
+                bulkDeleteBtn.disabled = false;
+                bulkDeleteBtn.textContent = `Delete Selected (${this.selectedCredentials.length})`;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+                bulkDeleteBtn.disabled = true;
+            }
+        }
+
+        if (selectAllBtn) {
+            selectAllBtn.textContent = this.selectedCredentials.length === this.credentials.length ? 'Deselect All' : 'Select All';
+        }
+    }
+
+    async handleBulkDelete() {
+        if (this.selectedCredentials.length === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${this.selectedCredentials.length} credential(s)?`)) {
+            return;
+        }
+
+        const bulkDeleteBtn = document.querySelector('#bulkDeleteBtn');
+        try {
+            bulkDeleteBtn.disabled = true;
+            bulkDeleteBtn.textContent = '⏳ Deleting...';
+
+            if (!this.token || !this.selectedTeam) {
+                throw new Error('Authentication or team selection required');
+            }
+
+            // Delete credentials using bulk API
+            const response = await fetch(`${Constants.BACKEND_URL}/api/credentials/cleanup?teamId=${this.selectedTeam.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ credentialIds: this.selectedCredentials })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                // Show success notification
+                NotificationToast.show(`Successfully deleted ${this.selectedCredentials.length} credential(s)`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                // Remove deleted credentials from local array
+                this.credentials = this.credentials.filter(cred => !this.selectedCredentials.includes(cred.id));
+                this.selectedCredentials = [];
+                
+                // Re-display credentials
+                this.displayCredentials(this.credentials);
+
+            } else {
+                throw new Error(result.message || 'Failed to delete credentials');
+            }
+
+        } catch (error) {
+            NotificationToast.show(error.message || 'Failed to delete credentials', {
+                type: 'error',
+                duration: 5000
+            });
+
+            bulkDeleteBtn.disabled = false;
+            bulkDeleteBtn.textContent = `Delete Selected (${this.selectedCredentials.length})`;
+        }
+    }
+
     destroy() {
+        this.selectedCredentials = [];
     }
 }
 

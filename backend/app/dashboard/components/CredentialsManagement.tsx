@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Eye, Trash2, RefreshCw, Download } from 'lucide-react'
+import { Eye, Trash2, RefreshCw, Download, Filter, X } from 'lucide-react'
 
 interface Credential {
   id: string
   teamId: string
+  teamName?: string
   createdAt: string
   credentialSource: string
   lastUsedAt?: string
@@ -25,11 +26,21 @@ interface Credential {
 
 export default function CredentialsManagement() {
   const [credentials, setCredentials] = useState<Credential[]>([])
+  const [filteredCredentials, setFilteredCredentials] = useState<Credential[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [selectedCredentials, setSelectedCredentials] = useState<string[]>([])
   const [viewingCredential, setViewingCredential] = useState<Credential | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState({
+    status: 'all', // all, active, expired
+    hasCookies: 'all', // all, yes, no
+    hasLocalStorage: 'all', // all, yes, no
+    hasSessionStorage: 'all', // all, yes, no
+    teamId: 'all', // all, specific team ID
+    searchText: '' // search in ID, IP, user agent
+  })
 
   // Helper function to check if credential is expired based on all available expiry data
   const isCredentialExpired = (credential: Credential) => {
@@ -119,6 +130,85 @@ export default function CredentialsManagement() {
     return false;
   };
 
+  // Filter credentials based on current filters
+  const applyFilters = (credentialsList: Credential[]) => {
+    return credentialsList.filter(credential => {
+      // Status filter
+      if (filters.status !== 'all') {
+        const isExpired = isCredentialExpired(credential);
+        const isActive = !isExpired && credential.isActive !== false;
+        if (filters.status === 'active' && !isActive) return false;
+        if (filters.status === 'expired' && isActive) return false;
+      }
+
+      // Has cookies filter
+      if (filters.hasCookies !== 'all') {
+        const hasCookies = credential.cookies && Object.keys(credential.cookies).length > 0;
+        if (filters.hasCookies === 'yes' && !hasCookies) return false;
+        if (filters.hasCookies === 'no' && hasCookies) return false;
+      }
+
+      // Has local storage filter
+      if (filters.hasLocalStorage !== 'all') {
+        const hasLocalStorage = credential.localStorage && Object.keys(credential.localStorage).length > 0;
+        if (filters.hasLocalStorage === 'yes' && !hasLocalStorage) return false;
+        if (filters.hasLocalStorage === 'no' && hasLocalStorage) return false;
+      }
+
+      // Has session storage filter
+      if (filters.hasSessionStorage !== 'all') {
+        const hasSessionStorage = credential.sessionStorage && Object.keys(credential.sessionStorage).length > 0;
+        if (filters.hasSessionStorage === 'yes' && !hasSessionStorage) return false;
+        if (filters.hasSessionStorage === 'no' && hasSessionStorage) return false;
+      }
+
+      // Team ID filter
+      if (filters.teamId !== 'all' && credential.teamId !== filters.teamId) {
+        return false;
+      }
+
+      // Search text filter
+      if (filters.searchText.trim()) {
+        const searchLower = filters.searchText.toLowerCase();
+        const searchableText = [
+          credential.id,
+          credential.ipAddress || '',
+          credential.userAgent || '',
+          credential.credentialSource || '',
+          credential.platform || ''
+        ].join(' ').toLowerCase();
+        
+        if (!searchableText.includes(searchLower)) return false;
+      }
+
+      return true;
+    });
+  };
+
+  // Get unique teams for filter dropdown
+  const getUniqueTeams = () => {
+    const teamMap = new Map();
+    credentials.forEach(c => {
+      if (!teamMap.has(c.teamId)) {
+        teamMap.set(c.teamId, {
+          id: c.teamId,
+          name: c.teamName || c.teamId
+        });
+      }
+    });
+    return Array.from(teamMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  // Update filtered credentials when credentials or filters change
+  useEffect(() => {
+    setFilteredCredentials(applyFilters(credentials));
+  }, [credentials, filters]);
+
+  // Reset selected credentials when filters change
+  useEffect(() => {
+    setSelectedCredentials([]);
+  }, [filters]);
+
   const loadCredentials = async () => {
     try {
       setIsLoading(true)
@@ -140,7 +230,9 @@ export default function CredentialsManagement() {
 
       const data = await response.json()
       if (data.success) {
-        setCredentials(data.data.credentials || [])
+        const credentialsList = data.data.credentials || [];
+        setCredentials(credentialsList);
+        setFilteredCredentials(applyFilters(credentialsList));
       } else {
         setError(data.message || data.error || 'Failed to load credentials')
       }
@@ -206,15 +298,35 @@ export default function CredentialsManagement() {
     loadCredentials()
   }
 
+  const clearAllFilters = () => {
+    setFilters({
+      status: 'all',
+      hasCookies: 'all',
+      hasLocalStorage: 'all',
+      hasSessionStorage: 'all',
+      teamId: 'all',
+      searchText: ''
+    });
+  };
+
+  const hasActiveFilters = () => {
+    return filters.status !== 'all' || 
+           filters.hasCookies !== 'all' || 
+           filters.hasLocalStorage !== 'all' || 
+           filters.hasSessionStorage !== 'all' || 
+           filters.teamId !== 'all' || 
+           filters.searchText.trim() !== '';
+  };
+
   useEffect(() => {
-    loadCredentials()
+    loadCredentials();
   }, [])
 
   const handleSelectAll = () => {
-    if (selectedCredentials.length === credentials.length) {
+    if (selectedCredentials.length === filteredCredentials.length) {
       setSelectedCredentials([])
     } else {
-      setSelectedCredentials(credentials.map(c => c.id))
+      setSelectedCredentials(filteredCredentials.map(c => c.id))
     }
   }
 
@@ -334,6 +446,20 @@ export default function CredentialsManagement() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center space-x-2 ${hasActiveFilters() ? 'bg-blue-50 border-blue-200' : ''}`}
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+            {hasActiveFilters() && (
+              <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs">
+                {Object.values(filters).filter(v => v !== 'all' && v !== '').length}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleRefresh}
             className="flex items-center space-x-2"
           >
@@ -342,6 +468,137 @@ export default function CredentialsManagement() {
           </Button>
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-slate-900">Filter Credentials</h3>
+            <div className="flex items-center space-x-2">
+              {hasActiveFilters() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="flex items-center space-x-1 text-xs"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Clear All</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(false)}
+                className="p-1"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* Status Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Status</label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+
+            {/* Has Cookies Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Has Cookies</label>
+              <select
+                value={filters.hasCookies}
+                onChange={(e) => setFilters(prev => ({ ...prev, hasCookies: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            {/* Has Local Storage Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Has Local Storage</label>
+              <select
+                value={filters.hasLocalStorage}
+                onChange={(e) => setFilters(prev => ({ ...prev, hasLocalStorage: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            {/* Has Session Storage Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Has Session Storage</label>
+              <select
+                value={filters.hasSessionStorage}
+                onChange={(e) => setFilters(prev => ({ ...prev, hasSessionStorage: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            {/* Team Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Team</label>
+              <select
+                value={filters.teamId}
+                onChange={(e) => setFilters(prev => ({ ...prev, teamId: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Teams</option>
+                {getUniqueTeams().map(team => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Text Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Search</label>
+              <input
+                type="text"
+                placeholder="ID, IP, User Agent..."
+                value={filters.searchText}
+                onChange={(e) => setFilters(prev => ({ ...prev, searchText: e.target.value }))}
+                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          {/* Filter Results Summary */}
+          <div className="mt-4 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <span>
+                Showing {filteredCredentials.length} of {credentials.length} credentials
+              </span>
+              {hasActiveFilters() && (
+                <span className="text-blue-600">
+                  {Object.values(filters).filter(v => v !== 'all' && v !== '').length} filter(s) active
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -364,7 +621,7 @@ export default function CredentialsManagement() {
             onClick={handleRefresh}
             className="mt-3"
           >
-            Try Again
+            Try Again 
           </Button>
         </div>
       )}
@@ -379,13 +636,16 @@ export default function CredentialsManagement() {
                 <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedCredentials.length === credentials.length && credentials.length > 0}
+                    checked={selectedCredentials.length === filteredCredentials.length && filteredCredentials.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-slate-300"
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   ID & Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Team
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Browser Info
@@ -402,7 +662,7 @@ export default function CredentialsManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {credentials.map((credential) => (
+              {filteredCredentials.map((credential) => (
                 <tr key={credential.id} className="hover:bg-slate-50">
                   <td className="px-4 py-4">
                     <input
@@ -430,6 +690,17 @@ export default function CredentialsManagement() {
                         <Badge variant="outline" className="text-xs">
                           {credential.credentialSource}
                         </Badge>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-4">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-slate-900">
+                        {credential.teamName || 'Unknown Team'}
+                      </div>
+                      <div className="text-xs text-slate-500 font-mono">
+                        {credential.teamId.substring(0, 8)}...
                       </div>
                     </div>
                   </td>
@@ -514,23 +785,39 @@ export default function CredentialsManagement() {
           </table>
         </div>
 
-        {credentials.length === 0 && (
+        {filteredCredentials.length === 0 && !isLoading && (
           <div className="text-center py-12">
-            <div className="text-slate-400 text-lg mb-2">No credentials found</div>
-            <div className="text-slate-500 text-sm">
-              Team members haven't set up any credentials yet
+            <div className="text-slate-400 text-lg mb-2">
+              {credentials.length === 0 ? 'No credentials found' : 'No credentials match your filters'}
             </div>
+            <div className="text-slate-500 text-sm">
+              {credentials.length === 0 
+                ? 'Team members haven\'t set up any credentials yet'
+                : 'Try adjusting your filter criteria'
+              }
+            </div>
+            {hasActiveFilters() && credentials.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="mt-3"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         )}
       </div>
       )}
 
       {/* Summary Footer */}
-      {!isLoading && !error && credentials.length > 0 && (
+      {!isLoading && !error && (credentials.length > 0 || hasActiveFilters()) && (
         <div className="bg-slate-50 rounded-lg p-4">
           <div className="flex items-center justify-between text-sm text-slate-600">
             <span>Total: {credentials.length} credentials</span>
-            <span>Active: {credentials.filter(c => !isCredentialExpired(c) && c.isActive !== false).length}</span>
+            <span>Filtered: {filteredCredentials.length} credentials</span>
+            <span>Active: {filteredCredentials.filter(c => !isCredentialExpired(c) && c.isActive !== false).length}</span>
             <span>Selected: {selectedCredentials.length}</span>
           </div>
         </div>
