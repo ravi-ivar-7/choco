@@ -91,6 +91,14 @@
     margin-bottom: 16px;
 }
 
+.status-details {
+    font-size: 12px;
+    color: #8b949e;
+    line-height: 1.4;
+    margin-top: 8px;
+    text-align: center;
+}
+
 .status-title {
     font-size: 15px;
     color: #c9d1d9;
@@ -110,9 +118,19 @@
     color: #8b949e;
 }
 
-.status-checking {
+.status-loading {
     background: rgba(255, 191, 0, 0.2);
     color: #ffbf00;
+}
+
+.status-active {
+    background: rgba(46, 160, 67, 0.2);
+    color: #3fb950;
+}
+
+.status-inactive {
+    background: rgba(110, 118, 129, 0.2);
+    color: #8b949e;
 }
 
 .status-success {
@@ -125,9 +143,9 @@
     color: #f85149;
 }
 
-.status-warning {
-    background: rgba(255, 191, 0, 0.2);
-    color: #ffbf00;
+.status-info {
+    background: rgba(88, 166, 255, 0.2);
+    color: #58a6ff;
 }
 
 /* Action Buttons */

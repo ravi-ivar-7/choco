@@ -2,49 +2,139 @@ class CredentialsController {
     constructor() {
         this.credentialsAPI = null;
         this.credentials = [];
+        this.selectedCredentials = [];
+        this.selectedTeam = null;
+        this.teamConfig = null;
+        this.targetTab = null;
+        this.token = null;
     }
 
     async init() {
         try {
-            
-            // Initialize API
+            // Initialize API first
             if (typeof CredentialsAPI !== 'undefined' && typeof Constants !== 'undefined') {
                 this.credentialsAPI = new CredentialsAPI(Constants.BACKEND_URL);
             }
+
+            // Check authentication first
+            const isAuthenticated = await this.checkUserAuthentication();
             
-            // Load and display credentials directly
-            await this.loadAndDisplayCredentials();
-            
+            if (isAuthenticated) {
+                // Only initialize storage data if user is authenticated
+                const storageInitialized = await this.initializeFromStorage();
+                if (storageInitialized) {
+                    // Load and display credentials only if storage initialization succeeded
+                    await this.loadAndDisplayCredentials();
+                }
+            } else {
+                this.updateCredentialsStatusCard('error', 'Please login first from the profile page');
+            }
         } catch (error) {
             console.error('CredentialsController initialization failed:', error);
+            this.updateCredentialsStatusCard('error', 'Failed to initialize credentials page');
+        }
+    }
+
+    async initializeFromStorage() {
+        try {
+            const storageResult = await StorageUtils.get(['choco_selected_team', 'choco_team_config', 'choco_target_tab', 'choco_token']);
+            
+            if (!storageResult.success) {
+                this.updateCredentialsStatusCard('error', 'Storage Access Failed', 'Unable to retrieve configuration data');
+                return false;
+            }
+
+            const { choco_selected_team, choco_team_config, choco_target_tab, choco_token } = storageResult.data;
+            
+            // Check for missing required data
+            const missingItems = [];
+            
+            if (!choco_selected_team) {
+                missingItems.push('team selection');
+            } else {
+                this.selectedTeam = choco_selected_team;
+            }
+
+            if (!choco_team_config) {
+                missingItems.push('team configuration');
+            } else {
+                this.teamConfig = choco_team_config;
+            }
+
+            if (!choco_target_tab) {
+                missingItems.push('target tab');
+            } else {
+                this.targetTab = choco_target_tab;
+            }
+
+            if (!choco_token) {
+                missingItems.push('authentication token');
+            } else {
+                this.token = choco_token;
+            }
+
+            // Show status card if critical data is missing
+            if (missingItems.length > 0) {
+                const missingText = missingItems.join(', ');
+                this.updateCredentialsStatusCard('info', 'Setup Required', `Missing: ${missingText}. Please visit the Profile page to complete setup.`);
+                return false;
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('CredentialsController: Error initializing from storage:', error);
+            this.updateCredentialsStatusCard('error', 'Storage Error', 'Failed to load configuration data');
+            return false;
+        }
+    }
+
+    async checkUserAuthentication() {
+        try {
+            const userAPI = new UserAPI(Constants.BACKEND_URL);
+            const storedUser = await userAPI.getLocalStoredUser();
+            return storedUser.success;
+        } catch (error) {
+            console.error('Error checking user authentication:', error);
+            return false;
         }
     }
 
     async loadAndDisplayCredentials() {
         try {
             if (!this.credentialsAPI) {
-                this.showError('Credentials API not available');
+                this.updateCredentialsStatusCard('error', 'Credentials API not available');
                 return;
             }
 
-            // Get stored user token
-            const userResult = await StorageUtils.get(['chocoUser']);
-            if (!userResult.success || !userResult.data.chocoUser?.token) {
-                this.showError('Please login first');
+            // Check if we have required data from storage
+            if (!this.token) {
+                this.updateCredentialsStatusCard('error', 'Please login first');
                 return;
             }
 
-            // Get credentials
-            const result = await this.credentialsAPI.getCredentials(userResult.data.chocoUser.token);
+            if (!this.selectedTeam) {
+                this.updateCredentialsStatusCard('error', 'No team selected');
+                return;
+            }
+            
+            this.updateCredentialsStatusCard('loading', 'Loading Credentials', 'Fetching your team credentials...');
+            
+            const result = await this.credentialsAPI.getCredentials(this.token, this.selectedTeam.id);
             if (result.success) {
                 this.credentials = result.data.credentials || [];
-                this.displayCredentials(this.credentials);
+                if (this.credentials.length === 0) {
+                    this.updateCredentialsStatusCard('info', 'No Credentials Found', 'No credentials available for this team yet.');
+                } else {
+                    this.hideCredentialsStatusCard();
+                    this.displayCredentials(this.credentials);
+                }
             } else {
-                this.showError('Failed to load credentials: ' + result.message);
+                this.updateCredentialsStatusCard('error', 'Failed to load credentials: ' + result.message);
             }
         } catch (error) {
             console.error('Failed to load credentials:', error);
-            this.showError('Error loading credentials');
+            this.updateCredentialsStatusCard('error', 'Error loading credentials');
         }
     }
 
@@ -135,14 +225,13 @@ class CredentialsController {
     displayCredentials(credentials) {
         const container = document.getElementById('credentialsContainer');
         if (!container) {
-            console.error('Credentials container not found');
             return;
         }
 
         // Clear existing content
         container.innerHTML = '';
 
-        // Create header
+        // Create header with bulk actions
         const header = document.createElement('div');
         header.className = 'credentials-header';
         // Calculate active/expired counts based on actual expiry data
@@ -150,8 +239,14 @@ class CredentialsController {
         const expiredCount = credentials.length - activeCount;
         
         header.innerHTML = `
-            <div class="credentials-title">
-                🔐 Team Credentials (${credentials.length})
+            <div class="credentials-title-row">
+                <div class="credentials-title">
+                     🔐 Team Credentials (${credentials.length})
+                </div>
+                <div class="bulk-actions">
+                    <button id="selectAllBtn" class="bulk-btn select-all-btn">Select All</button>
+                    <button id="bulkDeleteBtn" class="bulk-btn delete-btn" disabled style="display: none;">Delete Selected (0)</button>
+                </div>
             </div>
             <div class="credentials-subtitle">
                 ${credentials.length === 0 ? 
@@ -190,6 +285,7 @@ class CredentialsController {
         
         // Bind events
         this.bindCredentialsEvents(container);
+        this.bindBulkActionEvents(container);
     }
 
     createCredentialCard(cred, hasActiveCredentials = true, index = 0) {
@@ -207,8 +303,10 @@ class CredentialsController {
         card.innerHTML = `
             ${showNotice ? '<div class="credential-notice" style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; font-size: 13px; font-weight: 500;">⚠️ This token may still work even if expired - worth trying!</div>' : ''}
             <div class="credential-header">
-                <div class="credential-platform">
-                    <div class="credential-icon">🔐</div>
+                <div class="credential-select">
+                    <input type="checkbox" class="credential-checkbox" data-credential-id="${cred.id}">
+                </div>
+                <div class="credential-platform"> 
                     <div class="credential-name">${cred.id.substring(0, 8)}... (${cred.credentialSource || 'Unknown'})</div>
                 </div>
                 <div class="credential-status ${isActive ? 'status-active' : 'status-expired'}">
@@ -269,11 +367,19 @@ class CredentialsController {
         });
 
         // Delete buttons
-        const deleteBtns = container.querySelectorAll('.delete-btn');
+        const deleteBtns = container.querySelectorAll('.credential-actions .delete-btn');
         deleteBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const credentialId = e.target.dataset.credentialId;
                 this.handleDeleteCredential(credentialId, btn, container);
+            });
+        });
+
+        // Checkbox selection
+        const checkboxes = container.querySelectorAll('.credential-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                this.handleCredentialSelection(e.target.dataset.credentialId, e.target.checked);
             });
         });
     }
@@ -447,8 +553,8 @@ class CredentialsController {
             button.innerHTML = '⏳ Applying...';
 
             // Get stored user token
-            const userResult = await StorageUtils.get(['chocoUser']);
-            if (!userResult.success || !userResult.data.chocoUser?.token) {
+            const tokenResult = await StorageUtils.get(['choco_token']);
+            if (!tokenResult.success || !tokenResult.data.choco_token) {
                 alert('Please login first');
                 return;
             }
@@ -459,40 +565,119 @@ class CredentialsController {
                 throw new Error('Credential not found');
             }
 
-            // Get stored tab from selectedPlatform (like HomeController does)
-            let currentTab = null;
-            let tabId = null;
+            // Get stored tab from chrome.storage.local like HomeController
+            const tabResult = await StorageUtils.get(['choco_target_tab']);
+            if (!tabResult.success || !tabResult.data.choco_target_tab) {
+                throw new Error('No target tab found. Please select a platform first.');
+            }
             
-            const storedResult = await StorageUtils.get(['selectedPlatform']);
-            if (storedResult.success && storedResult.data.selectedPlatform && storedResult.data.selectedPlatform.tab) {
-                const storedTab = storedResult.data.selectedPlatform.tab;
-                try {
-                    // Verify stored tab still exists
-                    const verifiedTab = await chrome.tabs.get(storedTab.id);
-                    if (verifiedTab && verifiedTab.url === storedTab.url) {
-                        currentTab = verifiedTab;
-                        tabId = verifiedTab.id;
-                    }
-                } catch (tabError) {
-                    console.warn('Stored tab no longer valid:', tabError.message);
-                    // Tab cleanup is handled centrally by background.js tab lifecycle listeners
+            const storedTab = tabResult.data.choco_target_tab;
+            let currentTab = null;
+            
+            try {
+                // Verify stored tab still exists
+                const verifiedTab = await chrome.tabs.get(storedTab.id);
+                if (verifiedTab && verifiedTab.url === storedTab.url) {
+                    currentTab = verifiedTab;
                 }
+            } catch (tabError) {
+                // Tab cleanup is handled centrally by background.js tab lifecycle listeners
             }
             
             // If no valid tab available, require platform selection from parent
             if (!currentTab) {
-                throw new Error('No valid tab available. Please select a platform first.');
+                throw new Error('Target tab is no longer valid. Please select a platform again.');
             }
 
-            const credentialCopy = JSON.parse(JSON.stringify(credential));
-            const setBrowserDataResult = await BrowserDataCollector.setBrowserData(
-                currentTab.id,
-                credentialCopy,
-                currentTab.url
-            );
+            // Validate credential before applying (like HomeController)
+            const validation = await CredentialValidator.validateCredentials(credential, 'match_config');
+            
+            if (!validation.success) {
+                throw new Error('Credential validation failed: ' + validation.message);
+            }
 
-            // Show notification based on the actual result
-            await this.showNotification(currentTab, { setBrowserDataResult });
+            // Create a copy to prevent mutation of original credential object
+            const credentialCopy = JSON.parse(JSON.stringify(credential));
+            const setBrowserDataResult = await SetBrowserData.setBrowserData(credentialCopy);
+
+            // Handle partial success scenarios
+            if (setBrowserDataResult.success) {
+                const results = setBrowserDataResult.data?.results || [];
+                const failedResults = results.filter(r => !r.success);
+                const successfulResults = results.filter(r => r.success);
+                
+                if (failedResults.length === 0) {
+                    // Full success
+                    NotificationDialog.show(
+                        'Credentials Applied Successfully',
+                        'All credentials applied. Refresh to test login.',
+                        {
+                            type: 'success',
+                            buttons: [
+                                {
+                                    text: 'Refresh Page',
+                                    onClick: () => {
+                                        if (currentTab?.id) {
+                                            chrome.tabs.reload(currentTab.id);
+                                        }
+                                    },
+                                    primary: true
+                                },
+                                { text: 'Later', primary: false }
+                            ]
+                        }
+                    );
+                } else {
+                    // Partial success - show detailed breakdown
+                    const successList = successfulResults.map(r => 
+                        `<div style="color: #3fb950; margin: 2px 0;">✅ ${r.type}: ${r.name || 'Applied'}</div>`
+                    ).join('');
+                    
+                    const failureList = failedResults.map(r => 
+                        `<div style="color: #f85149; margin: 2px 0;">❌ ${r.type}: ${r.name || 'Failed'} ${r.error ? `(${r.error})` : ''}</div>`
+                    ).join('');
+                    
+                    const detailedMessage = `
+                        <div style="margin-bottom: 12px;">Some credentials applied successfully (${successfulResults.length}/${results.length}):</div>
+                        <div style="font-family: monospace; font-size: 12px; background: #0d1117; padding: 8px; border-radius: 4px; margin: 8px 0;">
+                            ${successList}
+                            ${failureList}
+                        </div>
+                        <div>Try refreshing to test login.</div>
+                    `;
+                    
+                    NotificationDialog.show(
+                        'Credentials Partially Applied',
+                        detailedMessage,
+                        {
+                            type: 'warning',
+                            buttons: [
+                                {
+                                    text: 'Refresh Page',
+                                    onClick: () => {
+                                        if (currentTab?.id) {
+                                            chrome.tabs.reload(currentTab.id);
+                                        }
+                                    },
+                                    primary: true
+                                },
+                                { text: 'Later', primary: false }
+                            ]
+                        }
+                    );
+                }
+            } else {
+                NotificationDialog.show(
+                    'Credentials Failed',
+                    setBrowserDataResult.message || 'Could not apply credentials to this page',
+                    {
+                        type: 'error',
+                        buttons: [
+                            { text: 'OK', primary: true }
+                        ]
+                    }
+                );
+            }
 
             if (setBrowserDataResult.success) {
                 button.innerHTML = '✅ Applied!';
@@ -505,17 +690,14 @@ class CredentialsController {
             }
 
         } catch (error) {
-            console.error('Failed to apply credential:', error);
-            
-            if (typeof addToNotificationQueue === 'function') {
-                addToNotificationQueue({
-                    title: 'Apply Failed',
-                    message: error.message || 'Failed to apply credentials',
-                    type: 'error'
-                });
-            } else {
-                alert('Failed to apply credentials: ' + error.message);
-            }
+            NotificationDialog.show(
+                'Apply Failed',
+                error.message || 'Failed to apply credentials',
+                {
+                    type: 'error',
+                    buttons: [{ text: 'OK', primary: true }]
+                }
+            );
 
             button.disabled = false;
             button.innerHTML = 'Apply';
@@ -531,35 +713,38 @@ class CredentialsController {
             button.disabled = true;
             button.innerHTML = '⏳ Deleting...';
 
-            // Get stored user token
-            const userResult = await StorageUtils.get(['chocoUser']);
-            if (!userResult.success || !userResult.data.chocoUser?.token) {
+            // Check if we have required data from storage
+            if (!this.token) {
                 alert('Please login first');
                 return;
             }
 
-            // Delete credential
-            const response = await fetch(`${Constants.BACKEND_URL}/api/credentials/cleanup?credentialId=${credentialId}`, {
+            if (!this.selectedTeam) {
+                alert('No team selected');
+                return;
+            }
+
+            // Delete credential using new API format
+            const response = await fetch(`${Constants.BACKEND_URL}/api/credentials/cleanup?teamId=${this.selectedTeam.id}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${userResult.data.chocoUser.token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({ credentialIds: [credentialId] })
             });
 
             const result = await response.json();
             if (result.success) {
                 // Show success notification
-                if (typeof addToNotificationQueue === 'function') {
-                    addToNotificationQueue({
-                        title: 'Credential Deleted',
-                        message: 'Credential deleted successfully',
-                        type: 'success'
-                    });
-                }
+                NotificationToast.show('Credential deleted successfully', {
+                    type: 'success',
+                    duration: 3000
+                });
 
-                // Remove from local array
+                // Remove from local array and selected credentials
                 this.credentials = this.credentials.filter(cred => cred.id !== credentialId);
+                this.selectedCredentials = this.selectedCredentials.filter(id => id !== credentialId);
                 
                 // Re-display credentials
                 this.displayCredentials(this.credentials);
@@ -569,41 +754,200 @@ class CredentialsController {
             }
 
         } catch (error) {
-            console.error('Failed to delete credential:', error);
-            
-            if (typeof addToNotificationQueue === 'function') {
-                addToNotificationQueue({
-                    title: 'Delete Failed',
-                    message: error.message || 'Failed to delete credential',
-                    type: 'error'
-                });
-            } else {
-                alert('Failed to delete credential: ' + error.message);
-            }
+            NotificationToast.show(error.message || 'Failed to delete credential', {
+                type: 'error',
+                duration: 5000
+            });
 
             button.disabled = false;
             button.innerHTML = 'Delete';
         }
     }
 
-    showError(message) {
-        const container = document.getElementById('credentialsContainer');
-        if (!container) return;
+    updateCredentialsStatusCard(type, message, details = '') {
+        const statusText = document.getElementById('credentialsStatusText');
+        const statusDetails = document.getElementById('credentialsStatusDetails');
+        
+        if (!statusText) {
+            console.error('Credentials status card elements not found');
+            return;
+        }
 
-        container.innerHTML = `
-            <div class="credentials-header">
-                <div class="credentials-title">🔐 Team Credentials</div>
-                <div class="credentials-subtitle">${message}</div>
-            </div>
-        `;
+        statusText.textContent = message;
+        statusText.className = `status-text status-${type}`;
+
+        if (details && statusDetails) {
+            statusDetails.textContent = details;
+            statusDetails.style.display = 'block';
+        } else if (statusDetails) {
+            statusDetails.style.display = 'none';
+        }
+        
+        // Show status card and hide credentials container when showing status
+        const statusCard = document.querySelector('.status-card');
+        const container = document.getElementById('credentialsContainer');
+        
+        if (statusCard) {
+            statusCard.style.display = 'block';
+        }
+        
+        if (container) {
+            container.style.display = 'none';
+        }
     }
 
-    async showNotification(currentTab, options = {}) {
-        // Use the general notification utility
-        return await NotificationUtils.showExtensionNotification(currentTab, options);
+    hideCredentialsStatusCard() {
+        const statusCard = document.querySelector('.status-card');
+        const container = document.getElementById('credentialsContainer');
+        
+        if (statusCard) {
+            statusCard.style.display = 'none';
+        }
+        
+        if (container) {
+            container.style.display = 'block';
+        }
+    }
+
+
+    async showNotification(message, options = {}) {
+        if (options.type === 'dialog') {
+            return NotificationDialog.show(options.title || 'Notification', message, {
+                type: options.notificationType || 'info',
+                buttons: options.buttons || [{ text: 'OK', primary: true }]
+            });
+        } else {
+            return NotificationToast.show(message, {
+                type: options.notificationType || 'info',
+                duration: options.duration || 3000
+            });
+        }
+    }
+
+    bindBulkActionEvents(container) {
+        const selectAllBtn = container.querySelector('#selectAllBtn');
+        const bulkDeleteBtn = container.querySelector('#bulkDeleteBtn');
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', () => {
+                this.handleSelectAll();
+            });
+        }
+
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', () => {
+                this.handleBulkDelete();
+            });
+        }
+    }
+
+    handleCredentialSelection(credentialId, isSelected) {
+        if (isSelected) {
+            if (!this.selectedCredentials.includes(credentialId)) {
+                this.selectedCredentials.push(credentialId);
+            }
+        } else {
+            this.selectedCredentials = this.selectedCredentials.filter(id => id !== credentialId);
+        }
+        this.updateBulkActionButtons();
+    }
+
+    handleSelectAll() {
+        const checkboxes = document.querySelectorAll('.credential-checkbox');
+        const selectAllBtn = document.querySelector('#selectAllBtn');
+        
+        if (this.selectedCredentials.length === this.credentials.length) {
+            // Deselect all
+            this.selectedCredentials = [];
+            checkboxes.forEach(cb => cb.checked = false);
+            selectAllBtn.textContent = 'Select All';
+        } else {
+            // Select all
+            this.selectedCredentials = this.credentials.map(c => c.id);
+            checkboxes.forEach(cb => cb.checked = true);
+            selectAllBtn.textContent = 'Deselect All';
+        }
+        this.updateBulkActionButtons();
+    }
+
+    updateBulkActionButtons() {
+        const bulkDeleteBtn = document.querySelector('#bulkDeleteBtn');
+        const selectAllBtn = document.querySelector('#selectAllBtn');
+
+        if (bulkDeleteBtn) {
+            if (this.selectedCredentials.length > 0) {
+                bulkDeleteBtn.style.display = 'inline-block';
+                bulkDeleteBtn.disabled = false;
+                bulkDeleteBtn.textContent = `Delete Selected (${this.selectedCredentials.length})`;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+                bulkDeleteBtn.disabled = true;
+            }
+        }
+
+        if (selectAllBtn) {
+            selectAllBtn.textContent = this.selectedCredentials.length === this.credentials.length ? 'Deselect All' : 'Select All';
+        }
+    }
+
+    async handleBulkDelete() {
+        if (this.selectedCredentials.length === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${this.selectedCredentials.length} credential(s)?`)) {
+            return;
+        }
+
+        const bulkDeleteBtn = document.querySelector('#bulkDeleteBtn');
+        try {
+            bulkDeleteBtn.disabled = true;
+            bulkDeleteBtn.textContent = '⏳ Deleting...';
+
+            if (!this.token || !this.selectedTeam) {
+                throw new Error('Authentication or team selection required');
+            }
+
+            // Delete credentials using bulk API
+            const response = await fetch(`${Constants.BACKEND_URL}/api/credentials/cleanup?teamId=${this.selectedTeam.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ credentialIds: this.selectedCredentials })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                // Show success notification
+                NotificationToast.show(`Successfully deleted ${this.selectedCredentials.length} credential(s)`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                // Remove deleted credentials from local array
+                this.credentials = this.credentials.filter(cred => !this.selectedCredentials.includes(cred.id));
+                this.selectedCredentials = [];
+                
+                // Re-display credentials
+                this.displayCredentials(this.credentials);
+
+            } else {
+                throw new Error(result.message || 'Failed to delete credentials');
+            }
+
+        } catch (error) {
+            NotificationToast.show(error.message || 'Failed to delete credentials', {
+                type: 'error',
+                duration: 5000
+            });
+
+            bulkDeleteBtn.disabled = false;
+            bulkDeleteBtn.textContent = `Delete Selected (${this.selectedCredentials.length})`;
+        }
     }
 
     destroy() {
+        this.selectedCredentials = [];
     }
 }
 

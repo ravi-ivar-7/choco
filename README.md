@@ -36,14 +36,8 @@ The creator of this extension assumes no liability for any misuse, including but
 
 ### Step 1: Get the Repository
 
-**Option 1 – Clone using Git**
-```bash
-git clone https://github.com/ravi-ivar-7/choco.git
-cd choco
-```
-
-**Option 2 – Download as ZIP from**  
-`https://github.com/ravi-ivar-7/choco`
+**Download the latest version from GitHub**  
+Go to `https://github.com/ravi-ivar-7/choco` and download the latest release or source code to get the most up-to-date version.
 
 ### Step 2: Configure Backend URL
 Update the backend URL in extension files:

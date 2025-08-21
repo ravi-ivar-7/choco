@@ -1,28 +1,43 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // Import modular components
-import AdminHeader from './components/AdminHeader'
+import DashboardHeader from './components/DashboardHeader'
 import NavigationTabs from './components/NavigationTabs'
 import OverviewTab from './components/OverviewTab'
 import TeamsManagement from './components/TeamsManagement'
 import MembersManagement from './components/MembersManagement'
 import CredentialsManagement from './components/CredentialsManagement'
+import ProfileManagement from './components/ProfileManagement'
 
 interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'member'
-  teamId: string
+  teams: Array<{
+    teamId: string
+    teamName: string
+    role: 'admin' | 'member'
+    isOwner: boolean
+  }>
 }
 
-export default function AdminDashboard() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function DashboardContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials'>('overview')
+  
+  // Get tab from URL parameter or default to 'overview'
+  const getInitialTab = (): 'overview' | 'teams' | 'members' | 'credentials' | 'profile' => {
+    const tabParam = searchParams.get('tab')
+    const validTabs = ['overview', 'teams', 'members', 'credentials', 'profile']
+    return validTabs.includes(tabParam || '') ? tabParam as any : 'overview'
+  }
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'members' | 'credentials' | 'profile'>(getInitialTab())
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     totalTeams: 0,
@@ -47,7 +62,6 @@ export default function AdminDashboard() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ requiredRole: 'admin' })
         })
         
         if (!authResponse.ok) {
@@ -63,7 +77,9 @@ export default function AdminDashboard() {
           return
         }
         
-        setUser(authData.data.user)
+        const userData = authData.data.user
+        
+        setUser(userData)
         // Load stats after successful authentication
         await loadStats()
       } catch (error) {
@@ -122,14 +138,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Admin Header */}
-      <AdminHeader user={user} onLogout={handleLogout} />
+      {/* Dashboard Header */}
+      <DashboardHeader user={user} onLogout={handleLogout} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
           <p className="mt-2 text-slate-600">Manage your teams, members, and credentials</p>
         </div>
 
@@ -143,11 +159,33 @@ export default function AdminDashboard() {
         {/* Tab Content - Each tab loads its own data */}
         <div className="mt-6">
           {activeTab === 'overview' && <OverviewTab />}
-          {activeTab === 'teams' && <TeamsManagement />}
-          {activeTab === 'members' && <MembersManagement />}
+          {activeTab === 'teams' && <TeamsManagement user={user} onUserUpdate={setUser} />}
+          {activeTab === 'members' && <MembersManagement user={user} onUserUpdate={setUser} />}
           {activeTab === 'credentials' && <CredentialsManagement />}
+          {activeTab === 'profile' && <ProfileManagement />}
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function DashboardLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-slate-600">Loading dashboard...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main export with Suspense wrapper
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   )
 }

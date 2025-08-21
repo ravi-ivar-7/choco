@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { db } from '../lib/db';
-import { teams, users } from '../lib/schema';
-import { generateAndHashInitialPassword } from '../lib/password-utils';
+import { teams, users, teamMembers } from '../lib/schema';
+import { hashPassword } from '../utils/password';
 import { createId } from '@paralleldrive/cuid2';
 
 async function initializeDatabase() {
@@ -10,28 +10,37 @@ async function initializeDatabase() {
   try {
     // Create demo team
     const teamId = createId();
+    const adminId = createId();
+    
     await db.insert(teams).values({
       id: teamId,
       name: 'Demo Team',
       description: 'Demo team for web platform access',
       platformAccountId: 'demo-account-123',
+      ownerId: adminId,
     });
 
     console.log('✅ Created demo team');
 
     // Create demo admin user
-    const adminId = createId();
     const adminEmail = 'admin@gmail.com';
-    const hashedPassword = await generateAndHashInitialPassword(adminEmail);
+    const hashedPassword = await hashPassword('admin');
     
     await db.insert(users).values({
       id: adminId,
       email: adminEmail,
       name: 'Admin User',
       password: hashedPassword,
-      role: 'admin',
-      teamId: teamId,
       isActive: true,
+    });
+    
+    // Add admin user to team as owner/admin
+    await db.insert(teamMembers).values({
+      id: createId(),
+      userId: adminId,
+      teamId: teamId,
+      role: 'admin',
+      invitedBy: adminId,
     });
 
     console.log('\n🎉 Database initialized successfully!');
@@ -41,7 +50,7 @@ async function initializeDatabase() {
     console.log('\n📝 Notes:');
     console.log('  - Demo team created with encrypted token storage');
     console.log('  - Additional users can be added via admin panel');
-    console.log('  - Extension users will use email username as password');
+    console.log('  - Users must register with their own secure passwords');
 
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

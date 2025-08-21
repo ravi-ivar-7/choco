@@ -1,4 +1,66 @@
 /* Profile Page Styles - Responsive */
+
+/* Status Card Styles */
+.status-card {
+    background: rgba(21, 24, 28, 0.6);
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+    width: calc(100% - 32px);
+    max-width: 90%;
+    align-self: center;
+}
+
+.status-title {
+    font-size: 15px;
+    color: #c9d1d9;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.status-text {
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.status-text.status-none {
+    background: rgba(110, 118, 129, 0.2);
+    color: #8b949e;
+}
+
+.status-text.status-loading {
+    background: rgba(255, 191, 0, 0.2);
+    color: #ffbf00;
+}
+
+.status-text.status-success {
+    background: rgba(46, 160, 67, 0.2);
+    color: #3fb950;
+}
+
+.status-text.status-error {
+    background: rgba(248, 81, 73, 0.2);
+    color: #f85149;
+}
+
+.status-text.status-info {
+    background: rgba(88, 166, 255, 0.2);
+    color: #58a6ff;
+}
+
+.status-details {
+    font-size: 12px;
+    color: #8b949e;
+    line-height: 1.4;
+    margin-top: 8px;
+}
 #profilePage {
     padding: 16px;
     padding-bottom: 40px;
@@ -436,3 +498,4 @@
         max-width: none;
     }
 }
+

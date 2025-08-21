@@ -3,25 +3,54 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw, Settings } from 'lucide-react'
 import TeamForm from './TeamForm'
+import CredentialConfig from './CredentialConfig'
 
 interface Team {
   id: string
   name: string
   description?: string
   platformAccountId: string
+  ownerId: string
   createdAt: string
   updatedAt: string
 }
 
-export default function TeamsManagement() {
+interface User {
+  id: string
+  email: string
+  name: string
+  teams: Array<{
+    teamId: string
+    teamName: string
+    role: 'admin' | 'member'
+    isOwner: boolean
+  }>
+}
+
+interface TeamsManagementProps {
+  user: User
+  onUserUpdate: (user: User) => void
+}
+
+export default function TeamsManagement({ user, onUserUpdate }: TeamsManagementProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
+  const [configTeam, setConfigTeam] = useState<Team | null>(null)
+
+  // Check if user can manage a specific team
+  const canManageTeam = (teamId: string) => {
+    const userTeam = user.teams.find(t => t.teamId === teamId)
+    return userTeam ? (userTeam.role === 'admin' || userTeam.isOwner) : false
+  }
+
+  // Check if user can create teams (must be admin of at least one team or have no teams)
+  const canCreateTeams = user.teams.length === 0 || user.teams.some(t => t.role === 'admin' || t.isOwner)
 
   const loadTeams = async () => {
     try {
@@ -60,6 +89,30 @@ export default function TeamsManagement() {
     loadTeams()
   }, [])
 
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem('choco_token')
+      if (!token) return
+
+      const authResponse = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      })
+      
+      if (authResponse.ok) {
+        const authData = await authResponse.json()
+        if (authData.success) {
+          onUserUpdate(authData.data.user)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error)
+    }
+  }
+
   const handleCreateTeam = async (teamData: { name: string; description?: string; platformAccountId: string }) => {
     try {
       setActionLoading('create')
@@ -81,7 +134,8 @@ export default function TeamsManagement() {
 
       const result = await response.json()
       if (result.success) {
-        await loadTeams() // Refresh the list
+        await loadTeams() // Refresh the teams list
+        await refreshUserData() // Refresh user data to include new team permissions
         setShowTeamForm(false)
         alert('Team created successfully')
       } else {
@@ -204,13 +258,15 @@ export default function TeamsManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-slate-900">Teams Management</h2>
-        <Button 
-          onClick={() => setShowTeamForm(true)}
-          disabled={actionLoading === 'create'}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {actionLoading === 'create' ? 'Creating...' : 'Add Team'}
-        </Button>
+        {canCreateTeams && (
+          <Button 
+            onClick={() => setShowTeamForm(true)}
+            disabled={actionLoading === 'create'}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {actionLoading === 'create' ? 'Creating...' : 'Add Team'}
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -235,27 +291,40 @@ export default function TeamsManagement() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingTeam(team)}
-                    disabled={actionLoading !== null}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteTeam(team.id)}
-                    disabled={actionLoading === team.id}
-                    className="text-red-600 hover:text-red-700 disabled:opacity-50"
-                  >
-                    {actionLoading === team.id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
+                  {canManageTeam(team.id) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConfigTeam(team)}
+                        disabled={actionLoading !== null}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingTeam(team)}
+                        disabled={actionLoading !== null}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteTeam(team.id)}
+                        disabled={actionLoading === team.id}
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {actionLoading === team.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -272,6 +341,15 @@ export default function TeamsManagement() {
             setShowTeamForm(false)
             setEditingTeam(null)
           }}
+        />
+      )}
+
+      {/* Credential Config Modal */}
+      {configTeam && (
+        <CredentialConfig
+          teamId={configTeam.id}
+          teamName={configTeam.name}
+          onClose={() => setConfigTeam(null)}
         />
       )}
     </div>

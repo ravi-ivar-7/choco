@@ -1,123 +1,109 @@
 class NavbarController {
     constructor() {
-        this.platformDropdownBtn = null;
-        this.platformDropdownMenu = null;
-        this.selectedPlatformIcon = null;
-        this.selectedPlatformName = null;
+        this.teamDropdownBtn = null;
+        this.teamDropdownMenu = null;
+        this.selectedTeamIcon = null;
+        this.selectedTeamName = null;
         this.userName = null;
         this.navTabs = null;
         this.currentTab = 'home';
         this.isDropdownOpen = false;
-        this.availablePlatforms = [];
+        this.availableTeams = [];
+        this.selectedTeam = null;
     }
 
     async init() {
-        console.log('NavbarController: Initializing...');
+        this.showLoading('Initializing...');
         
         // Initialize DOM elements
-        this.platformDropdownBtn = document.getElementById('platformDropdownBtn');
-        this.platformDropdownMenu = document.getElementById('platformDropdownMenu');
-        this.selectedPlatformIcon = document.getElementById('selectedPlatformIcon');
-        this.selectedPlatformName = document.getElementById('selectedPlatformName');
+        this.teamDropdownBtn = document.getElementById('teamDropdownBtn');
+        this.teamDropdownMenu = document.getElementById('teamDropdownMenu');
+        this.selectedTeamIcon = document.getElementById('selectedTeamIcon');
+        this.selectedTeamName = document.getElementById('selectedTeamName');
         this.userName = document.getElementById('userName');
         this.navTabs = document.querySelectorAll('.nav-tab');
 
-        if (!this.platformDropdownBtn || !this.platformDropdownMenu) {
-            console.error('Platform dropdown elements not found!');
+        if (!this.teamDropdownBtn || !this.teamDropdownMenu) {
+            console.error('Team dropdown elements not found!');
+            this.hideLoading();
             return;
         }
 
-        // Bind events
-        this.bindEvents();
-        this.bindUserProfileEvents();
+        // Initialize team manager
+        if (!window.teamManager) {
+            const { TeamManager } = await import('../lib/api/teams.js');
+            window.teamManager = new TeamManager();
+        }
 
-        // Load stored user
+        // Initialize team manager from storage to get latest config
+        await window.teamManager.initFromStorage();
+
         await this.loadStoredUser();
+        if (this.isUserLoggedIn()) {
+            await this.loadUserData();
+            await this.handleStoredTeamSelection();
+        }
         
-        // Initialize platform detection (this will auto-select platforms)
-        await this.initializePlatformDetection();
+        this.bindUserProfileEvents();
+        this.bindDropdownEvents();
         
-        console.log('NavbarController: Initialized');
+        this.hideLoading();
     }
 
-    bindEvents() {
-        // Platform dropdown events
-        this.platformDropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleDropdown();
-        });
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            if (this.isDropdownOpen) {
-                this.closeDropdown();
-            }
-        });
-
-        // Navigation tab events
-        this.navTabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.switchTab(tab.id.replace('Tab', ''));
-            });
-        });
-    }
-
-    // Platform dropdown methods
-    populatePlatformDropdown(platforms) {
-        console.log('Populating dropdown with platforms:', platforms);
-        this.availablePlatforms = platforms;
+    async populateTeamDropdown(teams) {
+        this.availableTeams = teams;
+        if (!this.teamDropdownMenu) return;
         
-        if (!this.platformDropdownMenu) {
-            console.error('Platform dropdown menu element not found!');
+        this.teamDropdownMenu.innerHTML = '';
+
+        if (teams.length === 0) {
+            const noTeamsDiv = document.createElement('div');
+            noTeamsDiv.className = 'no-teams-message';
+            noTeamsDiv.innerHTML = `<div class="instruction-text"><strong>No teams found.</strong> Please create a team in the dashboard first.</div>`;
+            this.teamDropdownMenu.appendChild(noTeamsDiv);
+            this.teamDropdownBtn.disabled = true;
             return;
         }
         
-        this.platformDropdownMenu.innerHTML = '';
-
-        if (platforms.length === 0) {
-            console.log('No platforms to populate');
-            this.platformDropdownBtn.disabled = true;
-            return;
-        }
-
-        // Add instruction message first
-        const instructionDiv = document.createElement('div');
-        instructionDiv.className = 'platform-instruction';
-        instructionDiv.innerHTML = `
-            <div class="instruction-text">
-                <strong>To change platform:</strong> Close this extension window and open from your desired platform tab
-            </div>
-        `;
-        this.platformDropdownMenu.appendChild(instructionDiv);
+        const teamsWithTabStatus = teams.map(team => ({
+            ...team,
+            hasOpenTab: true,
+            isSelectable: true
+        }));
         
-        platforms.forEach((platform, index) => {
-            console.log(`Adding platform ${index + 1}:`, platform.platformName);
+        teamsWithTabStatus.forEach(team => {
             const option = document.createElement('div');
-            option.className = 'dropdown-item disabled';
+            const isSelected = this.selectedTeam?.id === team.id;
+            const isDisabled = !team.isSelectable;
+            
+            option.className = `dropdown-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
             option.innerHTML = `
-                <span class="platform-icon">${platform.platformIcon}</span>
-                <span>${platform.platformName}</span>
-                <span class="platform-status">Available</span>
+                <span class="team-icon">👥</span>
+                <span class="team-name">${team.name}</span>
+                <span class="team-status">${this.getTeamStatus(team, isSelected)}</span>
             `;
-            // platforms are display-only
-            this.platformDropdownMenu.appendChild(option);
+            
+            if (!isDisabled) {
+                option.addEventListener('click', () => this.selectTeam(team));
+            }
+            
+            this.teamDropdownMenu.appendChild(option);
         });
 
-        // Enable dropdown if platforms available
-        this.platformDropdownBtn.disabled = false;
-        console.log(`Dropdown populated with ${platforms.length} platforms`);
+        this.teamDropdownBtn.disabled = false;
     } 
 
-    updateSelectedPlatform(platform) {
-        if (platform) {
-            this.selectedPlatformIcon.textContent = platform.platformIcon;
-            this.selectedPlatformName.textContent = platform.platformName;
-            this.platformDropdownBtn.disabled = false;
+    updateSelectedTeam(team) {
+        if (team) {
+            const domainInfo = window.teamManager?.getDomainInfo();
+            this.selectedTeamIcon.textContent = domainInfo?.icon || '👥';
+            this.selectedTeamName.textContent = team.name;
+            this.teamDropdownBtn.disabled = false;
         } else {
-            this.selectedPlatformIcon.textContent = '🖥️';
-            this.selectedPlatformName.textContent = 'Select Platform';
-            this.platformDropdownBtn.disabled = true;
+            this.selectedTeamIcon.textContent = '👥';
+            this.selectedTeamName.textContent = 'Select Team';
+            this.teamDropdownBtn.disabled = true;
         }
     }
 
@@ -130,16 +116,127 @@ class NavbarController {
     }
 
     openDropdown() {
-        this.platformDropdownMenu.classList.remove('hidden');
-        this.platformDropdownBtn.classList.add('open');
+        this.teamDropdownMenu.classList.remove('hidden');
+        this.teamDropdownBtn.classList.add('open');
         this.isDropdownOpen = true;
     }
 
     closeDropdown() {
-        this.platformDropdownMenu.classList.add('hidden');
-        this.platformDropdownBtn.classList.remove('open');
+        this.teamDropdownMenu.classList.add('hidden');
+        this.teamDropdownBtn.classList.remove('open');
         this.isDropdownOpen = false;
     }
+
+
+    async checkSelectedTeamStatus(team, configResult) {
+        const hasConfig = configResult?.success && configResult?.data?.hasConfig && configResult?.data?.config?.domain;
+        const domain = configResult?.data?.config?.domain;
+        const hasMatchingTab = hasConfig ? await this.checkTeamHasOpenTab(team, configResult) : false;
+        
+        if (!hasConfig || !hasMatchingTab) {
+            this.showWarning(hasConfig, hasMatchingTab, team.name, domain);
+        } else {
+            this.hideWarning();
+        }
+    }
+
+    showWarning(hasConfig, hasMatchingTab, teamName, domain = null) {
+        this.hideWarning();
+        
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'team-warning';
+        warningDiv.className = 'team-warning';
+        
+        let icon, title, message, actions;
+        
+        if (!hasConfig && !hasMatchingTab) {
+            icon = '⚠️';
+            title = 'Configuration & Tab Missing';
+            message = `Team "${teamName}" needs configuration and a matching tab to collect credentials.`;
+            actions = `
+                <a href="#" class="warning-btn primary" data-action="create-config">Create Configuration</a>
+                <button class="warning-btn secondary" data-action="dismiss">Dismiss</button>
+            `;
+        } else if (!hasConfig) {
+            icon = '⚠️';
+            title = 'No Configuration Found';
+            message = `Team "${teamName}" doesn't have credential collection configuration.`;
+            actions = `
+                <a href="#" class="warning-btn primary" data-action="create-config">Create Configuration</a>
+                <button class="warning-btn secondary" data-action="dismiss">Dismiss</button>
+            `;
+        } else if (!hasMatchingTab) {
+            icon = '💭';
+            title = 'No Matching Tab Open';
+            message = `Please open a tab for <strong>${domain}</strong> to collect credentials for "${teamName}".`;
+            actions = `
+                <a href="#" class="warning-btn primary" data-action="open-tab" data-domain="${domain}">Open ${domain}</a>
+                <button class="warning-btn secondary" data-action="dismiss">Dismiss</button>
+            `;
+        }
+        
+        warningDiv.innerHTML = `
+            <div class="warning-icon">${icon}</div>
+            <div class="warning-text">
+                <div class="warning-title">${title}</div>
+                <div class="warning-message">${message}</div>
+            </div>
+            <div class="warning-actions">${actions}</div>
+        `;
+        
+        // Add event listeners for buttons
+        warningDiv.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (action === 'create-config') {
+                e.preventDefault();
+                window.open(`${Constants.BACKEND_URL}/dashboard`, '_blank');
+            } else if (action === 'open-tab') {
+                e.preventDefault();
+                const targetDomain = e.target.dataset.domain;
+                const url = targetDomain.startsWith('http') ? targetDomain : `https://${targetDomain}`;
+                window.open(url, '_blank');
+            } else if (action === 'dismiss') {
+                this.hideWarning();
+            }
+        });
+        
+        // Add above nav tabs (below navbar)
+        const navTabs = document.querySelector('.nav-tabs');
+        if (navTabs) {
+            navTabs.parentNode.insertBefore(warningDiv, navTabs);
+        }
+    }
+
+    hideWarning() {
+        const warning = document.getElementById('team-warning');
+        if (warning) warning.remove();
+    }
+
+    showLoading(message = 'Loading...') {
+        // Remove existing loading
+        this.hideLoading();
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'navbar-loading';
+        loadingDiv.className = 'navbar-loading';
+        loadingDiv.innerHTML = `
+            <div class="loading-spinner"></div>
+            <span class="loading-text">${message}</span>
+        `;
+        
+        // Add to navbar
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+            navbar.appendChild(loadingDiv);
+        }
+    }
+
+    hideLoading() {
+        const loading = document.getElementById('navbar-loading');
+        if (loading) loading.remove();
+    }
+
+
 
     // User profile methods
     updateUserProfile(user) {
@@ -147,289 +244,240 @@ class NavbarController {
             this.userName.textContent = user.name;
             this.userName.classList.remove('not-logged-in');
             this.userName.classList.add('logged-in');
+            
+            setTimeout(async () => {
+                await this.loadUserData();
+                await this.handleStoredTeamSelection();
+            }, 100);
         } else {
             this.userName.textContent = 'Login';
             this.userName.classList.remove('logged-in');
             this.userName.classList.add('not-logged-in');
-        }
-    }
-
-    bindUserProfileEvents() {
-        console.log('Binding user profile events...');
-        
-        const userProfile = document.querySelector('.user-profile');
-        console.log('User profile element:', userProfile);
-        
-        if (userProfile) {
-            // Remove any existing listeners by cloning the element
-            const newUserProfile = userProfile.cloneNode(true);
-            userProfile.parentNode.replaceChild(newUserProfile, userProfile);
             
-            // Add new event listener
-            newUserProfile.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Click event triggered on user profile');
-                this.handleUserProfileClick();
-            });
-            console.log('Fresh event listener added to user profile section');
-            
-            // Update references after DOM replacement
-            this.userName = document.getElementById('userName');
-        } else {
-            console.error('User profile element not found for event binding!');
+            // Hide warnings when user is not logged in
+            this.hideWarning();
         }
     }
 
-    handleUserProfileClick() {
-        console.log('User profile clicked');
-        console.log('User name classes:', this.userName.classList);
-        console.log('PageLoader available:', !!window.pageLoader);
-        
-        if (this.userName.classList.contains('not-logged-in')) {
-            console.log('User not logged in, switching to profile page for login');
-            // Switch to profile page which will show login
-            if (window.pageLoader) {
-                window.pageLoader.switchToPage('profile');
-            }
-        } else {
-            console.log('User logged in, switching to profile page');
-            // Switch to profile page
-            if (window.pageLoader) {
-                window.pageLoader.switchToPage('profile');
-            }
-        }
-    }
 
-    showUserMenu() {
-        // Create or show user dropdown menu
-        let userMenu = document.getElementById('userDropdownMenu');
-        if (!userMenu) {
-            userMenu = document.createElement('div');
-            userMenu.id = 'userDropdownMenu';
-            userMenu.className = 'user-dropdown-menu hidden';
-            userMenu.innerHTML = `
-                <div class="user-menu-option" id="logoutOption">
-                    <span>🚪</span>
-                    <span>Logout</span>
-                </div>
-            `;
-            
-            // Add to user profile container
-            const userProfile = document.querySelector('.user-profile');
-            userProfile.appendChild(userMenu);
-            
-            // Bind logout event
-            document.getElementById('logoutOption').addEventListener('click', () => {
-                this.handleLogout();
-            });
-        }
-        
-        userMenu.classList.toggle('hidden');
-    }
-
-    async handleLogout() {
-        // Logout is now handled by ProfileController
-        this.updateUserProfile(null);
-        
-        // Hide user menu
-        const userMenu = document.getElementById('userDropdownMenu');
-        if (userMenu) {
-            userMenu.classList.add('hidden');
-        }
-        
-        console.log('User logged out from navbar');
-    }
-
-    // Navigation tab methods
-    switchTab(tabName) {
-        // Remove active class from all tabs
-        this.navTabs.forEach(tab => {
-            tab.classList.remove('active');
+    bindDropdownEvents() {
+        this.teamDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleDropdown();
         });
 
-        // Add active class to selected tab
-        const selectedTab = document.getElementById(`${tabName}Tab`);
-        if (selectedTab) {
-            selectedTab.classList.add('active');
-            this.currentTab = tabName;
-        }
-
-        // Tab changes are now handled by PageLoader
-        console.log('Tab switched to:', tabName);
+        document.addEventListener('click', () => {
+            if (this.isDropdownOpen) {
+                this.closeDropdown();
+            }
+        });
     }
 
-    getCurrentTab() {
-        return this.currentTab;
-    }
 
-    // Handle all platform detection and management
-    async initializePlatformDetection() {
-        try {
-            console.log('NavbarController: Initializing platform detection...');
-            
-            // Step 1: ALWAYS populate dropdown with ALL platforms from Constants
-            const allPlatforms = [];
-            if (typeof Constants !== 'undefined' && Constants.DOMAINS) {
-                Object.entries(Constants.DOMAINS).forEach(([key, domain]) => {
-                    allPlatforms.push({
-                        tab: { id: Math.random(), url: domain.URL, title: domain.DISPLAY_NAME },
-                        domainConfig: { key, domain },
-                        platformName: domain.DISPLAY_NAME,
-                        platformIcon: domain.ICON
-                    });
-                });
-                console.log('Created all platforms:', allPlatforms.map(p => p.platformName));
-            }
-            
-            this.populatePlatformDropdown(allPlatforms);
-            
-            // Step 2: Check current browser tab and auto-select if it matches
-            try {
-                const allTabs = await chrome.tabs.query({});
-                console.log('All tabs:', allTabs.map(t => ({ id: t.id, url: t.url, active: t.active })));
-                
-                // Find active browser tab (not extension tab)
-                const browserTabs = allTabs.filter(tab => 
-                    !tab.url.startsWith('chrome-extension://') && 
-                    !tab.url.startsWith('chrome://') &&
-                    !tab.url.startsWith('moz-extension://')
-                );
-                
-                const activeBrowserTab = browserTabs.find(tab => tab.active) || 
-                                       browserTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
-                
-                // Auto-detect platform based on current tab and update stored tab
-                await this.detectCurrentPlatform();
-                
-            } catch (error) {
-                console.error('Failed to check current tab:', error);
-            }
-            
-            // Step 3: No matching tab found, load from storage
-            await this.loadStoredPlatform();
-            
-        } catch (error) {
-            console.error('Platform detection failed:', error);
-            await this.loadStoredPlatform();
+    bindUserProfileEvents() {
+        const userProfile = document.querySelector('.user-profile');
+        if (userProfile) {
+            userProfile.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.pageLoader) {
+                    window.pageLoader.switchToPage('profile');
+                }
+            });
         }
     }
 
-    async detectCurrentPlatform() {
+    async selectTeam(team) {
+        this.showLoading('Selecting team...');
+        
+        this.selectedTeam = team;
+        this.updateSelectedTeam(team);
+        this.closeDropdown();
+        
+        // Store selected team in local storage
+        StorageUtils.set({ choco_selected_team: team });
+        
+        // Fetch and verify team configuration
+        this.showLoading('Loading team configuration...');
+        const configResult = await window.teamManager.fetchConfig(team.id);
+        
+        if (!configResult.success) {
+            console.warn('Failed to fetch team config:', configResult.error);
+        }
+        
+        // Check team configuration and tab status
+        await this.checkSelectedTeamStatus(team, configResult);
+        
+        // Store the target tab for the selected team
+        await this.storeTargetTabForTeam(team, configResult);
+        
+        // Notify other components about team change
+        if (window.homeController?.onTeamChange) {
+            window.dispatchEvent(new CustomEvent('teamChanged', { detail: team }));
+        }
+        
+        this.hideLoading();
+    }
+
+
+    async loadUserData() {
+        if (!window.teamManager) return;
+        
+        const result = await window.teamManager.init();
+        if (result.success) {
+            const { teams } = result.data;
+            await this.populateTeamDropdown(teams);
+        }
+    }
+
+    async loadStoredUser() {
+        this.showLoading('Verifying user...');
+        const result = await StorageUtils.get(['choco_user']);
+        this.updateUserProfile(result.success && result.data.choco_user ? result.data.choco_user : null);
+    }
+
+    isUserLoggedIn() {
+        return this.userName && this.userName.textContent && this.userName.textContent !== 'Login';
+    }
+
+
+    async handleStoredTeamSelection() {
+        const result = await StorageUtils.get(['choco_selected_team']);
+        
+        if (!result.success || !result.data.choco_selected_team) {
+            if (this.isUserLoggedIn() && this.availableTeams.length > 0) {
+                this.showNoTeamWarning();
+            }
+            return;
+        }
+        
+        const savedTeam = this.availableTeams.find(team => team.id === result.data.choco_selected_team.id);
+        if (!savedTeam) {
+            if (this.isUserLoggedIn() && this.availableTeams.length > 0) {
+                this.showNoTeamWarning();
+            }
+            return;
+        }
+        
+        this.selectedTeam = savedTeam;
+        this.updateSelectedTeam(savedTeam);
+        
+        const configResult = await window.teamManager.fetchConfig(savedTeam.id);
+        const hasMatchingTab = await this.checkTeamHasOpenTab(savedTeam, configResult);
+        
+        if (hasMatchingTab) {
+            await this.storeTargetTabForTeam(savedTeam, configResult);
+        }
+        
+        await this.checkSelectedTeamStatus(savedTeam, configResult);
+    }
+
+
+
+    showNoTeamWarning() {
+        this.hideWarning();
+        
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'team-warning';
+        warningDiv.className = 'team-warning';
+        
+        warningDiv.innerHTML = `
+            <div class="warning-content">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-text">
+                    <strong>No Team Selected</strong>
+                    <p>Please select a team from the dropdown to continue.</p>
+                </div>
+            </div>
+        `;
+        
+        const navbar = document.querySelector('.navbar');
+        if (navbar && navbar.parentNode) {
+            navbar.parentNode.insertBefore(warningDiv, navbar.nextSibling);
+        }
+    }
+
+    getTeamStatus(team, isSelected) {
+        return isSelected ? 'Selected' : 'Available';
+    }
+
+    async getBrowserTabs() {
+        const allTabs = await chrome.tabs.query({});
+        return allTabs.filter(tab => 
+            tab.url && 
+            !tab.url.startsWith('chrome-extension://') && 
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('moz-extension://') &&
+            !tab.url.startsWith('about:')
+        );
+    }
+
+    getDomainFromConfig(teamDomain) {
+        return teamDomain.startsWith('http') ? new URL(teamDomain).hostname : teamDomain;
+    }
+
+    async checkTeamHasOpenTab(team, configResult) {
         try {
-            // Step 1: Get most recent non-extension tab
-            let activeBrowserTab = null;
-            try {
-                const allTabs = await chrome.tabs.query({});
-                // Filter out extension tabs and find most recently accessed website tab
-                const browserTabs = allTabs.filter(tab => 
-                    tab.url && 
-                    !tab.url.startsWith('chrome-extension://') && 
-                    !tab.url.startsWith('moz-extension://') &&
-                    !tab.url.startsWith('chrome://') &&
-                    !tab.url.startsWith('about:')
-                );
+            const browserTabs = await this.getBrowserTabs();
+
+            if (configResult.success && configResult.data?.config?.domain) {
+                const configDomain = this.getDomainFromConfig(configResult.data.config.domain);
                 
-                // Sort by lastAccessed to get most recent
-                browserTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
-                
-                if (browserTabs.length > 0) {
-                    activeBrowserTab = browserTabs[0];
-                    console.log('Most recent website tab:', activeBrowserTab.url);
-                }
-            } catch (error) {
-                console.warn('Could not get browser tabs:', error);
-            }
-            
-            // Step 2: Load stored platform and update its tab to current tab
-            const result = await StorageUtils.get(['selectedPlatform']);
-            if (result.success && result.data.selectedPlatform) {
-                const storedPlatform = result.data.selectedPlatform;
-                
-                // Update stored platform with current active tab
-                if (activeBrowserTab) {
-                    storedPlatform.tab = activeBrowserTab;
-                    await StorageUtils.set({ selectedPlatform: storedPlatform });
-                    console.log('Updated stored platform with current tab:', activeBrowserTab.url);
-                }
-                
-                this.updateSelectedPlatform(storedPlatform);
-                return;
-            }
-            
-            // Step 3: No stored platform, try to auto-detect from current tab
-            if (activeBrowserTab && this.availablePlatforms) {
-                for (const platform of this.availablePlatforms) {
-                    // Extract domain from platform's domainConfig
-                    const platformUrl = platform.domainConfig?.domain?.URL;
-                    if (platformUrl) {
-                        try {
-                            const platformDomain = new URL(platformUrl).hostname;
-                            const currentDomain = new URL(activeBrowserTab.url).hostname;
-                            
-                            console.log(`Checking platform ${platform.platformName}: ${platformDomain} vs current: ${currentDomain}`);
-                            
-                            if (currentDomain.includes(platformDomain) || platformDomain.includes(currentDomain)) {
-                                console.log('Auto-selecting platform:', platform.platformName);
-                                // Update the platform with actual browser tab info
-                                platform.tab = activeBrowserTab;
-                                this.updateSelectedPlatform(platform);
-                                
-                                // Save to storage
-                                await StorageUtils.set({ selectedPlatform: platform });
-                                console.log('Platform auto-selected and saved:', platform.platformName);
-                                return;
-                            }
-                        } catch (error) {
-                            console.warn('Error parsing URLs for platform detection:', error);
+                for (const tab of browserTabs) {
+                    try {
+                        const tabDomain = new URL(tab.url).hostname;
+                        if (tabDomain.includes(configDomain) || configDomain.includes(tabDomain)) {
+                            return true;
                         }
+                    } catch (error) {
+                        console.warn('Error parsing tab URL:', error);
                     }
                 }
-            }
-            
-        } catch (error) {
-            console.error('Platform detection failed:', error);
-        }
-    }
-
-    // Load stored platform on init
-    async loadStoredPlatform() {
-        try {
-            const result = await StorageUtils.get(['selectedPlatform']);
-            if (result.success && result.data.selectedPlatform) {
-                this.updateSelectedPlatform(result.data.selectedPlatform);
-                console.log('Loaded stored platform:', result.data.selectedPlatform);
-            }
-        } catch (error) {
-            console.error('Failed to load stored platform:', error);
-        }
-    }
-
-    // Load stored user on init
-    async loadStoredUser() {
-        try {
-            const result = await StorageUtils.get(['chocoUser']);
-            if (result.success && result.data.chocoUser && result.data.chocoUser.user) {
-                this.updateUserProfile(result.data.chocoUser.user);
-                console.log('Loaded stored user:', result.data.chocoUser.user);
+                return false;
             } else {
-                this.updateUserProfile(null);
+                return browserTabs.length > 0;
             }
         } catch (error) {
-            console.error('Failed to load stored user:', error);
-            this.updateUserProfile(null);
+            console.warn('Error checking team tab:', error);
+            return false;
         }
     }
 
-    // Reset methods
-    async reset() {
-        this.updateSelectedPlatform(null);
-        this.updateUserProfile(null);
-        this.switchTab('home');
-        this.availablePlatforms = [];
-        this.platformDropdownMenu.innerHTML = '';
-        
-        // Clear stored platform
-        await StorageUtils.remove(['selectedPlatform']);
+    async storeTargetTabForTeam(team, configResult) {
+        try {
+            const browserTabs = await this.getBrowserTabs();
+            let targetTab = null;
+
+            if (configResult.success && configResult.data?.config?.domain) {
+                const configDomain = this.getDomainFromConfig(configResult.data.config.domain);
+                
+                for (const tab of browserTabs) {
+                    try {
+                        const tabDomain = new URL(tab.url).hostname;
+                        if (tabDomain.includes(configDomain) || configDomain.includes(tabDomain)) {
+                            targetTab = tab;
+                            break;
+                        }
+                    } catch (error) {
+                        console.warn('Error parsing tab URL:', error);
+                    }
+                }
+            } else {
+                targetTab = browserTabs[0] || null;
+            }
+
+            if (targetTab) {
+                StorageUtils.set({ 
+                    choco_target_tab: {
+                        ...targetTab,
+                        teamId: team.id,
+                        timestamp: Date.now()
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Error storing target tab:', error);
+        }
     }
+
 }

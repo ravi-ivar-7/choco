@@ -1,5 +1,12 @@
 <!-- Profile Page Content -->
 <div id="profilePage" class="page-section">
+    <!-- Status Card -->
+    <div class="status-card" id="statusContainer" style="display: none;">
+        <div class="status-title">👤 Profile</div>
+        <div id="profileStatusText" class="status-text"></div>
+        <div id="profileStatusDetails" class="status-details" style="display: none;"></div>
+    </div>
+    
     <!-- Login Form (shown when not logged in) -->
     <div id="loginForm" class="login-form">
         <div class="page-header">
@@ -34,28 +41,12 @@
             <div class="detail-card">
                 <h3>Account Information</h3>
                 <div class="detail-row">
-                    <span class="detail-label">User ID:</span>
-                    <span id="profileUserId" class="detail-value">-</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Email:</span>
-                    <span id="profileEmailDetail" class="detail-value">-</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Role:</span>
-                    <span id="profileRole" class="detail-value">-</span>
-                </div>
-                <div class="detail-row">
                     <span class="detail-label">Status:</span>
                     <span id="profileStatus" class="detail-value">-</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Member Since:</span>
                     <span id="profileMemberSince" class="detail-value">-</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Last Login:</span>
-                    <span id="profileLastLogin" class="detail-value">-</span>
                 </div>
             </div>
 

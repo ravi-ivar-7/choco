@@ -1,27 +1,28 @@
 class CredentialSyncer {
-    static async syncCredentialsToDatabase(domainConfig, userAPI, credentialsAPI) {
+    static async syncCredentialsToDatabase() {
         try {
-            if (!domainConfig || !domainConfig.key) {
-                return {
-                    success: false,
-                    error: 'Invalid domain configuration',
-                    message: 'Domain configuration is required for database sync',
-                    data: null
-                };
+            // Get team config from Chrome storage directly
+            const storageResult = await StorageUtils.get(['choco_team_config']);
+            let config = null;
+            if (storageResult.success && storageResult.data.choco_team_config) {
+                // Config is already an object, no need to parse
+                config = storageResult.data.choco_team_config;
             }
 
-            if (domainConfig.key === 'MAANG') {
-                return await MaangDBSync.syncCredentials(domainConfig, userAPI, credentialsAPI);
-            } else if (domainConfig.key === 'DEVS') {
-                return await DevsDBSync.syncCredentials(domainConfig, userAPI, credentialsAPI);
+            const syncerName = config?.syncer || 'base';
+            
+            let syncResult;
+            if (syncerName === 'base' || !config) {
+                syncResult = await BaseSyncer.syncCredentialsToDatabase(config);
+            
+            // define custom syncer here if required
+            
             } else {
-                return {
-                    success: false,
-                    error: 'Unsupported domain',
-                    message: `Database sync not supported for domain: ${domainConfig.key}`,
-                    data: null
-                };
+                // Fallback to base syncer for unknown types
+                syncResult = await BaseSyncer.syncCredentialsToDatabase(config);
             }
+
+            return syncResult;
 
         } catch (error) {
             return {
@@ -33,32 +34,32 @@ class CredentialSyncer {
         }
     }
 
-    static async syncCredentialsToLocal(domainConfig, userAPI, credentialsAPI, tabId = null) {
+    static async syncCredentialsToLocal() {
         try {
-
-            if (!domainConfig || !domainConfig.key) {
-                return {
-                    success: false,
-                    error: 'Invalid domain configuration',
-                    message: 'Domain configuration is required for local sync',
-                    data: null
-                };
+            // Get team config from Chrome storage directly
+            const storageResult = await StorageUtils.get(['choco_team_config']);
+            let config = null;
+            if (storageResult.success && storageResult.data.choco_team_config) {
+                // Config is already an object, no need to parse
+                config = storageResult.data.choco_team_config;
             }
 
-            if (domainConfig.key === 'MAANG') {
-                return await MaangLocalSync.syncCredentialsToLocal(domainConfig, userAPI, credentialsAPI, tabId);
-            } else if (domainConfig.key === 'DEVS') {
-                return await DevsLocalSync.syncCredentialsToLocal(domainConfig, userAPI, credentialsAPI, tabId);
+            const syncerName = config?.syncer || 'base';
+            
+            let syncResult;
+            if (syncerName === 'base' || !config) {
+                syncResult = await BaseSyncer.syncCredentialsToLocal();
+            
+            // define custom syncer here if required
+            
             } else {
-                return {
-                    success: false,
-                    error: 'Unsupported domain',
-                    message: `Local sync not supported for domain: ${domainConfig.domain.PRIMARY}`,
-                    data: null
-                };
+                // Fallback to base syncer for unknown types
+                syncResult = await BaseSyncer.syncCredentialsToLocal();
             }
+
+            return syncResult;
+
         } catch (error) {
-            console.error('Error in CredentialSyncer.syncCredentialsToLocal:', error);
             return {
                 success: false,
                 error: 'Sync error',
@@ -68,3 +69,4 @@ class CredentialSyncer {
         }
     }
 }
+

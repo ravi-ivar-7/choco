@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users } from '@/lib/schema';
+import { users, teams, teamMembers } from '@/lib/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '@/utils/jwt';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,19 +49,25 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET ;
-    if (!JWT_SECRET) {
-      throw new Error('JWT_SECRET environment variable is required');
-    }
-    const token = jwt.sign(
-      { 
-        userId: userData.id, 
-        email: userData.email,
-        role: userData.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = generateToken(userData.id, userData.email);
+
+    // Get user's team memberships
+    const userTeams = await db.select({
+      teamId: teamMembers.teamId,
+      teamName: teams.name,
+      role: teamMembers.role,
+      ownerId: teams.ownerId
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(eq(teamMembers.userId, userData.id));
+    
+    const formattedTeams = userTeams.map(team => ({
+      teamId: team.teamId,
+      teamName: team.teamName,
+      role: team.role,
+      isOwner: team.ownerId === userData.id
+    }));
 
     await db.update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
@@ -77,8 +83,7 @@ export async function POST(request: NextRequest) {
           id: userData.id,
           email: userData.email,
           name: userData.name,
-          role: userData.role,
-          teamId: userData.teamId
+          teams: formattedTeams
         }
       }
     });

@@ -33,7 +33,10 @@ class NotificationQueue {
             <div class="queue-panel" id="queue-panel" style="display: none;">
                 <div class="queue-header">
                     <span>Notifications</span>
-                    <button class="queue-clear" id="queue-clear">Clear All</button>
+                    <div class="queue-actions">
+                        <button class="queue-clear" id="queue-clear">Clear All</button>
+                        <button class="queue-close" id="queue-close">×</button>
+                    </div>
                 </div>
                 <div class="queue-list" id="queue-list"></div>
             </div>
@@ -125,6 +128,12 @@ class NotificationQueue {
                 color: #495057;
             }
 
+            .queue-actions {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
             .queue-clear {
                 background: #dc3545;
                 color: white;
@@ -138,6 +147,28 @@ class NotificationQueue {
 
             .queue-clear:hover {
                 background: #c82333;
+            }
+
+            .queue-close {
+                background: #58a6ff;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .queue-close:hover {
+                background: #4493e6;
+                transform: scale(1.05);
+                box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
             }
 
             .queue-list {
@@ -220,6 +251,7 @@ class NotificationQueue {
         const toggle = document.getElementById('queue-toggle');
         const panel = document.getElementById('queue-panel');
         const clearBtn = document.getElementById('queue-clear');
+        const closeBtn = document.getElementById('queue-close');
 
         toggle?.addEventListener('click', () => {
             this.isMinimized = !this.isMinimized;
@@ -228,6 +260,11 @@ class NotificationQueue {
 
         clearBtn?.addEventListener('click', () => {
             this.clearQueue();
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            this.isMinimized = true;
+            panel.style.display = 'none';
         });
 
         // Close panel when clicking outside
