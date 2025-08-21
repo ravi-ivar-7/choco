@@ -11,7 +11,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:init": "tsx scripts/init-db.ts",
     "db:drop": "tsx scripts/drop-db.ts",
     "setup": "npm install && npm run db:generate && npm run db:init",
     "test": "echo \"Tests not implemented yet\" && exit 0"
@@ -28,10 +27,13 @@
     "drizzle-orm": "^0.33.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.400.0",
+    "marked": "^16.2.0",
     "next": "^15.0.0",
     "postgres": "^3.4.7",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7"
   },

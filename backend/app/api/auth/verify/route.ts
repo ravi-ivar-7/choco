@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 
-export async function POST(request: NextRequest) {
+async function verifyAuth(request: NextRequest) {
   try {
     const user = await getAuthUser(request)
     
@@ -32,4 +32,8 @@ export async function POST(request: NextRequest) {
       data: null
     }, { status: 500 })
   }
+}
+
+export async function GET(request: NextRequest) {
+  return verifyAuth(request)
 }
