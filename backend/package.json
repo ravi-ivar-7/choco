@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:init": "tsx scripts/init-db.ts",
+    "db:drop": "tsx scripts/drop-db.ts",
     "setup": "npm install && npm run db:generate && npm run db:init",
     "test": "echo \"Tests not implemented yet\" && exit 0"
   },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // Import modular components
@@ -24,7 +24,8 @@ interface User {
   }>
 }
 
-export default function AdminDashboard() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
@@ -165,5 +166,26 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function DashboardLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-slate-600">Loading dashboard...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main export with Suspense wrapper
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
