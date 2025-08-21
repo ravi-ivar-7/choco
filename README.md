@@ -13,7 +13,7 @@
 
 ### 📚 Documentation On Website
  
-**[📖 View Documentation On Website →](http://algochoco.vercel.app/docs)**
+**[📖 View Documentation On Website →](https://usechoco.vercel.app/docs)**
 
 
 ## ⚠️ Important Disclaimer
