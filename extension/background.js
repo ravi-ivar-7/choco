@@ -106,7 +106,7 @@ class ChocoBackground {
                 this.targetTab = null;
                 this.addToQueue(
                     'Setup Required',
-                    'Team configuration missing. Please complete setup from dashboard.',
+                    'Account configuration missing. Please complete setup from dashboard.',
                     'info'
                 );
                 return;
@@ -194,7 +194,7 @@ class ChocoBackground {
             if (!teamConfigData.choco_team_config?.domain) {
                 this.addToQueue(
                     'Setup Required',
-                    'Team configuration missing. Please complete setup from dashboard.',
+                    'Account configuration missing. Please complete setup from dashboard.',
                     'info'
                 );
                 return;
@@ -422,7 +422,7 @@ class ChocoBackground {
             if (!config) {
                 this.addToQueue(
                     'Setup Required',
-                    'Team configuration missing. Please complete setup from dashboard.',
+                    'Account configuration missing. Please complete setup from dashboard.',
                     'info'
                 );
                 return;

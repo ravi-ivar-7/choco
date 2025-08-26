@@ -287,7 +287,7 @@ class ProfileController {
 
     getSelectedTeamFromStorage(teams) {
         try {
-            // Check if there's a selected team in local storage
+            // Check if there's a selected account in local storage
             const selectedTeamId = localStorage.getItem('selectedTeamId');
             if (selectedTeamId) {
                 const selectedTeam = teams.find(team => team.id === selectedTeamId);
@@ -338,7 +338,7 @@ class ProfileController {
         const teams = this.profileData.teams || [];
         const statistics = this.profileData.statistics || {};
         
-        // Get selected team from local storage
+        // Get selected account from local storage
         const selectedTeam = this.getSelectedTeamFromStorage(teams);
         
         const profileTeamName = document.getElementById('profileTeamName');
@@ -349,13 +349,13 @@ class ProfileController {
         const profileTotalTeams = document.getElementById('profileTotalTeams');
         const profileAdminTeams = document.getElementById('profileAdminTeams');
 
-        // Display selected team information
+        // Display selected account information
         if (profileTeamName) {
             if (selectedTeam) {
                 const roleText = selectedTeam.isOwner ? ' (Owner)' : ` (${selectedTeam.role})`;
                 profileTeamName.textContent = selectedTeam.name + roleText;
             } else {
-                profileTeamName.textContent = teams.length > 0 ? `${teams.length} teams available` : 'No teams';
+                profileTeamName.textContent = teams.length > 0 ? `${teams.length} accounts available` : 'No accounts';
             }
         }
         if (profileTeamId) {

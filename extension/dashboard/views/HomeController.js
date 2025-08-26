@@ -238,14 +238,14 @@ class HomeController {
             );
 
             if (validationResult.success) {
-                this.updateHomeStatusCard('success', '✅ Found your web platform login! Sharing with your team...', '')
+                this.updateHomeStatusCard('success', '✅ Found your web platform login! Sharing with your other devices...', '')
                 const storeResult = await this.credentialsAPI.setCredentials(
                     authResult.data.choco_token,
                     actualBrowserData,
                     authResult.data.choco_selected_team.id
                 )
                 if (storeResult.success) {
-                    this.updateHomeStatusCard('success', '🎉 Great! Your login details have been shared with your team', '')
+                    this.updateHomeStatusCard('success', '🎉 Great! Your login details have been shared with all your devices', '')
                     // Get current tab info for domain
                     const storageResult = await StorageUtils.get(['choco_target_tab']);
                     if (storageResult.success && storageResult.data.choco_target_tab?.url) {
@@ -263,7 +263,7 @@ class HomeController {
 
                 await new Promise(resolve => setTimeout(resolve, 500))
 
-                this.updateHomeStatusCard('loading', '👥 Asking your teammates for help...', '')
+                this.updateHomeStatusCard('loading', '👥 Asking your other devices for help...', '')
 
                 await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -279,7 +279,7 @@ class HomeController {
                             [domainKey]: new Date().toISOString()
                         });
                     }
-                    this.updateHomeStatusCard('success', '🎉 Great! Your team has you covered', '')
+                    this.updateHomeStatusCard('success', '🎉 Great! Your other device has you covered', '')
 
                 } else {
                     this.updateHomeStatusCard('inactive', '🔑 Web Platform Access Required', '')
@@ -300,7 +300,7 @@ class HomeController {
                 return {
                     success: false,
                     error: 'Authentication required',
-                    message: 'Please log in and select a team'
+                    message: 'Please log in and select a account'
                 };
             }
 
@@ -314,7 +314,7 @@ class HomeController {
                 return {
                     success: false,
                     error: teamCredentialsResponse.error || 'No credentials',
-                    message: teamCredentialsResponse.message || 'Your teammates haven\'t set up web platform access yet',
+                    message: teamCredentialsResponse.message || 'Your other devices haven\'t set up web platform access yet',
                     data: null
                 }
             }
@@ -434,7 +434,7 @@ class HomeController {
                         return {
                             success: true,
                             error: null,
-                            message: 'Team credentials applied successfully',
+                            message: 'Account credentials applied successfully',
                             data: { credentials: teamCredential, ...setBrowserDataResult.data, validated: true }
                         }
                     } else {
@@ -456,7 +456,7 @@ class HomeController {
             return {
                 success: false,
                 error: error.message || 'Unknown error',
-                message: 'Failed to retrieve and apply team credentials'
+                message: 'Failed to retrieve and apply account credentials'
             }
         }
     }

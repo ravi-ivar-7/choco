@@ -44,8 +44,8 @@ class GetBrowserData {
             if (!selectedTeam) {
                 return {
                     success: false,
-                    error: 'No team selected',
-                    message: 'Please select a team from the dashboard',
+                    error: 'No account selected',
+                    message: 'Please select a account from the extnesion navbar dropdown',
                     data: null
                 }
             }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { UserPlus, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { UserPlus, Eye, EyeOff, ArrowLeft, Sparkles, Shield, ExternalLink } from 'lucide-react'
 import InlineSpinner from '@/components/loaders/InlineSpinner'
 import Link from 'next/link'
 
@@ -16,6 +16,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: ''
   })
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -31,6 +32,13 @@ export default function RegisterPage() {
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    // Validate terms acceptance
+    if (!acceptTerms) {
+      setError('Please accept the Terms of Service and Privacy Policy')
       setIsLoading(false)
       return
     }
@@ -83,23 +91,26 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30 flex items-center justify-center px-4">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
+      </div>
+      
+      <div className="relative w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">🍫</span>
-            </div>
-            <span className="text-2xl font-bold">Choco</span>
-            <Badge variant="secondary">Register</Badge>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Create Account</h1>
-          <p className="text-slate-600">Join Choco to manage your teams and credentials</p>
+
+          <h1 className="text-3xl font-bold text-slate-900 mb-3">Create Account</h1>
+          <p className="text-slate-600 text-lg">Join Choco for secure personal browser sync</p>
         </div>
 
         {/* Registration Form */}
-        <div className="bg-white rounded-xl shadow-sm border p-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
+          {/* Form background decoration */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-purple-50/50 pointer-events-none"></div>
+          <div className="relative z-10">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
@@ -112,7 +123,7 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                 placeholder="Enter your full name"
               />
             </div>
@@ -128,7 +139,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                 placeholder="you@example.com"
               />
             </div>
@@ -146,15 +157,15 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                   placeholder="Create a password (min 6 characters)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-purple-600 transition-colors duration-200"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
@@ -171,16 +182,41 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                   placeholder="Confirm your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-purple-600 transition-colors duration-200"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
+              </div>
+            </div>
+
+            {/* Terms and Privacy Acceptance */}
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  id="acceptTerms"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-slate-300 rounded"
+                />
+                <label htmlFor="acceptTerms" className="text-sm text-slate-700 leading-relaxed">
+                  I agree to the{' '}
+                  <Link href="/terms" target="_blank" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center">
+                    Terms of Service
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" target="_blank" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center">
+                    Privacy Policy
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </Link>
+                </label>
               </div>
             </div>
 
@@ -198,8 +234,8 @@ export default function RegisterPage() {
 
             <Button 
               type="submit" 
-              className="w-full" 
-              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all duration-200 py-3 text-lg font-semibold" 
+              disabled={isLoading || !acceptTerms}
             >
               {isLoading ? (
                 <>
@@ -208,30 +244,39 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Create Account
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Create Your Account
                 </>
               )}
             </Button>
           </form>
 
           {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">
+          <div className="mt-8 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-slate-500">Already have an account?</span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Link href="/login" className="inline-flex items-center px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200">
+                <Shield className="w-4 h-4 mr-2" />
                 Sign in here
               </Link>
-            </p>
+            </div>
+          </div>
           </div>
         </div>
 
         {/* Back to Home */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-8">
           <Button 
             variant="ghost" 
             onClick={() => router.push('/')}
-            className="text-slate-600 hover:text-slate-900"
+            className="text-slate-600 hover:text-slate-900 hover:bg-white/50 backdrop-blur-sm transition-all duration-200"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home

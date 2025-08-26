@@ -32,7 +32,7 @@ class SetBrowserData {
             if (!selectedTeam) {
                 return {
                     success: false,
-                    error: 'No team selected',
+                    error: 'No account selected',
                     message: 'Please select a team from the dashboard'
                 }
             }

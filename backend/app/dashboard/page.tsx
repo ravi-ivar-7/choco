@@ -57,7 +57,7 @@ function DashboardContent() {
       if (typeof window === 'undefined') return
       const token = localStorage.getItem('choco_token')
       if (!token) {
-        router.push('/')
+        router.push('/login')
         return
       }
 
@@ -77,14 +77,14 @@ function DashboardContent() {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('choco_token')
           }
-          router.push('/')
+          router.push('/login')
         }
       } catch (error) {
         console.error('Failed to load user data:', error)
         if (typeof window !== 'undefined') {
           localStorage.removeItem('choco_token')
         }
-        router.push('/')
+        router.push('/login')
       } finally {
         setIsLoading(false)
       }

@@ -75,7 +75,7 @@
     justify-content: flex-end;
 }
 
-/* Team Dropdown */
+/* Account Dropdown */
 .team-dropdown {
     position: relative;
 }
@@ -441,7 +441,7 @@
     }
 }
 
-/* Team instruction styles */
+/* Account instruction styles */
 .team-instruction {
     background: rgba(56, 139, 253, 0.1);
     border: 1px solid rgba(56, 139, 253, 0.3);
@@ -481,7 +481,7 @@
     font-weight: 400;
 }
 
-/* Team Warning Styles */
+/* Account Warning Styles */
 .team-warning {
     display: flex;
     align-items: center;

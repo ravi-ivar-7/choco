@@ -26,15 +26,22 @@ export default function Footer() {
     { href: '/register', label: 'Get Started' }
   ]
 
+  const legalLinks = [
+    { href: '/privacy', label: 'Privacy Policy' },
+    { href: '/terms', label: 'Terms of Service' },
+    { href: 'mailto:legal@usechoco.com', label: 'Legal Contact' },
+    { href: 'mailto:support@usechoco.com', label: 'Support' }
+  ]
+
   return (
     <footer className="relative bg-gradient-to-br from-slate-50 via-white to-purple-50/30 border-t border-slate-200/60">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 pointer-events-none"></div>
       
       <div className="relative container mx-auto px-4 lg:px-6 py-16">
-        <div className="grid lg:grid-cols-12 gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Brand Section */}
-          <div className="lg:col-span-5">
+          <div className="col-span-2 md:col-span-4 lg:col-span-5">
             <div className="flex items-center space-x-3 mb-6">
               <div className="relative group">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300">
@@ -47,13 +54,13 @@ export default function Footer() {
                 </span>
                 <Badge variant="secondary" className="text-xs w-fit bg-purple-50 text-purple-700 border-purple-200">
                   <Sparkles className="w-3 h-3 mr-1" />
-                  Team Access Manager
+                  Personal Browser Sync
                 </Badge>
               </div>
             </div>
             
             <p className="text-slate-600 mb-8 max-w-md leading-relaxed">
-              Safe team account sharing without password risks and device limits.
+              Keep your sessions synchronized across your devices while maintaining complete privacy.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -77,7 +84,7 @@ export default function Footer() {
           </div>
           
           {/* Navigation Links */}
-          <div className="lg:col-span-3 lg:col-start-7">
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <h4 className="font-semibold text-slate-900 mb-6 text-lg">Navigation</h4>
             <ul className="space-y-4">
               {navigationLinks.map((link) => (
@@ -100,7 +107,7 @@ export default function Footer() {
           </div>
           
           {/* Support Links */}
-          <div className="lg:col-span-3">
+          <div className="col-span-1 md:col-span-1 lg:col-span-3">
             <h4 className="font-semibold text-slate-900 mb-6 text-lg">Support</h4>
             <ul className="space-y-4">
               {supportLinks.map((link) => (
@@ -121,17 +128,40 @@ export default function Footer() {
               ))}
             </ul>
           </div>
+          
+          {/* Legal Links */}
+          <div className="lg:col-span-2">
+            <h4 className="font-semibold text-slate-900 mb-6 text-lg">Legal</h4>
+            <ul className="space-y-4">
+              {legalLinks.map((link) => (
+                <li key={link.href}>
+                  <a 
+                    href={link.href}
+                    className="group flex items-center text-slate-600 hover:text-purple-600 transition-all duration-200 font-medium"
+                  >
+                    <span className="group-hover:translate-x-1 transition-transform duration-200">
+                      {link.label}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
         
         {/* Bottom Section */}
         <div className="border-t border-slate-200/60 mt-16 pt-8">
           <div className="flex flex-col items-center justify-center gap-4">
-            <div className="flex items-center gap-6 text-sm text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-slate-500">
               <p>© {new Date().getFullYear()} Choco. All rights reserved.</p>
+              <div className="flex items-center gap-4">
+                <a href="/privacy" className="hover:text-purple-600 transition-colors">Privacy Policy</a>
+                <a href="/terms" className="hover:text-purple-600 transition-colors">Terms of Service</a>
+              </div>
               <div className="flex items-center gap-1">
                 <span>Made with</span>
                 <Heart className="w-4 h-4 text-red-500 fill-current" />
-                <span>for teams</span>
+                <span>for personal sync</span>
               </div>
             </div>
           </div>

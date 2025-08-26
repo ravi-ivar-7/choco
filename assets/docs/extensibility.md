@@ -1,6 +1,6 @@
 # 🔧 Choco Extension Extensibility Guide
 
-This guide explains how to extend the Choco extension to support new websites that don't work with the base validator and syncer.
+This guide explains how to extend the Choco extension to support new websites that don't work with the base validator and syncer for your personal browser session synchronization.
 
 ## 📋 Table of Contents
 
@@ -27,8 +27,8 @@ The Choco extension uses a **modular dispatcher pattern** that makes it easy to 
    - `syncer.js` - Routes sync requests to appropriate syncers
 
 3. **Configuration-Driven**
-   - Team configs specify which validator/syncer to use
-   - Dashboard allows admins to configure credential structures
+   - Personal configs specify which validator/syncer to use
+   - Dashboard allows you to configure session data structures
    - Extension automatically uses the correct handler
 
 ### Extension Points
@@ -173,15 +173,15 @@ class CustomSyncer {
 1. **Backend URL**: Update `lib/config/constants.js` with your backend URL
 2. **Environment Variables**: Update `.env` files with database URL and other configs
 3. **Dashboard Configuration**: 
-   - Access Admin Dashboard: Navigate to your deployed URL + `/admin`
-   - Create Team Configuration with:
+   - Access Personal Dashboard: Navigate to your deployed URL + `/admin`
+   - Create Personal Configuration with:
      - `validator: 'custom'`
      - `syncer: 'custom'`
-     - Configure required cookies/localStorage/sessionStorage fields
+     - Configure required cookies/localStorage/sessionStorage fields for your personal sync
 
 ### Step 6: Test Configuration
 
-Extension will automatically use your custom handlers based on team configuration
+Extension will automatically use your custom handlers based on your personal configuration
 
 ---
 

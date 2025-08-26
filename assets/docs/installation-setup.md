@@ -1,6 +1,6 @@
 # 🚀 Installation & Setup Guide
 
-This guide walks you through setting up the Choco extension and backend from scratch.
+This guide walks you through setting up the Choco extension and backend for personal browser session synchronization across your devices.
 
 ## Table of Contents
 
@@ -9,7 +9,7 @@ This guide walks you through setting up the Choco extension and backend from scr
 - [Database Setup](#database-setup)
 - [Backend Deployment](#backend-deployment)
 - [Environment Configuration](#environment-configuration)
-- [Initial Admin Account](#initial-admin-account)
+- [Initial User Account](#initial-user-account)
 - [Production Deployment](#production-deployment)
 - [Troubleshooting](#troubleshooting)
 

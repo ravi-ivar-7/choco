@@ -166,7 +166,7 @@ export default function Navbar() {
               </span>
               <Badge variant="secondary" className="text-xs w-fit bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Team Access Manager
+                Personal Browser Sync
               </Badge>
             </div>
           </div>

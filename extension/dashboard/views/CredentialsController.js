@@ -114,11 +114,11 @@ class CredentialsController {
             }
 
             if (!this.selectedTeam) {
-                this.updateCredentialsStatusCard('error', 'No team selected');
+                this.updateCredentialsStatusCard('error', 'No account selected');
                 return;
             }
             
-            this.updateCredentialsStatusCard('loading', 'Loading Credentials', 'Fetching your team credentials...');
+            this.updateCredentialsStatusCard('loading', 'Loading Credentials', 'Fetching your account credentials...');
             
             const result = await this.credentialsAPI.getCredentials(this.token, this.selectedTeam.id);
             if (result.success) {
@@ -241,7 +241,7 @@ class CredentialsController {
         header.innerHTML = `
             <div class="credentials-title-row">
                 <div class="credentials-title">
-                     🔐 Team Credentials (${credentials.length})
+                     🔐 Account Credentials (${credentials.length})
                 </div>
                 <div class="bulk-actions">
                     <button id="selectAllBtn" class="bulk-btn select-all-btn">Select All</button>
@@ -250,8 +250,8 @@ class CredentialsController {
             </div>
             <div class="credentials-subtitle">
                 ${credentials.length === 0 ? 
-                    'No credentials found. Team members haven\'t set up any credentials yet.' :
-                    `Found ${credentials.length} credential${credentials.length > 1 ? 's' : ''} from your team members. ${activeCount} active, ${expiredCount} expired.`
+                    'No credentials found. No devices have set up credentials yet.' :
+                    `Found ${credentials.length} credential${credentials.length > 1 ? 's' : ''} from your all connected devices. ${activeCount} active, ${expiredCount} expired.`
                 }
             </div>
         `;
@@ -263,7 +263,7 @@ class CredentialsController {
             emptyState.innerHTML = `
                 <div class="empty-icon">🔐</div>
                 <div class="empty-title">No Credentials Available</div>
-                <div class="empty-description">Your team members haven't shared any credentials yet. Once they do, you'll be able to view and apply them here.</div>
+                <div class="empty-description">Your other devices haven't shared any credentials yet. Once they do, you'll be able to view and apply them here.</div>
             `;
             container.appendChild(emptyState);
             return;
@@ -720,7 +720,7 @@ class CredentialsController {
             }
 
             if (!this.selectedTeam) {
-                alert('No team selected');
+                alert('No account selected');
                 return;
             }
 
@@ -903,7 +903,7 @@ class CredentialsController {
             bulkDeleteBtn.textContent = '⏳ Deleting...';
 
             if (!this.token || !this.selectedTeam) {
-                throw new Error('Authentication or team selection required');
+                throw new Error('Authentication or account selection required');
             }
 
             // Delete credentials using bulk API
