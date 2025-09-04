@@ -107,14 +107,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <GoogleAnalytics />
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-          <body className={`${inter.className} min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white`}>
-            <GoogleAnalytics />
-            <Navbar />
-            <main className="container mx-auto p-4">
-              {children}
-            </main>
-          </body>
+          <Navbar />
+          <main className="pt-16 lg:pt-18">
+            {children}
+          </main>
+          {/* <Footer /> */}
         </div>
       </body>
     </html>
