@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import GoogleAnalytics from '@/components/GoogleAnalytics'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -107,11 +108,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-          <Navbar />
-          <main className="pt-16 lg:pt-18">
-            {children}
-          </main>
-          {/* <Footer /> */}
+          <body className={`${inter.className} min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white`}>
+            <GoogleAnalytics />
+            <Navbar />
+            <main className="container mx-auto p-4">
+              {children}
+            </main>
+          </body>
         </div>
       </body>
     </html>
