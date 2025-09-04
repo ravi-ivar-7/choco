@@ -8,13 +8,8 @@
     "storage",
     "activeTab",
     "cookies",
-    "notifications",
     "scripting",
     "tabs",
-    "history",
-    "bookmarks",
-    "downloads",
-    "management",
     "geolocation"
   ],
   

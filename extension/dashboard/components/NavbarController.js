@@ -43,6 +43,24 @@ class NavbarController {
         // Initialize team manager from storage to get latest config
         await window.teamManager.initFromStorage();
 
+        // Add click handler for logo and brand to reload extension
+        const logo = document.querySelector('.logo');
+        const brand = document.querySelector('.brand');
+        
+        const setupReloadHandler = (element) => {
+            if (element) {
+                element.style.cursor = 'pointer';
+                element.title = 'Reload dashboard';
+                element.addEventListener('click', () => {
+                    window.location.reload();
+                });
+            }
+        };
+        
+        // Make both logo and brand clickable
+        setupReloadHandler(logo);
+        setupReloadHandler(brand);
+
         await this.loadStoredUser();
         if (this.isUserLoggedIn()) {
             await this.loadUserData();

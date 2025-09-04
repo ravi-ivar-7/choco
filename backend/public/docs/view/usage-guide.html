@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choco Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --bg: #ffffff;
+            --border: #e5e7eb;
+            --code-bg: #f3f4f6;
+            --radius: 0.375rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .markdown-body {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Headings */
+        h1, h2, h3, h4, h5, h6 {
+            margin: 1.5em 0 1rem;
+            font-weight: 600;
+            line-height: 1.3;
+            color: #111827;
+        }
+
+        h1 { font-size: 2.25rem; margin-top: 0; }
+        h2 { font-size: 1.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.25rem; }
+
+        /* Paragraphs and text */
+        p {
+            margin: 1rem 0;
+            color: var(--text);
+        }
+
+        /* Links */
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 1rem 0;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        /* Code blocks */
+        pre, code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background: var(--code-bg);
+            border-radius: var(--radius);
+        }
+
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        code {
+            padding: 0.2em 0.4em;
+            font-size: 0.9em;
+        }
+
+        pre > code {
+            padding: 0;
+            background: transparent;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.5rem 1rem;
+            border-left: 4px solid var(--primary);
+            background: #f8fafc;
+            color: var(--text-light);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+            
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.5rem; }
+            h3 { font-size: 1.25rem; }
+            
+            pre {
+                border-radius: 0;
+                margin: 1.5rem -1rem;
+                padding: 1rem;
+            }
+        }
+
+        /* Navigation */
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+            padding: 0 1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-container">
+        <a href="/" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back to Home
+        </a>
+    </div>
+    
+    <div class="markdown-body">
+        <h1>📖 Choco Dashboard Usage Guide</h1>
+<p>This guide explains how to use the Choco backend dashboard to manage teams, configure credentials, and add members.</p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#team-management">Team Management</a></li>
+<li><a href="#credential-configuration">Credential Configuration</a></li>
+<li><a href="#member-management">Member Management</a></li>
+<li><a href="#extension-usage">Extension Usage</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+</ul>
+<hr>
+<h2>Getting Started</h2>
+<h3>Access Dashboard</h3>
+<ol>
+<li>Navigate to your deployed backend URL + <code>/dashboard</code></li>
+<li>Login with your credentials</li>
+<li>You&#39;ll see the main dashboard with 5 tabs: <strong>Overview</strong>, <strong>Teams</strong>, <strong>Members</strong>, <strong>Credentials</strong>, and <strong>Profile</strong></li>
+</ol>
+<hr>
+<h2>Team Management</h2>
+<h3>Creating a New Team</h3>
+<ol>
+<li><strong>Navigate to Teams Tab</strong> → Click &quot;Create New Team&quot; button</li>
+<li><strong>Fill Team Details</strong>: Name, Description, Account ID</li>
+<li><strong>Configure Credentials</strong>: Click Settings icon on your team to set up credential collection</li>
+</ol>
+<hr>
+<h2>Credential Configuration</h2>
+<p>After creating a team, configure what credentials to collect by clicking the Settings button on your team.</p>
+<h3>Configuration Fields</h3>
+<h4>Basic Settings</h4>
+<ul>
+<li><strong>Config Name</strong>: Descriptive name (e.g., &quot;Example Config&quot;)</li>
+<li><strong>Description</strong>: Brief description of what this config monitors</li>
+<li><strong>Domain</strong>: Target website domain (e.g., <code>example.com</code>) and domain is must to set. </li>
+<li><strong>Ohter details</strong>: Fill other details like Emoji icon (e.g., 🚀, 💻, 🌐)</li>
+</ul>
+<h4>Advanced Settings</h4>
+<ul>
+<li><strong>Validator</strong>: Keep as <code>base</code> (⚠️ only change if you have custom validator)</li>
+<li><strong>Syncer</strong>: Keep as <code>base</code> (⚠️ only change if you have custom syncer)</li>
+</ul>
+<p>⚠️ <strong>Important Warning</strong>: Only change validator/syncer from <code>base</code> to <code>custom</code> if you have implemented custom validation/sync logic and know what you&#39;re doing.</p>
+<h3>Data Collection Options</h3>
+<p>For each data type, you can choose:</p>
+<ul>
+<li><strong>none</strong>: Don&#39;t collect this data</li>
+<li><strong>full</strong>: Collect all data of this type</li>
+<li><strong>custom</strong>: Collect only specific keys (JSON array format)</li>
+</ul>
+<h4>Browser Environment Data</h4>
+<ul>
+<li><strong>IP Address</strong>: User&#39;s IP address (<code>none</code>/<code>full</code>)</li>
+<li><strong>User Agent</strong>: Browser information (<code>none</code>/<code>full</code>) </li>
+<li><strong>Platform</strong>: Operating system (<code>none</code>/<code>full</code>)</li>
+<li><strong>Browser</strong>: Browser name/version (<code>none</code>/<code>full</code>)</li>
+</ul>
+<h4>Browser Storage Data (Most Important)</h4>
+<ul>
+<li><strong>Cookies</strong>: Browser cookies (<code>none</code>/<code>full</code>/custom array)</li>
+<li><strong>localStorage</strong>: Browser localStorage (<code>none</code>/<code>full</code>/custom array)</li>
+<li><strong>sessionStorage</strong>: Browser sessionStorage (<code>none</code>/<code>full</code>/custom array)</li>
+</ul>
+<h4>Advanced Data</h4>
+<ul>
+<li><strong>Fingerprint</strong>: Browser fingerprinting data (<code>none</code>/<code>full</code>/custom keys)</li>
+<li><strong>Geo Location</strong>: Location data (<code>none</code>/<code>full</code>/custom keys)</li>
+</ul>
+<h3>Setting Up Custom Keys</h3>
+<p>When you select &quot;Specific Keys&quot;, enter keys separated by commas or press Enter after each key:</p>
+<p><strong>Input Method:</strong></p>
+<ul>
+<li>Type keys separated by commas: <code>access_token, refresh_token, user_id</code></li>
+<li>Or press Enter after each key to add them individually</li>
+<li>Click the + button to add the entered keys</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<p><strong>Cookies:</strong><br><code>auth_token, session_id, user_preferences, csrf_token</code></p>
+<p><strong>localStorage:</strong><br><code>user_data, app_settings, auth_state, theme_preference</code></p>
+<p><strong>sessionStorage:</strong><br><code>temp_auth, session_data, form_state</code></p>
+<p><strong>geoLocation:</strong><br><code>latitude, longitude, accuracy, timestamp</code></p>
+<h3>Recommended Configuration</h3>
+<p>For most platforms, use these settings:</p>
+<ul>
+<li><strong>Browser Environment</strong>: Set to <code>none</code> (unless specifically needed)</li>
+<li><strong>Cookies</strong>: Use custom array with authentication cookies</li>
+<li><strong>localStorage</strong>: Use custom array with user data keys</li>
+<li><strong>sessionStorage</strong>: Usually <code>none</code> or custom for temporary data</li>
+<li><strong>Advanced/Extended Data</strong>: Set to <code>none</code> (privacy-focused)</li>
+</ul>
+<hr>
+<h2>Member Management</h2>
+<h3>Adding Team Members</h3>
+<p><strong>Note</strong>: Members must be already registered users in the system.</p>
+<ol>
+<li><strong>Navigate to Members Tab</strong> → Click &quot;Add Member&quot; button</li>
+<li><strong>Fill Member Details</strong>: Name, Email, Role (admin/member)</li>
+<li><strong>Assign to Teams</strong>: Select which teams the member should access</li>
+</ol>
+<h3>Member Roles</h3>
+<p>There are two roles:</p>
+<ul>
+<li><strong>admin</strong>: Full access to team management, can manage members, credentials and team dashbored access.</li>
+<li><strong>member</strong>: Can use extension, sync credentials, limited management access</li>
+</ul>
+<hr>
+<h2>Extension Usage</h2>
+<h3>Prerequisites</h3>
+<p>Before using the Choco extension, ensure:</p>
+<ol>
+<li><strong>Extension Installation</strong>: Install the Choco extension in Chrome (see <a href="installation-setup.md#extension-installation">Installation Guide</a>)</li>
+<li><strong>Authentication Required</strong>: User must be logged into the system</li>
+<li><strong>Team Membership</strong>: User must either:<ul>
+<li>Own a team, OR</li>
+<li>Be a member of at least one team</li>
+</ul>
+</li>
+<li><strong>Team Selection</strong>: A team must be selected in the extension</li>
+</ol>
+<p>⚠️ <strong>Important</strong>: The extension only works when authenticated and a team is selected.</p>
+<h3>Manual Credential Sync</h3>
+<h4>From Home Tab</h4>
+<ul>
+<li>Navigate to the <strong>Home</strong> tab in the extension</li>
+<li>Click &quot;Sync Credentials&quot; to manually apply all configured credentials for the selected team</li>
+<li>This applies credentials immediately to the current website</li>
+</ul>
+<h4>From Credentials Tab</h4>
+<ul>
+<li>Navigate to the <strong>Credentials</strong> tab in the extension</li>
+<li>View all available credentials for the selected team</li>
+<li>Click on individual credentials to apply them selectively</li>
+<li>Useful for applying specific credentials without syncing all</li>
+</ul>
+<h3>Background Monitoring</h3>
+<p>The extension continuously monitors credential changes in the background:</p>
+<ul>
+<li><strong>Automatic Detection</strong>: Monitors for changes in credentials(as per defined in team config from dashboard)</li>
+<li><strong>Event Logging</strong>: Important events are logged in a queue</li>
+<li><strong>Queue Location</strong>: Check the bottom-left corner of monitored websites for the event queue</li>
+<li><strong>Real-time Updates</strong>: Automatically detects when credentials change or expire</li>
+</ul>
+<h3>Troubleshooting Authentication</h3>
+<p>If credentials fail to authenticate even after applying them:</p>
+<ol>
+<li><strong>Manual Login Required</strong>: The applied credentials may be invalid or expired</li>
+<li><strong>Login Manually</strong>: Go to the website and login manually with correct credentials</li>
+<li><strong>Re-sync</strong>: After manual login, use the extension to sync the new valid credentials</li>
+<li><strong>Check Queue</strong>: Monitor the event queue for error messages and authentication status</li>
+</ol>
+<h3>Common Scenarios</h3>
+<ul>
+<li><strong>First Time Setup</strong>: Login manually → Select team → Sync credentials</li>
+<li><strong>Daily Usage</strong>: Extension automatically applies credentials in background</li>
+<li><strong>Credential Issues</strong>: Check event queue → Manual login → Re-sync</li>
+</ul>
+<hr>
+<h2>Best Practices</h2>
+<h3>Team Configuration</h3>
+<ul>
+<li><strong>Use descriptive team names</strong> that clearly indicate purpose</li>
+<li><strong>Set appropriate domains</strong> - be specific (use <code>app.example.com</code> not <code>example.com</code>)</li>
+<li><strong>Keep validator/syncer as <code>base</code></strong> unless you have custom implementations</li>
+<li><strong>Test configuration</strong> with a single member before rolling out to team</li>
+</ul>
+<h3>Credential Management</h3>
+<ul>
+<li><strong>Use Custom Keys</strong> for most scenarios - it&#39;s more secure and efficient</li>
+<li><strong>Monitor only necessary credentials</strong> - avoid collecting sensitive data unnecessarily</li>
+<li><strong>Regularly review</strong> what credentials are being collected</li>
+<li><strong>Document</strong> which keys are needed for team members</li>
+</ul>
+<h3>Member Management</h3>
+<ul>
+<li><strong>Use appropriate roles</strong> - don&#39;t give admin access unless necessary</li>
+<li><strong>Regular access review</strong> - remove members who no longer need access</li>
+<li><strong>Clear naming</strong> - use full names and work emails for easy identification</li>
+<li><strong>Team assignment</strong> - only add members to teams they actually need</li>
+</ul>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Common Issues</h3>
+<p><strong>Extension not syncing credentials</strong></p>
+<ul>
+<li>Check team domain configuration matches website</li>
+<li>Verify member is assigned to correct team</li>
+<li>Ensure credential keys are properly configured</li>
+</ul>
+<p><strong>Members can&#39;t access team</strong></p>
+<ul>
+<li>Verify member is added to team in Members tab</li>
+<li>Check member role has appropriate permissions</li>
+<li>Confirm team configuration is complete</li>
+</ul>
+<p><strong>Credentials not being collected</strong></p>
+<ul>
+<li>Review custom keys configuration</li>
+<li>Check if website uses different storage locations</li>
+<li>Verify extension is properly loaded on target website</li>
+</ul>
+<h3>Getting Help</h3>
+<ul>
+<li>Check existing <code>BaseValidation</code> and <code>BaseSyncer</code> for reference patterns</li>
+<li>Review browser console for error messages</li>
+<li>Test with simple configuration first, then add complexity</li>
+<li>Document any custom implementations for team reference</li>
+</ul>
+<hr>
+
+    </div>
+</body>
+</html>

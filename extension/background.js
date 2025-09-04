@@ -398,13 +398,7 @@ class ChocoBackground {
                 return;
             }
 
-            const dashboardWindow = await chrome.windows.create({
-                url: chrome.runtime.getURL('dashboard/index.html'),
-                type: 'popup',
-                width: 450,
-                height: 600,
-                focused: true
-            });
+            
         } catch (error) {
             console.error('Failed to open dashboard window:', error);
         }

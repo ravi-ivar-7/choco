@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choco Icon Generator</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #eef2ff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e5e7eb;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --radius: 0.5rem;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 0 auto;
+            max-width: 100%;
+            width: 100%;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        
+        @media (min-width: 768px) {
+            .card {
+                padding: 2rem;
+                max-width: 1200px;
+            }
+        }
+
+        .preview-container {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--primary-light);
+            border-radius: var(--radius);
+            border: 1px dashed var(--primary);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .preview-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        @media (min-width: 640px) {
+            .preview-content {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 2.5rem;
+            }
+        }
+        
+        .emoji-display {
+            font-size: 6rem;
+            min-width: 160px;
+            width: 100%;
+            max-width: 200px;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #f5f5f5;
+            border: 1px solid var(--border);
+            margin: 0 auto;
+            transition: all 0.2s ease;
+        }
+        
+        .preview-details {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .preview-details p {
+            margin: 0.5rem 0;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        
+        .preview-details span {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.9375rem;
+            height: 42px;
+        }
+
+        input[type="color"] {
+            width: 42px;
+            height: 42px;
+            padding: 2px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+            width: 100%;
+        }
+
+        .icon-item {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 1.5rem 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .icon-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .icon-item canvas {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            margin-bottom: 0.75rem;
+        }
+
+        .icon-label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .section {
+            margin: 3rem 0;
+        }
+
+        .section:first-child {
+            margin-top: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .icon-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .icon-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .preview-container {
+                padding: 1.25rem 0.75rem;
+                margin: 1.25rem 0;
+            }
+            
+            .card {
+                padding: 1.25rem 0.75rem;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+            
+            body {
+                padding: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .icon-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header style="width: 100%; text-align: center; padding: 2rem 0;">
+        <h1 style="font-size: 2.25rem; font-weight: 700; color: #000; margin: 0 auto; max-width: 100%;">Choco Icon Generator</h1>
+    </header>
+
+    <div class="card">
+        <div id="projectDetailsForm">
+            <div class="form-group mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Project Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                        <input type="text" id="projectName" value="Choco"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Short Name</label>
+                        <input type="text" id="shortName" value="Choco"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start URL</label>
+                        <input type="text" id="startUrl" value="/"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Theme Color</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" id="themeColor" value="#4f46e5"
+                                class="w-10 h-10 rounded-md border border-gray-300 cursor-pointer">
+                            <span id="themeColorValue" class="text-sm text-gray-600">#4f46e5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <h3 class="section-title">Icon Settings</h3>
+                <div class="form-row">
+                    <div class="form-control">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Source Type</label>
+                        <div class="flex items-center gap-4 mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="sourceType" value="emoji" checked
+                                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <span>Emoji</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="sourceType" value="image"
+                                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <span>Upload Image</span>
+                            </label>
+                        </div>
+
+                        <div id="emojiSource" class="source-section">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Emoji</label>
+                            <input type="text" id="emojiInput" value="🍫" maxlength="2"
+                                class="text-2xl text-center w-16 h-12 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+
+                        <div id="imageSource" class="source-section hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Upload Image</label>
+                            <div class="mt-1 flex items-center">
+                                <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                                <label for="imageUpload" class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    Choose File
+                                </label>
+                                <span id="fileName" class="ml-2 text-sm text-gray-500">No file chosen</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">PNG, JPG, SVG up to 2MB</p>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Background</label>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="bgType" value="transparent" checked
+                                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <span>Transparent</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="bgType" value="color"
+                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                    <span>Color:</span>
+                                </label>
+                                <input type="color" id="bgColor" value="#4f46e5"
+                                    class="w-8 h-8 rounded-md border border-gray-300 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button id="generateAllBtn" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Generate All Icons
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-container">
+            <h3>Preview</h3>
+            <div class="preview-content">
+                <div id="emojiDisplay" class="emoji-display">🍫</div>
+                <div class="preview-details">
+                    <p>Emoji: <span id="emojiText">🍫</span></p>
+                    <p>Background: <span id="bgText">Transparent</span></p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Favicon Assets</h2>
+            <p class="text-gray-500 mb-4">Standard favicon sizes for browsers and devices</p>
+            <div class="icon-grid" id="faviconGrid">
+                <!-- Favicon items will be added here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Browser Icons</h2>
+            <p class="text-gray-500 mb-4">Icons for browser extensions and mobile apps</p>
+            <div class="icon-grid" id="browserIconsGrid">
+                <!-- Browser icon items will be added here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Social Media</h2>
+            <p class="text-gray-500 mb-4">Optimized images for social sharing</p>
+            <div class="icon-grid" id="socialGrid">
+                <!-- Social media items will be added here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Configuration Files</h2>
+            <p class="text-gray-500 mb-4">Essential configuration files for web apps</p>
+            <div class="icon-grid" id="configGrid">
+                <!-- Web Manifest -->
+                <div class="icon-item">
+                    <span class="icon-label">site.webmanifest</span>
+                    <div class="config-file-preview">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 text-blue-500">
+                            <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z" clip-rule="evenodd" />
+                            <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-.904-1.451l-.003-.004-.34-.65a.75.75 0 00-.118-.24l-4.5-6.5z" />
+                        </svg>
+                    </div>
+                    <button onclick="generateManifest()" class="download-btn">Download</button>
+                </div>
+                
+                <!-- Browser Config -->
+                <div class="icon-item">
+                    <span class="icon-label">browserconfig.xml</span>
+                    <div class="config-file-preview">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 text-blue-500">
+                            <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z" clip-rule="evenodd" />
+                            <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-.904-1.451l-.003-.004-.34-.65a.75.75 0 00-.118-.24l-4.5-6.5z" />
+                        </svg>
+                    </div>
+                    <button onclick="generateBrowserConfig()" class="download-btn">Download</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+            <p>Generated with ❤️ by Choco Team</p>
+        </footer>
+    </div>
+
+    <style>
+        .source-section {
+            transition: all 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .form-control {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+    <script>
+        // DOM Elements
+        const emojiInput = document.getElementById('emojiInput');
+        const emojiDisplay = document.getElementById('emojiDisplay');
+        const generateBtn = document.getElementById('generateAllBtn');
+
+        // Icon configurations
+        const iconConfigs = [
+            // Favicon Assets
+            { id: 'favicon-16', name: 'favicon-16x16.png', size: 16, category: 'favicon' },
+            { id: 'favicon-32', name: 'favicon-32x32.png', size: 32, category: 'favicon' },
+            { id: 'favicon-ico', name: 'favicon.ico', size: 32, category: 'favicon' },
+            { id: 'apple-touch', name: 'apple-touch-icon.png', size: 180, category: 'favicon' },
+            { id: 'safari-pinned', name: 'safari-pinned-tab.svg', size: 16, category: 'favicon' },
+
+            // Browser Icons
+            { id: 'icon-16', name: 'icon-16.png', size: 16, category: 'browser' },
+            { id: 'icon-32', name: 'icon-32.png', size: 32, category: 'browser' },
+            { id: 'icon-48', name: 'icon-48.png', size: 48, category: 'browser' },
+            { id: 'icon-128', name: 'icon-128.png', size: 128, category: 'browser' },
+
+            // Social Media
+            { id: 'og-image', name: 'og-image.png', width: 1200, height: 630, category: 'social' },
+            { id: 'twitter-image', name: 'twitter-image.png', width: 1200, height: 600, category: 'social' }
+        ];
+
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            createIconItems();
+            updatePreview();
+            generateAllIcons();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            emojiInput.addEventListener('input', updatePreview);
+            document.querySelectorAll('input[name="bgType"]').forEach(radio => {
+                radio.addEventListener('change', updatePreview);
+            });
+            document.getElementById('bgColor').addEventListener('input', updatePreview);
+            generateBtn.addEventListener('click', generateAllIcons);
+        }
+
+        // Create icon items in the DOM
+        function createIconItems() {
+            const containers = {
+                favicon: document.getElementById('faviconGrid'),
+                browser: document.getElementById('browserIconsGrid'),
+                social: document.getElementById('socialGrid')
+            };
+
+            iconConfigs.forEach(config => {
+                const container = containers[config.category];
+                if (!container) return;
+
+                const item = document.createElement('div');
+                item.className = 'icon-item';
+                item.innerHTML = `
+                    <span class="icon-label">${config.name} (${config.width ? `${config.width}×${config.height}` : `${config.size}×${config.size}`})</span>
+                    <canvas id="${config.id}" width="${config.width || config.size}" height="${config.height || config.size}"></canvas>
+                    <button onclick="downloadIcon('${config.id}', '${config.name}')">Download</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Update the preview emoji display
+        function updatePreview() {
+            const emoji = emojiInput.value || '🍫';
+            emojiDisplay.textContent = emoji;
+
+            const bgType = document.querySelector('input[name="bgType"]:checked').value;
+            if (bgType === 'color') {
+                const color = document.getElementById('bgColor').value;
+                emojiDisplay.style.backgroundColor = color;
+                emojiDisplay.style.color = getContrastColor(color);
+            } else {
+                emojiDisplay.style.backgroundColor = 'transparent';
+                emojiDisplay.style.color = '#000';
+            }
+        }
+
+        // Generate all icons
+        function generateAllIcons() {
+            const emoji = emojiInput.value || '🍫';
+            const bgType = document.querySelector('input[name="bgType"]:checked').value;
+            const bgColor = bgType === 'color' ? document.getElementById('bgColor').value : null;
+
+            iconConfigs.forEach(config => {
+                generateIcon(config, emoji, bgColor);
+            });
+        }
+
+        // Generate a single icon
+        function generateIcon(config, emoji, bgColor) {
+            const canvas = document.getElementById(config.id);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = config.width || config.size;
+            const height = config.height || config.size;
+
+            // Set canvas size (in case it was changed)
+            canvas.width = width;
+            canvas.height = height;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Fill background if color is selected
+            if (bgColor) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, width, height);
+                ctx.fillStyle = getContrastColor(bgColor) === '#000000' ? '#000000' : '#ffffff';
+            } else {
+                ctx.fillStyle = '#000000';
+            }
+
+            // For SVG, we'll handle it differently
+            if (config.name.endsWith('.svg')) {
+                // We'll handle SVG download separately
+                return;
+            }
+
+            // Draw emoji
+            const fontSize = Math.min(width, height) * 0.8;
+            ctx.font = `${fontSize}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, width / 2, height / 2);
+        }
+
+        // Download an icon
+        function downloadIcon(canvasId, filename) {
+            // Handle SVG separately
+            if (filename.endsWith('.svg')) {
+                const bgType = document.querySelector('input[name="bgType"]:checked').value;
+                const bgColor = bgType === 'color' ? document.getElementById('bgColor').value : 'transparent';
+                const emoji = emojiInput.value || '🍫';
+                const textColor = bgType === 'color' ?
+                    (getContrastColor(bgColor) === '#000000' ? '#000000' : '#ffffff') :
+                    '#000000';
+
+                const svgContent = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+                        <rect width="16" height="16" fill="${bgColor}" rx="2"/>
+                        <text x="8" y="12" font-family="Arial" font-size="12" text-anchor="middle" fill="${textColor}">${emoji}</text>
+                    </svg>
+                `;
+
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                return;
+            }
+
+            // Handle PNG/ICO
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Update theme color preview
+        document.getElementById('themeColor').addEventListener('input', function() {
+            document.getElementById('themeColorValue').textContent = this.value;
+        });
+
+        // Generate and download site.webmanifest
+        function generateManifest() {
+            const projectName = document.getElementById('projectName').value || 'My App';
+            const shortName = document.getElementById('shortName').value || projectName.substring(0, 12);
+            const startUrl = document.getElementById('startUrl').value || '/';
+            const themeColor = document.getElementById('themeColor').value || '#4f46e5';
+            const bgType = document.querySelector('input[name="bgType"]:checked').value;
+            const bgColor = bgType === 'color' ? document.getElementById('bgColor').value : '#ffffff';
+            
+            const manifest = {
+                name: projectName,
+                short_name: shortName,
+                description: 'Generated with Choco Icon Generator',
+                start_url: startUrl,
+                display: 'standalone',
+                orientation: 'portrait',
+                theme_color: themeColor,
+                background_color: bgColor,
+                icons: [
+                    {
+                        src: '/android-chrome-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                        purpose: 'any maskable'
+                    },
+                    {
+                        src: '/android-chrome-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/apple-touch-icon.png',
+                        sizes: '180x180',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/favicon-32x32.png',
+                        sizes: '32x32',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/favicon-16x16.png',
+                        sizes: '16x16',
+                        type: 'image/png'
+                    }
+                ]
+            };
+            
+            const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'site.webmanifest';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Generate and download browserconfig.xml
+        function generateBrowserConfig() {
+            const projectName = document.getElementById('projectName').value || 'My App';
+            const themeColor = document.getElementById('themeColor').value || '#4f46e5';
+            
+            const config = `<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <tile>
+            <square70x70logo src="/mstile-70x70.png"/>
+            <square150x150logo src="/mstile-150x150.png"/>
+            <square310x310logo src="/mstile-310x310.png"/>
+            <wide310x150logo src="/mstile-310x150.png"/>
+            <TileColor>${themeColor}</TileColor>
+            <TileText>${projectName.substring(0, 20)}</TileText>
+        </tile>
+    </msapplication>
+</browserconfig>`;
+            
+            const blob = new Blob([config], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'browserconfig.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Helper function to get contrast color (black or white)
+        function getContrastColor(hexColor) {
+            if (!hexColor || hexColor === 'transparent') return '#000000';
+
+            // Convert hex to RGB
+            let r, g, b;
+            if (hexColor.startsWith('#')) {
+                const hex = hexColor.substring(1);
+                r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16);
+                g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16);
+                b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16);
+            } else if (hexColor.startsWith('rgb')) {
+                const rgb = hexColor.match(/\d+/g);
+                r = parseInt(rgb[0]);
+                g = parseInt(rgb[1]);
+                b = parseInt(rgb[2]);
+            } else {
+                return '#000000'; // Default to black if color format is unknown
+            }
+
+            // Calculate brightness
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 128 ? '#000000' : '#ffffff';
+        }
+
+        // Generate and download site.webmanifest
+        function generateAndDownloadManifest() {
+            const emoji = emojiInput.value || '🍫';
+            const bgType = document.querySelector('input[name="bgType"]:checked').value;
+            const bgColor = bgType === 'color' ? document.getElementById('bgColor').value : '#f8fafc';
+
+            const manifest = {
+                name: 'Choco Icons',
+                short_name: 'Icons',
+                description: 'Generated with Choco Icon Generator',
+                start_url: '/',
+                display: 'standalone',
+                orientation: 'portrait',
+                theme_color: '#4f46e5',
+                background_color: bgColor,
+                icons: [
+                    {
+                        src: '/android-chrome-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                        purpose: 'any maskable'
+                    },
+                    {
+                        src: '/android-chrome-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/apple-touch-icon.png',
+                        sizes: '180x180',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/favicon-32x32.png',
+                        sizes: '32x32',
+                        type: 'image/png'
+                    },
+                    {
+                        src: '/favicon-16x16.png',
+                        sizes: '16x16',
+                        type: 'image/png'
+                    }
+                ]
+            };
+
+            const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'site.webmanifest';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Generate and download browserconfig.xml
+        function generateAndDownloadBrowserConfig() {
+            const config = `<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <tile>
+            <square70x70logo src="/mstile-70x70.png"/>
+            <square150x150logo src="/mstile-150x150.png"/>
+            <square310x310logo src="/mstile-310x310.png"/>
+            <wide310x150logo src="/mstile-310x150.png"/>
+            <TileColor>#4f46e5</TileColor>
+            <TileText>Choco Icons</TileText>
+        </tile>
+    </msapplication>
+</browserconfig>`;
+
+            const blob = new Blob([config], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'browserconfig.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Toggle between emoji and image source
+        document.querySelectorAll('input[name="sourceType"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const sourceType = e.target.value;
+                document.getElementById('emojiSource').classList.toggle('hidden', sourceType !== 'emoji');
+                document.getElementById('imageSource').classList.toggle('hidden', sourceType !== 'image');
+            });
+        });
+
+        // Handle file upload preview
+        document.getElementById('imageUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                // Here you can add image preview logic if needed
+            }
+        });
+
+        // Initialize the app when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            init();
+            // Add event listeners for the new download buttons
+            document.getElementById('downloadManifest').addEventListener('click', generateAndDownloadManifest);
+            document.getElementById('downloadBrowserConfig').addEventListener('click', generateAndDownloadBrowserConfig);
+        });
+    </script>
+</body>
+
+</html>

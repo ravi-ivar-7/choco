@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Choco Team Access Manager Backend",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,6 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "db:drop": "tsx scripts/drop-db.ts",
     "setup": "npm install && npm run db:generate && npm run db:init",
+    "docs:build": "node --experimental-modules --es-module-specifier-resolution=node scripts/convert-markdown.js",
     "test": "echo \"Tests not implemented yet\" && exit 0"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.400.0",
     "marked": "^16.2.0",
+    "highlight.js": "^11.9.0",
     "next": "^15.0.0",
     "postgres": "^3.4.7",
     "react": "^18.3.0",

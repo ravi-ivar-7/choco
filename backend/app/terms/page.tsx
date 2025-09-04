@@ -31,13 +31,13 @@ export default function TermsPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">💻 "Members" refers to:</h4>
                                 <ul className="list-disc pl-6 space-y-1">
-                                    <li><strong>Your Personal Devices:</strong> Your own devices (laptop, desktop, phone, tablet) that sync credentials within an account category</li>
+                                    <li><strong>Your Personal Devices:</strong> Your own devices (laptop, desktop, tablet) that sync credentials within an account category</li>
                                     <li><strong>Device Instances:</strong> Different browser instances or profiles on your devices that need credential access</li>
                                     <li><strong>Authorized Endpoints:</strong> Your personal endpoints that can access and sync credential data for a specific account category</li>
                                 </ul>
                             </div>
                             <div className="bg-indigo-100 p-3 rounded">
-                                <p className="font-medium">Example: You might have a "Gaming" account category with your gaming PC, laptop, and phone - all your own devices that need access to your gaming platform logins.</p>
+                                <p className="font-medium">Example: You might have a "Gaming" account category with your gaming PC, laptop - all your own devices that need access to your gaming platform logins.</p>
                             </div>
                         </div>
                     </div>

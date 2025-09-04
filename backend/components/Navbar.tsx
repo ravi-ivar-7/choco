@@ -153,7 +153,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 lg:px-6">
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo Section */}
-          <div className="flex items-center space-x-3">
+          <Link href="/" className="flex items-center space-x-3">
             <div className="relative group">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300 group-hover:scale-105">
                 <span className="text-white font-bold text-lg">🍫</span>
@@ -169,14 +169,15 @@ export default function Navbar() {
                 Personal Browser Sync
               </Badge>
             </div>
-          </div>
+          </Link>
           
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-2">
             {[
               { href: '/', label: 'Home', icon: Home, external: false },
-              { href: '/docs', label: 'Docs', icon: BookOpen, external: false },
-              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false }
+              { href: '/docs', label: 'Documentation', icon: BookOpen, external: false },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false },
+              { href: 'https://chromewebstore.google.com/detail/choco-personal-browser-sy/cdlgnfhednemdcnpjpolienfjdolblgm', label: 'Extension', icon: Chrome, external: true }
             ].map((item) => (
               item.external ? (
                 <a
@@ -206,15 +207,6 @@ export default function Navbar() {
           
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => window.open('https://github.com/ravi-ivar-7/choco/', '_blank')}
-              className="text-slate-700 hover:text-slate-900 hover:bg-slate-50 border-slate-200"
-            >
-              <Chrome className="w-4 h-4 mr-2" />
-              Extension
-            </Button>
             {authLoading ? (
               <div className="flex items-center space-x-3 px-3 py-1.5 bg-slate-50 rounded-lg">
                 <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center animate-pulse">
@@ -282,8 +274,9 @@ export default function Navbar() {
           <div className="py-4 space-y-1 border-t border-slate-100">
             {[
               { href: '/', label: 'Home', icon: Home, external: false },
-              { href: '/docs', label: 'Docs', icon: BookOpen, external: false },
-              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false }
+              { href: '/docs', label: 'Documentation', icon: BookOpen, external: false },
+              { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, external: false },
+              { href: 'https://chromewebstore.google.com/detail/choco-personal-browser-sy/cdlgnfhednemdcnpjpolienfjdolblgm', label: 'Extension', icon: Chrome, external: true }
             ].map((item) => (
               item.external ? (
                 <a
@@ -311,17 +304,6 @@ export default function Navbar() {
             ))}
             
             <div className="pt-4 space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-center"
-                onClick={() => {
-                  window.open('https://github.com/ravi-ivar-7/choco/', '_blank')
-                  setMobileMenuOpen(false)
-                }}
-              >
-                <Chrome className="w-4 h-4 mr-2" />
-                Install Extension
-              </Button>
               {authLoading ? (
                 <div className="flex items-center space-x-3 px-4 py-3 bg-slate-50 rounded-lg">
                   <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center animate-pulse">

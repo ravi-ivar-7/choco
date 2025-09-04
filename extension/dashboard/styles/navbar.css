@@ -648,10 +648,16 @@
     
     .navbar-loading {
         left: 8px;
-        padding: 4px 8px;
+        padding: 6px 10px;
+        gap: 6px;
     }
     
     .loading-text {
-        display: none;
+        display: inline;
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
     }
 }

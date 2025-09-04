@@ -5,32 +5,35 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Chrome, ArrowRight, Sparkles, Github, Heart, ExternalLink } from 'lucide-react'
 
+interface LinkItem {
+  href: string;
+  label: string;
+  external?: boolean;
+}
+
 export default function Footer() {
   const router = useRouter()
 
   const handleGetStarted = () => {
-    router.push('/login')
+    router.push('/dashboard')
   }
 
-  const navigationLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/docs', label: 'Documentation' },
-    { href: 'https://github.com/ravi-ivar-7/choco/', label: 'Extension', external: true },
-    { href: '/dashboard', label: 'Dashboard' }
+  const navigationLinks: LinkItem[] = [
+    { href: '/', label: 'Home' }, 
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: 'https://chromewebstore.google.com/detail/choco-personal-browser-sy/cdlgnfhednemdcnpjpolienfjdolblgm', label: 'Install Extension', external: true }
   ]
 
-  const supportLinks = [
-    { href: 'https://github.com/ravi-ivar-7/choco/issues', label: 'Report Issues', external: true },
-    { href: 'https://github.com/ravi-ivar-7/choco/', label: 'GitHub', external: true },
-    { href: '/docs', label: 'Help Center' },
-    { href: '/register', label: 'Get Started' }
+  const supportLinks: LinkItem[] = [
+    { href: 'mailto:report@usechoco.com', label: 'Report Issues' },
+    { href: '/docs', label: 'Help Center' }, 
+    { href: '/faqs', label: 'FAQs' }
   ]
 
-  const legalLinks = [
+  const legalLinks: LinkItem[] = [
     { href: '/privacy', label: 'Privacy Policy' },
-    { href: '/terms', label: 'Terms of Service' },
-    { href: 'mailto:legal@usechoco.com', label: 'Legal Contact' },
-    { href: 'mailto:support@usechoco.com', label: 'Support' }
+    { href: '/terms', label: 'Terms of Service' }, 
+    { href: 'mailto:support@usechoco.com', label: 'Contact Us' }
   ]
 
   return (
@@ -60,14 +63,14 @@ export default function Footer() {
             </div>
             
             <p className="text-slate-600 mb-8 max-w-md leading-relaxed">
-              Keep your sessions synchronized across your devices while maintaining complete privacy.
+              Keep your sessions synchronized across your devices while maintaining complete privacy. Secure and built for personal use.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 variant="outline" 
                 className="group border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
-                onClick={() => window.open('https://github.com/ravi-ivar-7/choco/', '_blank')}
+                onClick={() => window.open('https://chromewebstore.google.com/detail/choco-personal-browser-sy/cdlgnfhednemdcnpjpolienfjdolblgm', '_blank')}
               >
                 <Chrome className="w-4 h-4 mr-2 group-hover:text-purple-600 transition-colors" />
                 Install Extension

@@ -121,7 +121,7 @@ cp .env.example .env
 Edit `.env` file with your configuration:
 ```bash
 # Application URL (update for production)
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 
 # Database connection from Supabase
 DATABASE_URL="postgresql://postgres:your-password@db.xxx.supabase.co:5432/postgres"
@@ -160,7 +160,7 @@ Backend will be available at: `http://localhost:3000`
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_APP_URL` | Your app's public URL | `http://localhost:3000` |
+| `NEXT_PUBLIC_SITE_URL` | Your app's public URL | `http://localhost:3000` |
 | `DATABASE_URL` | Supabase database connection | `postgresql://postgres:...` |
 | `ENCRYPTION_KEY` | 32-char key for token encryption | `a1b2c3d4e5f6...` |
 | `JWT_SECRET` | Secret for JWT token signing | `your-secret-key` |
