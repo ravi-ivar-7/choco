@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
     images: [`${SITE_URL}/images/twitter-image.png`],
-    creator: '@usechoco',
+    creator: '@use_choco',
   },
   robots: {
     index: true,
